@@ -146,6 +146,101 @@ app.post("/api/convert", upload.single("file"), async (req, res) => {
   }
 });
 
+// POST /api/palette — multipart form: file, count (3-10, default 6)
+// Returns dominant colors as hex + percentage of image they cover.
+app.post("/api/palette", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const count = Math.min(10, Math.max(3, parseInt(req.body.count) || 6));
+
+    // Downscale first — palette extraction doesn't need full resolution,
+    // and it keeps this fast even on large uploads.
+    const { data, info } = await sharp(req.file.buffer)
+      .resize(200, 200, { fit: "inside", withoutEnlargement: true })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const channels = info.channels; // 3 (RGB) since alpha removed
+    const totalPixels = data.length / channels;
+
+    // Quantize each channel to 16 levels (4 bits) to bucket visually similar
+    // colors together, then average the actual pixel values within each
+    // bucket for an accurate representative color (not just the bucket center).
+    const buckets = new Map();
+
+    for (let i = 0; i < data.length; i += channels) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const key = (r >> 4) + "-" + (g >> 4) + "-" + (b >> 4);
+
+      const existing = buckets.get(key);
+      if (existing) {
+        existing.count++;
+        existing.r += r;
+        existing.g += g;
+        existing.b += b;
+      } else {
+        buckets.set(key, { count: 1, r, g, b });
+      }
+    }
+
+    const allBuckets = [...buckets.values()].sort((a, b) => b.count - a.count);
+
+    // Pure frequency ranking tends to return several near-identical dark or
+    // near-identical light shades from a busy background, crowding out
+    // smaller-but-visually-distinct accent colors. Greedily pick buckets
+    // that are sufficiently far apart in RGB space, falling back to the
+    // remaining most-frequent buckets only if the image is too monochrome
+    // to fill the requested count with distinct colors.
+    const MIN_DISTANCE = 70;
+    const selected = [];
+
+    for (const bucket of allBuckets) {
+      if (selected.length >= count) break;
+      const r = bucket.r / bucket.count;
+      const g = bucket.g / bucket.count;
+      const b = bucket.b / bucket.count;
+      const isDistinct = selected.every((s) => {
+        const dr = s.r - r;
+        const dg = s.g - g;
+        const db = s.b - b;
+        return Math.sqrt(dr * dr + dg * dg + db * db) >= MIN_DISTANCE;
+      });
+      if (isDistinct) selected.push({ r, g, b, count: bucket.count });
+    }
+
+    if (selected.length < count) {
+      for (const bucket of allBuckets) {
+        if (selected.length >= count) break;
+        const r = bucket.r / bucket.count;
+        const g = bucket.g / bucket.count;
+        const b = bucket.b / bucket.count;
+        const alreadyIn = selected.some((s) => s.r === r && s.g === g && s.b === b);
+        if (!alreadyIn) selected.push({ r, g, b, count: bucket.count });
+      }
+    }
+
+    const palette = selected.map((s) => {
+      const r = Math.round(s.r);
+      const g = Math.round(s.g);
+      const b = Math.round(s.b);
+      const hex =
+        "#" + [r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("");
+      const percent = Math.round((s.count / totalPixels) * 1000) / 10;
+      return { hex, rgb: [r, g, b], percent };
+    });
+
+    return res.json({ ok: true, totalPixels, palette });
+  } catch (err) {
+    console.error("Palette extraction error:", err);
+    return res.status(500).json({ ok: false, error: "Palette extraction failed" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });

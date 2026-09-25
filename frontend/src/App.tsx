@@ -14,6 +14,12 @@ type ConversionStats = {
   metTarget: boolean;
 };
 
+type PaletteColor = {
+  hex: string;
+  rgb: [number, number, number];
+  percent: number;
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   const kb = bytes / 1024;
@@ -32,8 +38,23 @@ export default function App() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [stats, setStats] = useState<ConversionStats | null>(null);
 
+  const [paletteCount, setPaletteCount] = useState(6);
+  const [paletteLoading, setPaletteLoading] = useState(false);
+  const [paletteError, setPaletteError] = useState<string | null>(null);
+  const [palette, setPalette] = useState<PaletteColor[] | null>(null);
+  const [copiedHex, setCopiedHex] = useState<string | null>(null);
+
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const targetSizeAvailable = TARGET_SIZE_FORMATS.includes(format);
+
+  function handleFileChange(f: File | null) {
+    setFile(f);
+    setResultUrl(null);
+    setStats(null);
+    setPalette(null);
+    setError(null);
+    setPaletteError(null);
+  }
 
   async function handleConvert() {
     if (!file) return;
@@ -78,6 +99,40 @@ export default function App() {
     }
   }
 
+  async function handleExtractPalette() {
+    if (!file) return;
+    setPaletteLoading(true);
+    setPaletteError(null);
+    setPalette(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("count", String(paletteCount));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/palette`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      setPalette(data.palette);
+    } catch (err) {
+      setPaletteError(err instanceof Error ? err.message : "Extraction échouée");
+    } finally {
+      setPaletteLoading(false);
+    }
+  }
+
+  function copyHex(hex: string) {
+    navigator.clipboard.writeText(hex).then(() => {
+      setCopiedHex(hex);
+      setTimeout(() => setCopiedHex(null), 1200);
+    });
+  }
+
   return (
     <div style={{ maxWidth: 480, margin: "60px auto", fontFamily: "sans-serif", padding: 20 }}>
       <h1>NOXEL Spectra</h1>
@@ -87,10 +142,11 @@ export default function App() {
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
         />
       </div>
 
+      {/* ── Conversion ── */}
       <div style={{ marginTop: 16 }}>
         <label>
           Format :{" "}
@@ -219,6 +275,86 @@ export default function App() {
             <a href={resultUrl} download={`converted.${format}`}>
               Télécharger le résultat
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── Palette de couleurs ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Palette de couleurs</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Extrait les couleurs dominantes de l'image sélectionnée ci-dessus.
+      </p>
+
+      <div style={{ marginTop: 12 }}>
+        <label>
+          Nombre de couleurs : {paletteCount}
+          <input
+            type="range"
+            min={3}
+            max={10}
+            value={paletteCount}
+            onChange={(e) => setPaletteCount(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle" }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleExtractPalette}
+        disabled={!file || paletteLoading}
+        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {paletteLoading ? "Extraction..." : "Extraire la palette"}
+      </button>
+
+      {paletteError && <p style={{ color: "red", marginTop: 16 }}>{paletteError}</p>}
+
+      {palette && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", height: 60 }}>
+            {palette.map((c) => (
+              <div
+                key={c.hex}
+                title={`${c.hex} — ${c.percent}%`}
+                style={{ background: c.hex, flexGrow: c.percent, flexBasis: 0 }}
+              />
+            ))}
+          </div>
+
+          <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {palette.map((c) => (
+              <button
+                key={c.hex}
+                onClick={() => copyHex(c.hex)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  border: "1px solid #ddd",
+                  borderRadius: 6,
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontFamily: "monospace",
+                }}
+              >
+                <span
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 4,
+                    background: c.hex,
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    display: "inline-block",
+                  }}
+                />
+                {copiedHex === c.hex ? "Copié !" : c.hex}
+                <span style={{ color: "#aaa" }}>{c.percent}%</span>
+              </button>
+            ))}
           </div>
         </div>
       )}
