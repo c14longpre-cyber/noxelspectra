@@ -984,7 +984,9 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality: 92 });
         break;
       case "png":
-        pipeline = pipeline.png();
+        // Max out compression effort — a naive re-encode of a photographic
+        // PNG can otherwise end up larger than a well-optimized source file.
+        pipeline = pipeline.png({ compressionLevel: 9, effort: 10 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality: 92 });
@@ -997,7 +999,17 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
         break;
     }
 
-    const outputBuffer = await pipeline.toBuffer();
+    let outputBuffer: Buffer = await pipeline.toBuffer();
+    let grewLarger = outputBuffer.length > req.file.size;
+
+    // A lossless re-encode can legitimately end up bigger for photographic
+    // content saved as PNG — if so, fall back to returning the ORIGINAL bytes
+    // (metadata intact) rather than silently handing back a larger file; the
+    // frontend flags this case and points the user at Convert instead.
+    if (grewLarger && format === "png") {
+      outputBuffer = req.file.buffer;
+    }
+
     const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
 
     res.setHeader("Content-Type", mimeType);
@@ -1007,10 +1019,11 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     );
     res.setHeader("X-Original-Size", String(req.file.size));
     res.setHeader("X-Output-Size", String(outputBuffer.length));
-    res.setHeader("X-Metadata-Bytes-Removed", String(metadataBytesRemoved));
+    res.setHeader("X-Metadata-Bytes-Removed", String(grewLarger ? 0 : metadataBytesRemoved));
+    res.setHeader("X-Grew-Larger", String(grewLarger));
     res.setHeader(
       "Access-Control-Expose-Headers",
-      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed"
+      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger"
     );
     return res.send(outputBuffer);
   } catch (err) {

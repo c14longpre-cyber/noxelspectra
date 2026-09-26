@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
@@ -59,6 +59,7 @@ type MetaCleanStats = {
   originalSize: number;
   outputSize: number;
   bytesRemoved: number;
+  grewLarger: boolean;
 };
 
 type RotateDims = {
@@ -79,8 +80,147 @@ function sanitizeFilename(name: string): string {
   return cleaned || "vectorized";
 }
 
+function BeforeAfterSlider({
+  beforeUrl,
+  afterUrl,
+  checkered = false,
+}: {
+  beforeUrl: string;
+  afterUrl: string;
+  checkered?: boolean;
+}) {
+  const [pos, setPos] = useState(50);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragging = useRef(false);
+
+  function updatePos(clientX: number) {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    let pct = ((clientX - rect.left) / rect.width) * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    setPos(pct);
+  }
+
+  function handlePointerDown(e: React.PointerEvent) {
+    dragging.current = true;
+    updatePos(e.clientX);
+  }
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!dragging.current) return;
+    updatePos(e.clientX);
+  }
+  function handlePointerUp() {
+    dragging.current = false;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      style={{
+        position: "relative",
+        width: "100%",
+        cursor: "ew-resize",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1px solid #ddd",
+        touchAction: "none",
+        background: checkered
+          ? "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px"
+          : undefined,
+      }}
+    >
+      <img
+        src={beforeUrl}
+        alt="Avant"
+        draggable={false}
+        style={{ display: "block", width: "100%", height: "auto" }}
+      />
+      <img
+        src={afterUrl}
+        alt="Après"
+        draggable={false}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "contain",
+          clipPath: `inset(0 ${100 - pos}% 0 0)`,
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${pos}%`,
+          width: 2,
+          background: "#fff",
+          boxShadow: "0 0 4px rgba(0,0,0,0.6)",
+          transform: "translateX(-1px)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: `${pos}%`,
+          transform: "translate(-50%, -50%)",
+          width: 30,
+          height: 30,
+          borderRadius: "50%",
+          background: "#fff",
+          border: "2px solid #333",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+        }}
+      >
+        ↔
+      </div>
+      <span
+        style={{
+          position: "absolute",
+          top: 8,
+          left: 8,
+          background: "rgba(0,0,0,0.6)",
+          color: "#fff",
+          fontSize: 11,
+          padding: "2px 8px",
+          borderRadius: 4,
+        }}
+      >
+        Avant
+      </span>
+      <span
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          background: "rgba(0,0,0,0.6)",
+          color: "#fff",
+          fontSize: 11,
+          padding: "2px 8px",
+          borderRadius: 4,
+        }}
+      >
+        Après
+      </span>
+    </div>
+  );
+}
+
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
+  const [originalPreviewUrl, setOriginalPreviewUrl] = useState<string | null>(null);
   const [format, setFormat] = useState<Format>("webp");
   const [mode, setMode] = useState<"quality" | "targetSize">("quality");
   const [quality, setQuality] = useState(75);
@@ -125,6 +265,7 @@ export default function App() {
   const [vectorizeError, setVectorizeError] = useState<string | null>(null);
   const [vectorizeSvg, setVectorizeSvg] = useState<string | null>(null);
   const [vectorizeMeta, setVectorizeMeta] = useState<VectorizeMeta | null>(null);
+  const [vectorizeSvgUrl, setVectorizeSvgUrl] = useState<string | null>(null);
 
   const [detectedColors, setDetectedColors] = useState<string[] | null>(null);
   const [editedColors, setEditedColors] = useState<string[]>([]);
@@ -151,8 +292,23 @@ export default function App() {
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const targetSizeAvailable = TARGET_SIZE_FORMATS.includes(format);
 
+  useEffect(() => {
+    if (!vectorizeSvg) {
+      setVectorizeSvgUrl(null);
+      return;
+    }
+    const blob = new Blob([vectorizeSvg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    setVectorizeSvgUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [vectorizeSvg]);
+
   function handleFileChange(f: File | null) {
     setFile(f);
+    setOriginalPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return f ? URL.createObjectURL(f) : null;
+    });
     setResultUrl(null);
     setStats(null);
     setPalette(null);
@@ -515,10 +671,11 @@ export default function App() {
       const originalSize = Number(res.headers.get("X-Original-Size") || file.size);
       const outputSize = Number(res.headers.get("X-Output-Size") || 0);
       const bytesRemoved = Number(res.headers.get("X-Metadata-Bytes-Removed") || 0);
+      const grewLarger = res.headers.get("X-Grew-Larger") === "true";
 
       const blob = await res.blob();
       setMetaCleanResultUrl(URL.createObjectURL(blob));
-      setMetaCleanStats({ originalSize, outputSize, bytesRemoved });
+      setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger });
     } catch (err) {
       setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
     } finally {
@@ -810,7 +967,11 @@ export default function App() {
 
         {resultUrl && (
           <div style={{ marginTop: 20 }}>
-            <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            {originalPreviewUrl ? (
+              <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={resultUrl} />
+            ) : (
+              <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            )}
             <div style={{ marginTop: 8 }}>
               <a href={resultUrl} download={`converted.${format}`}>
                 Télécharger le résultat
@@ -910,7 +1071,11 @@ export default function App() {
 
       {resizeResultUrl && (
         <div style={{ marginTop: 20 }}>
-          <img src={resizeResultUrl} alt="Résultat redimensionné" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={resizeResultUrl} />
+          ) : (
+            <img src={resizeResultUrl} alt="Résultat redimensionné" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
           <div style={{ marginTop: 8 }}>
             <a href={resizeResultUrl} download="resized">
               Télécharger le résultat
@@ -1000,7 +1165,11 @@ export default function App() {
 
       {rotateResultUrl && (
         <div style={{ marginTop: 20 }}>
-          <img src={rotateResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={rotateResultUrl} />
+          ) : (
+            <img src={rotateResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
           {rotateDims && (
             <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
               {rotateDims.width}×{rotateDims.height}px
@@ -1265,15 +1434,19 @@ export default function App() {
 
       {vectorizeSvg && vectorizeMeta && (
         <div style={{ marginTop: 20 }}>
-          <div
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: 8,
-              padding: 12,
-              background: "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
-            }}
-            dangerouslySetInnerHTML={{ __html: vectorizeSvg }}
-          />
+          {originalPreviewUrl && vectorizeSvgUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={vectorizeSvgUrl} checkered />
+          ) : (
+            <div
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: 12,
+                background: "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
+              }}
+              dangerouslySetInnerHTML={{ __html: vectorizeSvg }}
+            />
+          )}
           <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
             {vectorizeMeta.width}×{vectorizeMeta.height}px — {vectorizeMeta.colorsUsed} couleur(s) utilisée(s)
           </div>
@@ -1359,11 +1532,20 @@ export default function App() {
         >
           <div>Avant : {formatBytes(metaCleanStats.originalSize)}</div>
           <div>Après : {formatBytes(metaCleanStats.outputSize)}</div>
-          <div style={{ fontWeight: 600, color: "#2a8a4a" }}>
-            {metaCleanStats.bytesRemoved > 0
-              ? `${formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées`
-              : "Aucune métadonnée trouvée dans le fichier"}
-          </div>
+          {metaCleanStats.grewLarger ? (
+            <div style={{ marginTop: 6, color: "#c0392b" }}>
+              Ce PNG est déjà plus compact que ce qu'un réencodage sans perte peut faire —
+              le fichier original a été gardé tel quel (métadonnées incluses) pour éviter de
+              te renvoyer un fichier plus lourd. Pour un vrai gain de poids sur une photo,
+              utilise plutôt <strong>Convertir</strong> (WebP ou AVIF).
+            </div>
+          ) : (
+            <div style={{ fontWeight: 600, color: "#2a8a4a" }}>
+              {metaCleanStats.bytesRemoved > 0
+                ? `${formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées`
+                : "Aucune métadonnée trouvée dans le fichier"}
+            </div>
+          )}
         </div>
       )}
 
