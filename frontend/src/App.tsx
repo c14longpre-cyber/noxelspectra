@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import "./App.css";
 
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
@@ -35,6 +35,26 @@ type VectorizeMeta = {
   colorsUsed: number;
 };
 
+type AnalyzeCandidate = {
+  format: string;
+  quality: number;
+  size: number;
+  savingsPercent: number;
+};
+
+type AnalyzeResult = {
+  sourceFormat: string;
+  width: number;
+  height: number;
+  originalSize: number;
+  hasAlpha: boolean;
+  imageType: "graphic" | "photo";
+  metadataOverheadBytes: number;
+  recommendation: AnalyzeCandidate | null;
+  alternatives: AnalyzeCandidate[];
+  notes: string[];
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   const kb = bytes / 1024;
@@ -58,6 +78,11 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [stats, setStats] = useState<ConversionStats | null>(null);
+
+  const [analyzeLoading, setAnalyzeLoading] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
+  const convertSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [paletteCount, setPaletteCount] = useState(6);
   const [paletteLoading, setPaletteLoading] = useState(false);
@@ -111,6 +136,45 @@ export default function App() {
     setDetectError(null);
     setFaviconResultUrl(null);
     setFaviconError(null);
+    setAnalyzeResult(null);
+    setAnalyzeError(null);
+  }
+
+  async function handleAnalyze() {
+    if (!file) return;
+    setAnalyzeLoading(true);
+    setAnalyzeError(null);
+    setAnalyzeResult(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/analyze`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      setAnalyzeResult(data);
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "Analyse échouée");
+    } finally {
+      setAnalyzeLoading(false);
+    }
+  }
+
+  function applyRecommendation() {
+    if (!analyzeResult?.recommendation) return;
+    const rec = analyzeResult.recommendation;
+    if ((FORMATS as readonly string[]).includes(rec.format)) {
+      setFormat(rec.format as Format);
+    }
+    setMode("quality");
+    setQuality(rec.quality);
+    convertSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function handleConvert() {
@@ -360,138 +424,234 @@ export default function App() {
         />
       </div>
 
+      {/* ── Analyser / Smart Optimize ── */}
+      <div
+        style={{
+          marginTop: 24,
+          padding: 16,
+          borderRadius: 10,
+          border: "1px solid rgba(61,220,132,0.35)",
+          background: "linear-gradient(135deg, rgba(61,220,132,0.06), rgba(168,85,247,0.06))",
+        }}
+      >
+        <h2 style={{ fontSize: 17, margin: "0 0 4px" }}>✨ Analyser (recommandation intelligente)</h2>
+        <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+          Teste plusieurs formats réels et recommande le plus léger pour cette image précise.
+        </p>
+
+        <button
+          onClick={handleAnalyze}
+          disabled={!file || analyzeLoading}
+          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+        >
+          {analyzeLoading ? "Analyse en cours..." : "Analyser"}
+        </button>
+
+        {analyzeError && <p style={{ color: "red", marginTop: 16 }}>{analyzeError}</p>}
+
+        {analyzeResult && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
+              {analyzeResult.sourceFormat.toUpperCase()} — {analyzeResult.width}×{analyzeResult.height}px —{" "}
+              {formatBytes(analyzeResult.originalSize)} —{" "}
+              {analyzeResult.imageType === "graphic" ? "Graphique/logo" : "Photo"}
+              {analyzeResult.hasAlpha ? " — Transparent" : ""}
+            </div>
+
+            {analyzeResult.notes.length > 0 && (
+              <ul style={{ fontSize: 13, color: "#555", paddingLeft: 18, marginBottom: 12 }}>
+                {analyzeResult.notes.map((note, i) => (
+                  <li key={i}>{note}</li>
+                ))}
+              </ul>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {analyzeResult.alternatives.map((c) => {
+                const isRecommended =
+                  analyzeResult.recommendation &&
+                  c.format === analyzeResult.recommendation.format &&
+                  c.quality === analyzeResult.recommendation.quality;
+                return (
+                  <div
+                    key={c.format}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 12px",
+                      borderRadius: 8,
+                      background: isRecommended ? "rgba(61,220,132,0.12)" : "#f5f5f5",
+                      border: isRecommended ? "1px solid rgba(61,220,132,0.4)" : "1px solid transparent",
+                      fontSize: 14,
+                    }}
+                  >
+                    <span>
+                      {isRecommended && "🏆 "}
+                      {c.format.toUpperCase()} (q{c.quality})
+                    </span>
+                    <span>
+                      {formatBytes(c.size)}{" "}
+                      <span style={{ color: c.savingsPercent >= 0 ? "#2a8a4a" : "#c0392b" }}>
+                        ({c.savingsPercent >= 0 ? "-" : "+"}
+                        {Math.abs(c.savingsPercent)}%)
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {analyzeResult.recommendation && (
+              <button
+                onClick={applyRecommendation}
+                style={{ marginTop: 14, padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
+              >
+                Utiliser cette recommandation ↓
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Conversion ── */}
-      <div style={{ marginTop: 16 }}>
-        <label>
-          Format :{" "}
-          <select
-            value={format}
-            onChange={(e) => {
-              const next = e.target.value as Format;
-              setFormat(next);
-              if (!TARGET_SIZE_FORMATS.includes(next)) setMode("quality");
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <div ref={convertSectionRef}>
+        <h2 style={{ fontSize: 18, marginBottom: 4 }}>Convertir</h2>
+
+        <div style={{ marginTop: 16 }}>
+          <label>
+            Format :{" "}
+            <select
+              value={format}
+              onChange={(e) => {
+                const next = e.target.value as Format;
+                setFormat(next);
+                if (!TARGET_SIZE_FORMATS.includes(next)) setMode("quality");
+              }}
+            >
+              {FORMATS.map((f) => (
+                <option key={f} value={f}>{f.toUpperCase()}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div style={{ marginTop: 16, display: "flex", gap: 16, alignItems: "center" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input
+              type="radio"
+              checked={mode === "quality"}
+              onChange={() => setMode("quality")}
+            />
+            Qualité manuelle
+          </label>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              opacity: targetSizeAvailable ? 1 : 0.4,
+            }}
+            title={targetSizeAvailable ? "" : "Pas disponible pour PNG/GIF"}
+          >
+            <input
+              type="radio"
+              checked={mode === "targetSize"}
+              disabled={!targetSizeAvailable}
+              onChange={() => setMode("targetSize")}
+            />
+            Taille cible
+          </label>
+        </div>
+
+        {mode === "quality" && (
+          <div style={{ marginTop: 12 }}>
+            <label>
+              Qualité : {quality}
+              <input
+                type="range"
+                min={1}
+                max={100}
+                value={quality}
+                onChange={(e) => setQuality(Number(e.target.value))}
+                style={{ marginLeft: 8, verticalAlign: "middle" }}
+              />
+            </label>
+          </div>
+        )}
+
+        {mode === "targetSize" && targetSizeAvailable && (
+          <div style={{ marginTop: 12 }}>
+            <label>
+              Poids max (Ko) :{" "}
+              <input
+                type="number"
+                min={1}
+                value={targetSizeKB}
+                onChange={(e) => setTargetSizeKB(Number(e.target.value))}
+                style={{ width: 80 }}
+              />
+            </label>
+            <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+              La qualité sera ajustée automatiquement pour rester sous cette limite.
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={handleConvert}
+          disabled={!file || loading}
+          style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+        >
+          {loading ? "Conversion..." : "Convertir"}
+        </button>
+
+        {error && <p style={{ color: "red", marginTop: 16 }}>{error}</p>}
+
+        {stats && (
+          <div
+            style={{
+              marginTop: 20,
+              padding: 12,
+              background: "#f5f5f5",
+              borderRadius: 8,
+              fontSize: 14,
             }}
           >
-            {FORMATS.map((f) => (
-              <option key={f} value={f}>{f.toUpperCase()}</option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div style={{ marginTop: 16, display: "flex", gap: 16, alignItems: "center" }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <input
-            type="radio"
-            checked={mode === "quality"}
-            onChange={() => setMode("quality")}
-          />
-          Qualité manuelle
-        </label>
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 4,
-            opacity: targetSizeAvailable ? 1 : 0.4,
-          }}
-          title={targetSizeAvailable ? "" : "Pas disponible pour PNG/GIF"}
-        >
-          <input
-            type="radio"
-            checked={mode === "targetSize"}
-            disabled={!targetSizeAvailable}
-            onChange={() => setMode("targetSize")}
-          />
-          Taille cible
-        </label>
-      </div>
-
-      {mode === "quality" && (
-        <div style={{ marginTop: 12 }}>
-          <label>
-            Qualité : {quality}
-            <input
-              type="range"
-              min={1}
-              max={100}
-              value={quality}
-              onChange={(e) => setQuality(Number(e.target.value))}
-              style={{ marginLeft: 8, verticalAlign: "middle" }}
-            />
-          </label>
-        </div>
-      )}
-
-      {mode === "targetSize" && targetSizeAvailable && (
-        <div style={{ marginTop: 12 }}>
-          <label>
-            Poids max (Ko) :{" "}
-            <input
-              type="number"
-              min={1}
-              value={targetSizeKB}
-              onChange={(e) => setTargetSizeKB(Number(e.target.value))}
-              style={{ width: 80 }}
-            />
-          </label>
-          <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
-            La qualité sera ajustée automatiquement pour rester sous cette limite.
-          </div>
-        </div>
-      )}
-
-      <button
-        onClick={handleConvert}
-        disabled={!file || loading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {loading ? "Conversion..." : "Convertir"}
-      </button>
-
-      {error && <p style={{ color: "red", marginTop: 16 }}>{error}</p>}
-
-      {stats && (
-        <div
-          style={{
-            marginTop: 20,
-            padding: 12,
-            background: "#f5f5f5",
-            borderRadius: 8,
-            fontSize: 14,
-          }}
-        >
-          <div>Avant : {formatBytes(stats.originalSize)}</div>
-          <div>Après : {formatBytes(stats.outputSize)}</div>
-          <div style={{ fontWeight: 600, color: stats.reductionPct >= 0 ? "#2a8a4a" : "#c0392b" }}>
-            {stats.reductionPct >= 0
-              ? `Réduction de ${stats.reductionPct}%`
-              : `Augmentation de ${Math.abs(stats.reductionPct)}%`}
-          </div>
-          {mode === "targetSize" && (
-            <div style={{ marginTop: 4, color: "#888" }}>
-              Qualité utilisée : {stats.qualityUsed}
-              {!stats.metTarget && (
-                <span style={{ color: "#c0392b" }}>
-                  {" "}
-                  — impossible de descendre sous la limite demandée, taille minimale atteinte
-                </span>
-              )}
+            <div>Avant : {formatBytes(stats.originalSize)}</div>
+            <div>Après : {formatBytes(stats.outputSize)}</div>
+            <div style={{ fontWeight: 600, color: stats.reductionPct >= 0 ? "#2a8a4a" : "#c0392b" }}>
+              {stats.reductionPct >= 0
+                ? `Réduction de ${stats.reductionPct}%`
+                : `Augmentation de ${Math.abs(stats.reductionPct)}%`}
             </div>
-          )}
-        </div>
-      )}
-
-      {resultUrl && (
-        <div style={{ marginTop: 20 }}>
-          <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
-          <div style={{ marginTop: 8 }}>
-            <a href={resultUrl} download={`converted.${format}`}>
-              Télécharger le résultat
-            </a>
+            {mode === "targetSize" && (
+              <div style={{ marginTop: 4, color: "#888" }}>
+                Qualité utilisée : {stats.qualityUsed}
+                {!stats.metTarget && (
+                  <span style={{ color: "#c0392b" }}>
+                    {" "}
+                    — impossible de descendre sous la limite demandée, taille minimale atteinte
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+
+        {resultUrl && (
+          <div style={{ marginTop: 20 }}>
+            <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <div style={{ marginTop: 8 }}>
+              <a href={resultUrl} download={`converted.${format}`}>
+                Télécharger le résultat
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Redimensionner ── */}
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />

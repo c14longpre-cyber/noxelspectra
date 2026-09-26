@@ -736,6 +736,117 @@ app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Color detection failed" });
   }
 });
+// POST /api/analyze — multipart form: file
+// Real analysis, not guesses: actually encodes the image into several
+// candidate formats (WebP, AVIF, and JPEG or PNG depending on alpha),
+// measures the real output size of each, and recommends the smallest.
+// Also flags simple-graphic images (good vectorize candidates) and
+// stripped-out-EXIF/ICC savings.
+app.post("/api/analyze", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const originalSize = req.file.size;
+    const hasAlpha = !!meta.hasAlpha;
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+    const sourceFormat = meta.format || "unknown";
+
+    const metadataOverheadBytes =
+      (meta.exif ? meta.exif.length : 0) +
+      (meta.icc ? meta.icc.length : 0) +
+      (meta.iptc ? meta.iptc.length : 0) +
+      (meta.xmp ? meta.xmp.length : 0);
+
+    // Downscaled working copy for fast color-complexity analysis.
+    const ANALYZE_MAX_DIM = 400;
+    const { data, info } = await sharp(req.file.buffer)
+      .resize(ANALYZE_MAX_DIM, ANALYZE_MAX_DIM, { fit: "inside", withoutEnlargement: true })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const channels = info.channels;
+    const ALPHA_THRESHOLD = 128;
+    const buckets = new Set();
+    let opaqueCount = 0;
+    for (let i = 0; i < data.length; i += channels) {
+      if (data[i + 3] < ALPHA_THRESHOLD) continue;
+      opaqueCount++;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      buckets.add((r >> 4) + "-" + (g >> 4) + "-" + (b >> 4));
+    }
+    const distinctColorBuckets = buckets.size;
+    const complexityRatio = opaqueCount > 0 ? distinctColorBuckets / opaqueCount : 0;
+    const isSimpleGraphic = distinctColorBuckets <= 48 || complexityRatio < 0.02;
+    const imageType = isSimpleGraphic ? "graphic" : "photo";
+
+    // Real candidate encodes — actual bytes, not estimates.
+    const testFormats: { format: SupportedFormat; quality: number }[] = [
+      { format: "webp", quality: 80 },
+      { format: "avif", quality: 75 },
+    ];
+    if (!hasAlpha) testFormats.push({ format: "jpeg", quality: 80 });
+    if (hasAlpha) testFormats.push({ format: "png", quality: 90 });
+
+    const candidates: { format: string; quality: number; size: number; savingsPercent: number }[] = [];
+    for (const t of testFormats) {
+      try {
+        const out = await encodeAtQuality(req.file.buffer, t.format, t.quality);
+        candidates.push({
+          format: t.format,
+          quality: t.quality,
+          size: out.length,
+          savingsPercent: Math.round((1 - out.length / originalSize) * 1000) / 10,
+        });
+      } catch (e) {
+        console.error("Analyze: skipping format " + t.format, e);
+      }
+    }
+    candidates.sort((a, b) => a.size - b.size);
+    const recommendation = candidates[0] || null;
+
+    const notes: string[] = [];
+    if (metadataOverheadBytes > 5000) {
+      notes.push(
+        Math.round(metadataOverheadBytes / 1024) +
+          " KB of embedded metadata (EXIF/ICC/etc.) could be stripped."
+      );
+    }
+    if (isSimpleGraphic && hasAlpha) {
+      notes.push(
+        "This looks like a simple graphic or logo — vectorizing to SVG may give an even smaller, infinitely scalable result. Try the Vectorizer."
+      );
+    }
+    if (sourceFormat === "png" && imageType === "photo") {
+      notes.push(
+        "This PNG looks photographic — PNG's lossless compression is likely making the file much larger than necessary."
+      );
+    }
+
+    return res.json({
+      ok: true,
+      sourceFormat,
+      width,
+      height,
+      originalSize,
+      hasAlpha,
+      imageType,
+      metadataOverheadBytes,
+      recommendation,
+      alternatives: candidates,
+      notes,
+    });
+  } catch (err) {
+    console.error("Analyze error:", err);
+    return res.status(500).json({ ok: false, error: "Analysis failed" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });
