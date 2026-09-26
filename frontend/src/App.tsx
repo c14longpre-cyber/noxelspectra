@@ -303,6 +303,20 @@ export default function App() {
   const [pixelateSize, setPixelateSize] = useState(0);
   const [reduceNoise, setReduceNoise] = useState(0);
   const [vignetteIntensity, setVignetteIntensity] = useState(0);
+  const [quantizeColors, setQuantizeColors] = useState(0);
+
+  const [shadowOffsetX, setShadowOffsetX] = useState(15);
+  const [shadowOffsetY, setShadowOffsetY] = useState(15);
+  const [shadowBlur, setShadowBlur] = useState(8);
+  const [shadowOpacity, setShadowOpacity] = useState(60);
+  const [shadowLoading, setShadowLoading] = useState(false);
+  const [shadowError, setShadowError] = useState<string | null>(null);
+  const [shadowResultUrl, setShadowResultUrl] = useState<string | null>(null);
+
+  const [glowIntensity, setGlowIntensity] = useState(12);
+  const [glowLoading, setGlowLoading] = useState(false);
+  const [glowError, setGlowError] = useState<string | null>(null);
+  const [glowResultUrl, setGlowResultUrl] = useState<string | null>(null);
 
   const [cropNaturalWidth, setCropNaturalWidth] = useState(0);
   const [cropNaturalHeight, setCropNaturalHeight] = useState(0);
@@ -373,6 +387,10 @@ export default function App() {
     setCropY(0);
     setCropWidth(0);
     setCropHeight(0);
+    setShadowResultUrl(null);
+    setShadowError(null);
+    setGlowResultUrl(null);
+    setGlowError(null);
   }
 
   async function handleAnalyze() {
@@ -719,6 +737,65 @@ export default function App() {
     }
   }
 
+  async function handleGlow() {
+    if (!file) return;
+    setGlowLoading(true);
+    setGlowError(null);
+    setGlowResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("intensity", String(glowIntensity));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/glow`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setGlowResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setGlowError(err instanceof Error ? err.message : "Effet lumineux échoué");
+    } finally {
+      setGlowLoading(false);
+    }
+  }
+
+  async function handleDropShadow() {
+    if (!file) return;
+    setShadowLoading(true);
+    setShadowError(null);
+    setShadowResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("offsetX", String(shadowOffsetX));
+    formData.append("offsetY", String(shadowOffsetY));
+    formData.append("blur", String(shadowBlur));
+    formData.append("opacity", String(shadowOpacity));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/drop-shadow`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setShadowResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setShadowError(err instanceof Error ? err.message : "Ombre portée échouée");
+    } finally {
+      setShadowLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!file || !filtersTouched) return;
     const timer = setTimeout(() => {
@@ -726,7 +803,7 @@ export default function App() {
     }, 500);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brightness, contrast, saturation, sharpenAmount, blurAmount, effect, invertColors, pixelateSize, reduceNoise, vignetteIntensity, filtersTouched]);
+  }, [brightness, contrast, saturation, sharpenAmount, blurAmount, effect, invertColors, pixelateSize, reduceNoise, vignetteIntensity, quantizeColors, filtersTouched]);
 
   async function handleAdjust() {
     if (!file) return;
@@ -746,6 +823,7 @@ export default function App() {
     formData.append("pixelate", String(pixelateSize));
     formData.append("reduceNoise", String(reduceNoise));
     formData.append("vignetteIntensity", String(vignetteIntensity));
+    formData.append("quantizeColors", String(quantizeColors));
 
     try {
       const res = await fetch(`${apiUrl}/api/adjust`, {
@@ -1535,6 +1613,21 @@ export default function App() {
             <option value={7}>Forte</option>
           </select>
         </label>
+        <label>
+          Quantize (nb de couleurs) : {quantizeColors === 0 ? "Désactivé" : quantizeColors}
+          <input
+            type="range"
+            min={0}
+            max={256}
+            step={4}
+            value={quantizeColors}
+            onChange={(e) => { setQuantizeColors(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+          <div style={{ fontSize: 12, color: "#888" }}>
+            Fonctionne uniquement quand le format de sortie est PNG.
+          </div>
+        </label>
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
@@ -1952,6 +2045,138 @@ export default function App() {
           <a href={metaCleanResultUrl} download="cleaned">
             Télécharger le fichier nettoyé
           </a>
+        </div>
+      )}
+
+      {/* ── Ombre portée ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Ombre portée</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Fonctionne mieux sur une image avec transparence (logo, icône vectorisée).
+      </p>
+
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+        <label>
+          Décalage X : {shadowOffsetX}px
+          <input
+            type="range"
+            min={-50}
+            max={50}
+            value={shadowOffsetX}
+            onChange={(e) => setShadowOffsetX(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Décalage Y : {shadowOffsetY}px
+          <input
+            type="range"
+            min={-50}
+            max={50}
+            value={shadowOffsetY}
+            onChange={(e) => setShadowOffsetY(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Flou : {shadowBlur}
+          <input
+            type="range"
+            min={0}
+            max={30}
+            value={shadowBlur}
+            onChange={(e) => setShadowBlur(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Opacité : {shadowOpacity}%
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={shadowOpacity}
+            onChange={(e) => setShadowOpacity(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleDropShadow}
+        disabled={!file || shadowLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {shadowLoading ? "Application..." : "Appliquer"}
+      </button>
+
+      {shadowError && <p style={{ color: "red", marginTop: 16 }}>{shadowError}</p>}
+
+      {shadowResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          <div
+            style={{
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              padding: 12,
+              background: "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
+            }}
+          >
+            <img src={shadowResultUrl} alt="Résultat" style={{ maxWidth: "100%", display: "block" }} />
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <a href={shadowResultUrl} download="drop-shadow.png">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── Effet lumineux (Glow) ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Effet lumineux (Glow)</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Ajoute un halo lumineux doux, utile pour des visuels promotionnels.
+      </p>
+
+      <label>
+        Intensité : {glowIntensity}
+        <input
+          type="range"
+          min={0}
+          max={30}
+          value={glowIntensity}
+          onChange={(e) => setGlowIntensity(Number(e.target.value))}
+          style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+        />
+      </label>
+
+      <div>
+        <button
+          onClick={handleGlow}
+          disabled={!file || glowLoading}
+          style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+        >
+          {glowLoading ? "Application..." : "Appliquer"}
+        </button>
+      </div>
+
+      {glowError && <p style={{ color: "red", marginTop: 16 }}>{glowError}</p>}
+
+      {glowResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={glowResultUrl} />
+          ) : (
+            <img src={glowResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={glowResultUrl} download="glow">
+              Télécharger le résultat
+            </a>
+          </div>
         </div>
       )}
     </div>

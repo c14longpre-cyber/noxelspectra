@@ -1155,6 +1155,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
     const reduceNoiseRaw = parseInt(req.body.reduceNoise) || 0;
     const reduceNoise = [3, 5, 7].includes(reduceNoiseRaw) ? reduceNoiseRaw : 0;
     const vignetteIntensity = Math.min(100, Math.max(0, parseInt(req.body.vignetteIntensity) || 0));
+    const quantizeColors = Math.min(256, Math.max(0, parseInt(req.body.quantizeColors) || 0));
 
     const originalWidth = meta.width || 0;
     const originalHeight = meta.height || 0;
@@ -1215,7 +1216,11 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png(
+          quantizeColors > 0
+            ? { quality, palette: true, colours: quantizeColors }
+            : { quality }
+        );
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1337,6 +1342,172 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("Crop error:", err);
     return res.status(500).json({ ok: false, error: "Crop failed" });
+  }
+});
+// POST /api/drop-shadow — multipart form:
+//   file        required
+//   offsetX     optional, px (default 15)
+//   offsetY     optional, px (default 15)
+//   blur        optional, sigma (default 8, min 0.3 if > 0)
+//   opacity     optional 0-100 (default 60)
+// Works best on images with transparency (logos, vectorized icons);
+// on fully-opaque images it shadows the whole rectangle.
+app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+
+    const offsetX = parseInt(req.body.offsetX) || 15;
+    const offsetY = parseInt(req.body.offsetY) || 15;
+    const blurAmount = Math.max(0.3, parseFloat(req.body.blur) || 8);
+    const opacity = Math.min(100, Math.max(0, parseInt(req.body.opacity) || 60)) / 100;
+
+    const padding = Math.ceil(blurAmount * 3) + Math.max(Math.abs(offsetX), Math.abs(offsetY));
+    const canvasWidth = width + padding * 2;
+    const canvasHeight = height + padding * 2;
+
+    const sourceWithAlpha = await sharp(req.file.buffer)
+      .ensureAlpha()
+      .toBuffer();
+
+    // Build the shadow: take the alpha channel as a mask, recolor it solid
+    // black at the requested opacity, then blur it for a soft edge.
+    const alphaMask = await sharp(sourceWithAlpha).extractChannel(3).toBuffer();
+    const shadowLayer = await sharp({
+      create: {
+        width,
+        height,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: alphaMask, blend: "dest-in" }])
+      .ensureAlpha()
+      .toBuffer();
+
+    const blurredShadow = await sharp(shadowLayer)
+      .blur(blurAmount)
+      .toBuffer();
+
+    const shadowWithOpacity = await sharp(blurredShadow)
+      .composite([
+        {
+          input: {
+            create: {
+              width,
+              height,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: opacity },
+            },
+          },
+          blend: "dest-in",
+        },
+      ])
+      .toBuffer();
+
+    const outputBuffer = await sharp({
+      create: {
+        width: canvasWidth,
+        height: canvasHeight,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([
+        {
+          input: shadowWithOpacity,
+          left: padding + offsetX,
+          top: padding + offsetY,
+        },
+        { input: sourceWithAlpha, left: padding, top: padding },
+      ])
+      .png()
+      .toBuffer();
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="drop-shadow.png"'
+    );
+    res.setHeader("X-Output-Width", String(canvasWidth));
+    res.setHeader("X-Output-Height", String(canvasHeight));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Output-Width, X-Output-Height"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Drop shadow error:", err);
+    return res.status(500).json({ ok: false, error: "Drop shadow failed" });
+  }
+});
+// POST /api/glow — multipart form:
+//   file        required
+//   intensity   optional 0-30 (default 12) — controls both blur radius
+//               and brightness boost of the "screen"-blended glow layer
+//   format      optional, default keeps the original format
+//   quality     optional 1-100, default 90 (ignored for png/gif)
+app.post("/api/glow", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+    const intensity = Math.min(30, Math.max(0, parseFloat(req.body.intensity) || 12));
+
+    const sigma = Math.max(0.3, intensity * 0.3);
+    const glowLayer = await sharp(req.file.buffer)
+      .blur(sigma)
+      .modulate({ brightness: 1 + intensity / 30 })
+      .toBuffer();
+
+    let pipeline = sharp(req.file.buffer).composite([
+      { input: glowLayer, blend: "screen" },
+    ]);
+
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="glow.' + format + '"'
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Glow error:", err);
+    return res.status(500).json({ ok: false, error: "Glow failed" });
   }
 });
 app.listen(PORT, () => {
