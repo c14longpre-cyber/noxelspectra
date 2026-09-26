@@ -99,6 +99,15 @@ export default function App() {
   const [resizeResultUrl, setResizeResultUrl] = useState<string | null>(null);
   const [resizeStats, setResizeStats] = useState<ResizeStats | null>(null);
 
+  const [responsiveFormat, setResponsiveFormat] = useState<Format>("webp");
+  const [responsiveQuality, setResponsiveQuality] = useState(80);
+  const [responsiveLoading, setResponsiveLoading] = useState(false);
+  const [responsiveError, setResponsiveError] = useState<string | null>(null);
+  const [responsiveResultUrl, setResponsiveResultUrl] = useState<string | null>(null);
+  const [responsiveSrcset, setResponsiveSrcset] = useState<string | null>(null);
+  const [responsiveSizes, setResponsiveSizes] = useState<string | null>(null);
+  const [srcsetCopied, setSrcsetCopied] = useState(false);
+
   const [vectorizeColors, setVectorizeColors] = useState(6);
   const [vectorizeFilename, setVectorizeFilename] = useState("vectorized");
   const [vectorizeLoading, setVectorizeLoading] = useState(false);
@@ -138,6 +147,10 @@ export default function App() {
     setFaviconError(null);
     setAnalyzeResult(null);
     setAnalyzeError(null);
+    setResponsiveResultUrl(null);
+    setResponsiveSrcset(null);
+    setResponsiveSizes(null);
+    setResponsiveError(null);
   }
 
   async function handleAnalyze() {
@@ -291,6 +304,51 @@ export default function App() {
     } finally {
       setResizeLoading(false);
     }
+  }
+
+  async function handleGenerateResponsive() {
+    if (!file) return;
+    setResponsiveLoading(true);
+    setResponsiveError(null);
+    setResponsiveResultUrl(null);
+    setResponsiveSrcset(null);
+    setResponsiveSizes(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("format", responsiveFormat);
+    formData.append("quality", String(responsiveQuality));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/responsive`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+
+      const srcsetHeader = res.headers.get("X-Srcset");
+      const sizesHeader = res.headers.get("X-Sizes-Generated");
+
+      const blob = await res.blob();
+      setResponsiveResultUrl(URL.createObjectURL(blob));
+      setResponsiveSrcset(srcsetHeader ? decodeURIComponent(srcsetHeader) : null);
+      setResponsiveSizes(sizesHeader);
+    } catch (err) {
+      setResponsiveError(err instanceof Error ? err.message : "Génération échouée");
+    } finally {
+      setResponsiveLoading(false);
+    }
+  }
+
+  function copySrcset() {
+    if (!responsiveSrcset) return;
+    navigator.clipboard.writeText(responsiveSrcset).then(() => {
+      setSrcsetCopied(true);
+      setTimeout(() => setSrcsetCopied(false), 1200);
+    });
   }
 
   async function handleDetectColors() {
@@ -749,6 +807,89 @@ export default function App() {
               Télécharger le résultat
             </a>
           </div>
+        </div>
+      )}
+
+      {/* ── Tailles responsives / srcset ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Générer des tailles responsives (srcset)</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Produit plusieurs largeurs (320 à 1920px, jamais agrandies au-delà de l'original) et
+        un <code>srcset</code> prêt à coller dans ton HTML.
+      </p>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
+        <label>
+          Format :{" "}
+          <select
+            value={responsiveFormat}
+            onChange={(e) => setResponsiveFormat(e.target.value as Format)}
+          >
+            {FORMATS.filter((f) => f !== "gif").map((f) => (
+              <option key={f} value={f}>{f.toUpperCase()}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Qualité : {responsiveQuality}
+          <input
+            type="range"
+            min={1}
+            max={100}
+            value={responsiveQuality}
+            onChange={(e) => setResponsiveQuality(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle" }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleGenerateResponsive}
+        disabled={!file || responsiveLoading}
+        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {responsiveLoading ? "Génération..." : "Générer les tailles"}
+      </button>
+
+      {responsiveError && <p style={{ color: "red", marginTop: 16 }}>{responsiveError}</p>}
+
+      {responsiveSizes && (
+        <div style={{ marginTop: 16, fontSize: 13, color: "#888" }}>
+          Tailles générées : {responsiveSizes.split(",").join("px, ")}px
+        </div>
+      )}
+
+      {responsiveSrcset && (
+        <div style={{ marginTop: 12 }}>
+          <div
+            style={{
+              background: "#f5f5f5",
+              borderRadius: 8,
+              padding: 12,
+              fontSize: 12,
+              fontFamily: "monospace",
+              wordBreak: "break-all",
+              maxHeight: 120,
+              overflowY: "auto",
+            }}
+          >
+            {responsiveSrcset}
+          </div>
+          <button
+            onClick={copySrcset}
+            style={{ marginTop: 8, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
+          >
+            {srcsetCopied ? "Copié !" : "Copier le srcset"}
+          </button>
+        </div>
+      )}
+
+      {responsiveResultUrl && (
+        <div style={{ marginTop: 16 }}>
+          <a href={responsiveResultUrl} download="responsive-images.zip">
+            Télécharger le pack (responsive-images.zip)
+          </a>
         </div>
       )}
 

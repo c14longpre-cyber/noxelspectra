@@ -847,6 +847,113 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Analysis failed" });
   }
 });
+// POST /api/responsive — multipart form:
+//   file      required
+//   widths    optional, comma-separated (e.g. "320,640,1024") — default set below
+//   format    optional, default webp
+//   quality   optional 1-100, default 80 (ignored for png/gif)
+// Generates one resized file per width (never upscaling past the original),
+// zips them together, and returns a ready-to-use srcset string in a header.
+app.post("/api/responsive", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const originalWidth = meta.width || 0;
+
+    const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1600, 1920];
+    let requestedWidths: number[] = DEFAULT_WIDTHS;
+    if (req.body.widths) {
+      const parsed = String(req.body.widths)
+        .split(",")
+        .map((w: string) => parseInt(w.trim()))
+        .filter((w: number) => !isNaN(w) && w > 0);
+      if (parsed.length > 0) requestedWidths = parsed;
+    }
+
+    let widths = requestedWidths.filter((w) => w <= originalWidth);
+    if (widths.length === 0) widths = [originalWidth];
+    widths = [...new Set(widths)].sort((a, b) => a - b);
+
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      format = "webp";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 80));
+
+    const baseName =
+      (req.file.originalname || "image")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^a-zA-Z0-9_-]/g, "-")
+        .replace(/-+/g, "-") || "image";
+
+    const buffers: { width: number; buffer: Buffer }[] = [];
+    for (const w of widths) {
+      let pipeline = sharp(req.file.buffer).resize({ width: w, withoutEnlargement: true });
+      switch (format) {
+        case "jpeg":
+          pipeline = pipeline.jpeg({ quality });
+          break;
+        case "png":
+          pipeline = pipeline.png({ quality });
+          break;
+        case "webp":
+          pipeline = pipeline.webp({ quality });
+          break;
+        case "avif":
+          pipeline = pipeline.avif({ quality });
+          break;
+        case "gif":
+          pipeline = pipeline.gif();
+          break;
+      }
+      const buf = await pipeline.toBuffer();
+      buffers.push({ width: w, buffer: buf });
+    }
+
+    const srcsetParts = buffers.map(
+      (b) => baseName + "-" + b.width + "." + format + " " + b.width + "w"
+    );
+    const srcset = srcsetParts.join(", ");
+    const largestWidth = widths[widths.length - 1];
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="responsive-images.zip"'
+    );
+    res.setHeader("X-Srcset", encodeURIComponent(srcset));
+    res.setHeader("X-Sizes-Generated", widths.join(","));
+    res.setHeader("X-Default-Src", baseName + "-" + largestWidth + "." + format);
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Srcset, X-Sizes-Generated, X-Default-Src"
+    );
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    archive.on("error", (err) => {
+      throw err;
+    });
+    archive.pipe(res);
+    for (const b of buffers) {
+      archive.append(b.buffer, {
+        name: baseName + "-" + b.width + "." + format,
+      });
+    }
+    const htmlSnippet =
+      "<img\n  src=\"" + baseName + "-" + largestWidth + "." + format + "\"\n  srcset=\"" + srcset + "\"\n  sizes=\"100vw\"\n  alt=\"\"\n/>";
+    archive.append(htmlSnippet, { name: "example.html" });
+    await archive.finalize();
+  } catch (err) {
+    console.error("Responsive sizes error:", err);
+    if (!res.headersSent) {
+      return res.status(500).json({ ok: false, error: "Responsive size generation failed" });
+    }
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });
