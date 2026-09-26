@@ -954,6 +954,148 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
     }
   }
 });
+// POST /api/strip-metadata — multipart form: file
+// Re-encodes the image in its original format at high fidelity, without
+// carrying over EXIF/GPS/ICC/IPTC/XMP data. Reports how many bytes of
+// metadata were actually removed.
+app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const metadataBytesRemoved =
+      (meta.exif ? meta.exif.length : 0) +
+      (meta.icc ? meta.icc.length : 0) +
+      (meta.iptc ? meta.iptc.length : 0) +
+      (meta.xmp ? meta.xmp.length : 0);
+
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    const sourceFormat = meta.format || "png";
+    const format: SupportedFormat = (allowedFormats.includes(sourceFormat) ? sourceFormat : "png") as SupportedFormat;
+
+    // Sharp only carries over metadata when withMetadata() is called, so a
+    // plain re-encode already strips it — a high quality keeps this
+    // effectively lossless to the eye for a "clean my file" action.
+    let pipeline = sharp(req.file.buffer);
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality: 92 });
+        break;
+      case "png":
+        pipeline = pipeline.png();
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality: 92 });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality: 88 });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="cleaned.' + format + '"'
+    );
+    res.setHeader("X-Original-Size", String(req.file.size));
+    res.setHeader("X-Output-Size", String(outputBuffer.length));
+    res.setHeader("X-Metadata-Bytes-Removed", String(metadataBytesRemoved));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Strip metadata error:", err);
+    return res.status(500).json({ ok: false, error: "Metadata cleanup failed" });
+  }
+});
+
+// POST /api/rotate — multipart form:
+//   file             required
+//   angle            optional, degrees (default 0) — 90/180/270 or arbitrary
+//   flipHorizontal   optional "true" — mirror left-right
+//   flipVertical     optional "true" — mirror top-bottom
+//   format           optional, default keeps the original format
+//   quality          optional 1-100, default 90 (ignored for png/gif)
+app.post("/api/rotate", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const hasAlpha = !!meta.hasAlpha;
+
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+
+    const angle = parseInt(req.body.angle) || 0;
+    const flipHorizontal = req.body.flipHorizontal === "true";
+    const flipVertical = req.body.flipVertical === "true";
+
+    let pipeline = sharp(req.file.buffer);
+    if (angle !== 0) {
+      pipeline = pipeline.rotate(angle, {
+        background: hasAlpha
+          ? { r: 0, g: 0, b: 0, alpha: 0 }
+          : { r: 255, g: 255, b: 255 },
+      });
+    }
+    if (flipHorizontal) pipeline = pipeline.flop();
+    if (flipVertical) pipeline = pipeline.flip();
+
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const { data: outputBuffer, info } = await pipeline.toBuffer({ resolveWithObject: true });
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="rotated.' + format + '"'
+    );
+    res.setHeader("X-Output-Width", String(info.width));
+    res.setHeader("X-Output-Height", String(info.height));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Output-Width, X-Output-Height"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Rotate error:", err);
+    return res.status(500).json({ ok: false, error: "Rotate/flip failed" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });

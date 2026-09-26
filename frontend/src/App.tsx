@@ -55,6 +55,17 @@ type AnalyzeResult = {
   notes: string[];
 };
 
+type MetaCleanStats = {
+  originalSize: number;
+  outputSize: number;
+  bytesRemoved: number;
+};
+
+type RotateDims = {
+  width: number;
+  height: number;
+};
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   const kb = bytes / 1024;
@@ -124,6 +135,19 @@ export default function App() {
   const [faviconError, setFaviconError] = useState<string | null>(null);
   const [faviconResultUrl, setFaviconResultUrl] = useState<string | null>(null);
 
+  const [metaCleanLoading, setMetaCleanLoading] = useState(false);
+  const [metaCleanError, setMetaCleanError] = useState<string | null>(null);
+  const [metaCleanResultUrl, setMetaCleanResultUrl] = useState<string | null>(null);
+  const [metaCleanStats, setMetaCleanStats] = useState<MetaCleanStats | null>(null);
+
+  const [rotateAngle, setRotateAngle] = useState(0);
+  const [flipHorizontal, setFlipHorizontal] = useState(false);
+  const [flipVertical, setFlipVertical] = useState(false);
+  const [rotateLoading, setRotateLoading] = useState(false);
+  const [rotateError, setRotateError] = useState<string | null>(null);
+  const [rotateResultUrl, setRotateResultUrl] = useState<string | null>(null);
+  const [rotateDims, setRotateDims] = useState<RotateDims | null>(null);
+
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const targetSizeAvailable = TARGET_SIZE_FORMATS.includes(format);
 
@@ -151,6 +175,12 @@ export default function App() {
     setResponsiveSrcset(null);
     setResponsiveSizes(null);
     setResponsiveError(null);
+    setMetaCleanResultUrl(null);
+    setMetaCleanStats(null);
+    setMetaCleanError(null);
+    setRotateResultUrl(null);
+    setRotateDims(null);
+    setRotateError(null);
   }
 
   async function handleAnalyze() {
@@ -459,6 +489,85 @@ export default function App() {
       setFaviconError(err instanceof Error ? err.message : "Génération échouée");
     } finally {
       setFaviconLoading(false);
+    }
+  }
+
+  async function handleStripMetadata() {
+    if (!file) return;
+    setMetaCleanLoading(true);
+    setMetaCleanError(null);
+    setMetaCleanResultUrl(null);
+    setMetaCleanStats(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/strip-metadata`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+
+      const originalSize = Number(res.headers.get("X-Original-Size") || file.size);
+      const outputSize = Number(res.headers.get("X-Output-Size") || 0);
+      const bytesRemoved = Number(res.headers.get("X-Metadata-Bytes-Removed") || 0);
+
+      const blob = await res.blob();
+      setMetaCleanResultUrl(URL.createObjectURL(blob));
+      setMetaCleanStats({ originalSize, outputSize, bytesRemoved });
+    } catch (err) {
+      setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
+    } finally {
+      setMetaCleanLoading(false);
+    }
+  }
+
+  function adjustAngle(delta: number) {
+    setRotateAngle((prev) => {
+      let next = prev + delta;
+      if (next > 180) next -= 360;
+      if (next < -180) next += 360;
+      return next;
+    });
+  }
+
+  async function handleRotate() {
+    if (!file) return;
+    setRotateLoading(true);
+    setRotateError(null);
+    setRotateResultUrl(null);
+    setRotateDims(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("angle", String(rotateAngle));
+    formData.append("flipHorizontal", String(flipHorizontal));
+    formData.append("flipVertical", String(flipVertical));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/rotate`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+
+      const width = Number(res.headers.get("X-Output-Width") || 0);
+      const height = Number(res.headers.get("X-Output-Height") || 0);
+
+      const blob = await res.blob();
+      setRotateResultUrl(URL.createObjectURL(blob));
+      setRotateDims({ width, height });
+    } catch (err) {
+      setRotateError(err instanceof Error ? err.message : "Rotation échouée");
+    } finally {
+      setRotateLoading(false);
     }
   }
 
@@ -810,6 +919,101 @@ export default function App() {
         </div>
       )}
 
+      {/* ── Rotation / Miroir ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rotation / Miroir</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Tourne ou retourne l'image sélectionnée ci-dessus.
+      </p>
+
+      <div style={{ marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            onClick={() => adjustAngle(-5)}
+            style={{ padding: "6px 12px", fontSize: 15, cursor: "pointer" }}
+          >
+            − 5°
+          </button>
+          <input
+            type="number"
+            value={rotateAngle}
+            onChange={(e) => setRotateAngle(Number(e.target.value))}
+            style={{ width: 70, textAlign: "center", fontSize: 15, padding: "6px 4px" }}
+          />
+          <span>°</span>
+          <button
+            onClick={() => adjustAngle(5)}
+            style={{ padding: "6px 12px", fontSize: 15, cursor: "pointer" }}
+          >
+            + 5°
+          </button>
+        </div>
+        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+          {[0, 90, 180, 270].map((preset) => (
+            <button
+              key={preset}
+              onClick={() => setRotateAngle(preset)}
+              style={{
+                padding: "4px 10px",
+                fontSize: 12,
+                cursor: "pointer",
+                background: rotateAngle === preset ? "#e0e0e0" : "#fff",
+                border: "1px solid #ddd",
+                borderRadius: 4,
+              }}
+            >
+              {preset}°
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 16 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={flipHorizontal}
+            onChange={(e) => setFlipHorizontal(e.target.checked)}
+          />
+          Miroir horizontal
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={flipVertical}
+            onChange={(e) => setFlipVertical(e.target.checked)}
+          />
+          Miroir vertical
+        </label>
+      </div>
+
+      <button
+        onClick={handleRotate}
+        disabled={!file || rotateLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {rotateLoading ? "Application..." : "Appliquer"}
+      </button>
+
+      {rotateError && <p style={{ color: "red", marginTop: 16 }}>{rotateError}</p>}
+
+      {rotateResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          <img src={rotateResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          {rotateDims && (
+            <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
+              {rotateDims.width}×{rotateDims.height}px
+            </div>
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={rotateResultUrl} download="rotated">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ── Tailles responsives / srcset ── */}
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
@@ -1120,6 +1324,53 @@ export default function App() {
         <div style={{ marginTop: 16 }}>
           <a href={faviconResultUrl} download="favicon-package.zip">
             Télécharger le pack (favicon-package.zip)
+          </a>
+        </div>
+      )}
+
+      {/* ── Nettoyer les métadonnées ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Nettoyer les métadonnées</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Retire les données EXIF/GPS/ICC embarquées (utile pour la vie privée) sans changer
+        le format ni visiblement la qualité.
+      </p>
+
+      <button
+        onClick={handleStripMetadata}
+        disabled={!file || metaCleanLoading}
+        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {metaCleanLoading ? "Nettoyage..." : "Nettoyer les métadonnées"}
+      </button>
+
+      {metaCleanError && <p style={{ color: "red", marginTop: 16 }}>{metaCleanError}</p>}
+
+      {metaCleanStats && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: 12,
+            background: "#f5f5f5",
+            borderRadius: 8,
+            fontSize: 14,
+          }}
+        >
+          <div>Avant : {formatBytes(metaCleanStats.originalSize)}</div>
+          <div>Après : {formatBytes(metaCleanStats.outputSize)}</div>
+          <div style={{ fontWeight: 600, color: "#2a8a4a" }}>
+            {metaCleanStats.bytesRemoved > 0
+              ? `${formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées`
+              : "Aucune métadonnée trouvée dans le fichier"}
+          </div>
+        </div>
+      )}
+
+      {metaCleanResultUrl && (
+        <div style={{ marginTop: 16 }}>
+          <a href={metaCleanResultUrl} download="cleaned">
+            Télécharger le fichier nettoyé
           </a>
         </div>
       )}
