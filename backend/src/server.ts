@@ -1109,6 +1109,236 @@ app.post("/api/rotate", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Rotate/flip failed" });
   }
 });
+// Standard sepia color matrix — a well-known, public-domain color
+// transform (not tied to any specific product), used widely across
+// open-source image tools.
+const SEPIA_MATRIX: [[number, number, number], [number, number, number], [number, number, number]] = [
+  [0.393, 0.769, 0.189],
+  [0.349, 0.686, 0.168],
+  [0.272, 0.534, 0.131],
+];
+
+// POST /api/adjust — multipart form:
+//   file          required
+//   brightness    optional, 0.3-2 (default 1, sharp modulate multiplier)
+//   contrast      optional, 0.3-2 (default 1, linear transform around midpoint)
+//   saturation    optional, 0-2 (default 1, sharp modulate multiplier)
+//   sharpen       optional, 0-10 (default 0, sigma — 0 disables)
+//   blurAmount    optional, 0-20 (default 0, sigma — 0 disables)
+//   effect        optional "none" | "grayscale" | "sepia" (default none)
+//   invert        optional "true" — inverts colors, preserves alpha
+//   format        optional, default keeps the original format
+//   quality       optional 1-100, default 90 (ignored for png/gif)
+app.post("/api/adjust", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+
+    const brightness = Math.min(2, Math.max(0.3, parseFloat(req.body.brightness) || 1));
+    const contrast = Math.min(2, Math.max(0.3, parseFloat(req.body.contrast) || 1));
+    const saturation = Math.min(2, Math.max(0, parseFloat(req.body.saturation) || 1));
+    const sharpenAmount = Math.min(10, Math.max(0, parseFloat(req.body.sharpen) || 0));
+    const blurAmount = Math.min(20, Math.max(0, parseFloat(req.body.blurAmount) || 0));
+    const effect = req.body.effect === "grayscale" || req.body.effect === "sepia" ? req.body.effect : "none";
+    const invert = req.body.invert === "true";
+    const pixelateSize = Math.min(50, Math.max(0, parseInt(req.body.pixelate) || 0));
+    const reduceNoiseRaw = parseInt(req.body.reduceNoise) || 0;
+    const reduceNoise = [3, 5, 7].includes(reduceNoiseRaw) ? reduceNoiseRaw : 0;
+    const vignetteIntensity = Math.min(100, Math.max(0, parseInt(req.body.vignetteIntensity) || 0));
+
+    const originalWidth = meta.width || 0;
+    const originalHeight = meta.height || 0;
+
+    let pipeline = sharp(req.file.buffer);
+    if (pixelateSize > 1 && originalWidth > 0 && originalHeight > 0) {
+      const downW = Math.max(1, Math.round(originalWidth / pixelateSize));
+      const downH = Math.max(1, Math.round(originalHeight / pixelateSize));
+      const smallBuf = await sharp(req.file.buffer)
+        .resize(downW, downH, { kernel: "nearest" })
+        .toBuffer();
+      pipeline = sharp(smallBuf).resize(originalWidth, originalHeight, {
+        kernel: "nearest",
+      });
+    }
+
+    if (reduceNoise > 0) {
+      pipeline = pipeline.median(reduceNoise);
+    }
+
+    if (brightness !== 1 || saturation !== 1) {
+      pipeline = pipeline.modulate({ brightness, saturation });
+    }
+    if (contrast !== 1) {
+      const b = 128 * (1 - contrast);
+      pipeline = pipeline.linear(contrast, b);
+    }
+    if (sharpenAmount > 0) {
+      pipeline = pipeline.sharpen({ sigma: sharpenAmount });
+    }
+    if (blurAmount > 0) {
+      pipeline = pipeline.blur(blurAmount);
+    }
+    if (effect === "grayscale") {
+      pipeline = pipeline.grayscale();
+    } else if (effect === "sepia") {
+      pipeline = pipeline.recomb(SEPIA_MATRIX);
+    }
+    if (invert) {
+      pipeline = pipeline.negate({ alpha: false });
+    }
+
+    if (vignetteIntensity > 0 && originalWidth > 0 && originalHeight > 0) {
+      const vignetteSvg =
+        '<svg width="' + originalWidth + '" height="' + originalHeight + '" xmlns="http://www.w3.org/2000/svg">' +
+        '<defs><radialGradient id="v" cx="50%" cy="50%" r="75%">' +
+        '<stop offset="55%" stop-color="white" stop-opacity="0"/>' +
+        '<stop offset="100%" stop-color="black" stop-opacity="' + (vignetteIntensity / 100) + '"/>' +
+        "</radialGradient></defs>" +
+        '<rect width="100%" height="100%" fill="url(#v)"/>' +
+        "</svg>";
+      const vignetteBuffer = await sharp(Buffer.from(vignetteSvg)).png().toBuffer();
+      pipeline = pipeline.composite([{ input: vignetteBuffer, blend: "multiply" }]);
+    }
+
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="adjusted.' + format + '"'
+    );
+    res.setHeader("X-Original-Size", String(req.file.size));
+    res.setHeader("X-Output-Size", String(outputBuffer.length));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Original-Size, X-Output-Size"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Adjust error:", err);
+    return res.status(500).json({ ok: false, error: "Adjustment failed" });
+  }
+});
+
+// POST /api/crop — multipart form:
+//   file       required
+//   x, y       required, top-left corner in pixels (integers >= 0)
+//   width      required, crop width in pixels (> 0)
+//   height     required, crop height in pixels (> 0)
+//   format     optional, default keeps the original format
+//   quality    optional 1-100, default 90 (ignored for png/gif)
+app.post("/api/crop", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const originalWidth = meta.width || 0;
+    const originalHeight = meta.height || 0;
+
+    const x = parseInt(req.body.x);
+    const y = parseInt(req.body.y);
+    const cropWidth = parseInt(req.body.width);
+    const cropHeight = parseInt(req.body.height);
+
+    if (
+      [x, y, cropWidth, cropHeight].some((v) => isNaN(v)) ||
+      x < 0 ||
+      y < 0 ||
+      cropWidth <= 0 ||
+      cropHeight <= 0 ||
+      x + cropWidth > originalWidth ||
+      y + cropHeight > originalHeight
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid crop region for a " + originalWidth + "x" + originalHeight + " image",
+      });
+    }
+
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+
+    let pipeline = sharp(req.file.buffer).extract({
+      left: x,
+      top: y,
+      width: cropWidth,
+      height: cropHeight,
+    });
+
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="cropped.' + format + '"'
+    );
+    res.setHeader("X-Output-Width", String(cropWidth));
+    res.setHeader("X-Output-Height", String(cropHeight));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Output-Width, X-Output-Height"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Crop error:", err);
+    return res.status(500).json({ ok: false, error: "Crop failed" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });

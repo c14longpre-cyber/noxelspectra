@@ -151,7 +151,7 @@ function BeforeAfterSlider({
           width: "100%",
           height: "100%",
           objectFit: "contain",
-          clipPath: `inset(0 ${100 - pos}% 0 0)`,
+          clipPath: `inset(0 0 0 ${pos}%)`,
         }}
       />
       <div
@@ -289,6 +289,31 @@ export default function App() {
   const [rotateResultUrl, setRotateResultUrl] = useState<string | null>(null);
   const [rotateDims, setRotateDims] = useState<RotateDims | null>(null);
 
+  const [brightness, setBrightness] = useState(1);
+  const [contrast, setContrast] = useState(1);
+  const [saturation, setSaturation] = useState(1);
+  const [sharpenAmount, setSharpenAmount] = useState(0);
+  const [blurAmount, setBlurAmount] = useState(0);
+  const [effect, setEffect] = useState<"none" | "grayscale" | "sepia">("none");
+  const [invertColors, setInvertColors] = useState(false);
+  const [adjustLoading, setAdjustLoading] = useState(false);
+  const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [adjustResultUrl, setAdjustResultUrl] = useState<string | null>(null);
+  const [filtersTouched, setFiltersTouched] = useState(false);
+  const [pixelateSize, setPixelateSize] = useState(0);
+  const [reduceNoise, setReduceNoise] = useState(0);
+  const [vignetteIntensity, setVignetteIntensity] = useState(0);
+
+  const [cropNaturalWidth, setCropNaturalWidth] = useState(0);
+  const [cropNaturalHeight, setCropNaturalHeight] = useState(0);
+  const [cropX, setCropX] = useState(0);
+  const [cropY, setCropY] = useState(0);
+  const [cropWidth, setCropWidth] = useState(0);
+  const [cropHeight, setCropHeight] = useState(0);
+  const [cropLoading, setCropLoading] = useState(false);
+  const [cropError, setCropError] = useState<string | null>(null);
+  const [cropResultUrl, setCropResultUrl] = useState<string | null>(null);
+
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const targetSizeAvailable = TARGET_SIZE_FORMATS.includes(format);
 
@@ -337,6 +362,17 @@ export default function App() {
     setRotateResultUrl(null);
     setRotateDims(null);
     setRotateError(null);
+    setAdjustResultUrl(null);
+    setAdjustError(null);
+    setFiltersTouched(false);
+    setCropResultUrl(null);
+    setCropError(null);
+    setCropNaturalWidth(0);
+    setCropNaturalHeight(0);
+    setCropX(0);
+    setCropY(0);
+    setCropWidth(0);
+    setCropHeight(0);
   }
 
   async function handleAnalyze() {
@@ -680,6 +716,102 @@ export default function App() {
       setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
     } finally {
       setMetaCleanLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!file || !filtersTouched) return;
+    const timer = setTimeout(() => {
+      handleAdjust();
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brightness, contrast, saturation, sharpenAmount, blurAmount, effect, invertColors, pixelateSize, reduceNoise, vignetteIntensity, filtersTouched]);
+
+  async function handleAdjust() {
+    if (!file) return;
+    setAdjustLoading(true);
+    setAdjustError(null);
+    setAdjustResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("brightness", String(brightness));
+    formData.append("contrast", String(contrast));
+    formData.append("saturation", String(saturation));
+    formData.append("sharpen", String(sharpenAmount));
+    formData.append("blurAmount", String(blurAmount));
+    formData.append("effect", effect);
+    formData.append("invert", String(invertColors));
+    formData.append("pixelate", String(pixelateSize));
+    formData.append("reduceNoise", String(reduceNoise));
+    formData.append("vignetteIntensity", String(vignetteIntensity));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/adjust`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setAdjustResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setAdjustError(err instanceof Error ? err.message : "Ajustement échoué");
+    } finally {
+      setAdjustLoading(false);
+    }
+  }
+
+  function handleCropImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    if (cropNaturalWidth === 0) {
+      setCropNaturalWidth(img.naturalWidth);
+      setCropNaturalHeight(img.naturalHeight);
+      setCropX(0);
+      setCropY(0);
+      setCropWidth(img.naturalWidth);
+      setCropHeight(img.naturalHeight);
+    }
+  }
+
+  function resetCrop() {
+    setCropX(0);
+    setCropY(0);
+    setCropWidth(cropNaturalWidth);
+    setCropHeight(cropNaturalHeight);
+  }
+
+  async function handleCrop() {
+    if (!file) return;
+    setCropLoading(true);
+    setCropError(null);
+    setCropResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("x", String(cropX));
+    formData.append("y", String(cropY));
+    formData.append("width", String(cropWidth));
+    formData.append("height", String(cropHeight));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/crop`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setCropResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setCropError(err instanceof Error ? err.message : "Recadrage échoué");
+    } finally {
+      setCropLoading(false);
     }
   }
 
@@ -1084,6 +1216,121 @@ export default function App() {
         </div>
       )}
 
+      {/* ── Rogner ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rogner</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Ajuste la zone ci-dessous — l'aperçu montre exactement ce qui sera gardé.
+      </p>
+
+      {originalPreviewUrl && (
+        <div style={{ marginTop: 12, position: "relative", display: "inline-block", maxWidth: "100%", overflow: "hidden", borderRadius: 8 }}>
+          <img
+            src={originalPreviewUrl}
+            alt="Aperçu de rognage"
+            onLoad={handleCropImageLoad}
+            style={{ display: "block", maxWidth: "100%", height: "auto", borderRadius: 8 }}
+          />
+          {cropNaturalWidth > 0 && (
+            <div
+              style={{
+                position: "absolute",
+                left: `${(cropX / cropNaturalWidth) * 100}%`,
+                top: `${(cropY / cropNaturalHeight) * 100}%`,
+                width: `${(cropWidth / cropNaturalWidth) * 100}%`,
+                height: `${(cropHeight / cropNaturalHeight) * 100}%`,
+                border: "2px dashed #fff",
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
+                boxSizing: "border-box",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <label>
+          X :{" "}
+          <input
+            type="number"
+            min={0}
+            max={Math.max(0, cropNaturalWidth - 1)}
+            value={cropX}
+            onChange={(e) => setCropX(Number(e.target.value))}
+            style={{ width: 80 }}
+          />
+        </label>
+        <label>
+          Y :{" "}
+          <input
+            type="number"
+            min={0}
+            max={Math.max(0, cropNaturalHeight - 1)}
+            value={cropY}
+            onChange={(e) => setCropY(Number(e.target.value))}
+            style={{ width: 80 }}
+          />
+        </label>
+        <label>
+          Largeur :{" "}
+          <input
+            type="number"
+            min={1}
+            max={cropNaturalWidth}
+            value={cropWidth}
+            onChange={(e) => setCropWidth(Number(e.target.value))}
+            style={{ width: 80 }}
+          />
+        </label>
+        <label>
+          Hauteur :{" "}
+          <input
+            type="number"
+            min={1}
+            max={cropNaturalHeight}
+            value={cropHeight}
+            onChange={(e) => setCropHeight(Number(e.target.value))}
+            style={{ width: 80 }}
+          />
+        </label>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
+        <button
+          onClick={resetCrop}
+          disabled={!file}
+          style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
+        >
+          Réinitialiser
+        </button>
+        <button
+          onClick={handleCrop}
+          disabled={!file || cropLoading}
+          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+        >
+          {cropLoading ? "Rognage..." : "Rogner"}
+        </button>
+      </div>
+
+      {cropError && <p style={{ color: "red", marginTop: 16 }}>{cropError}</p>}
+
+      {cropResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={cropResultUrl} />
+          ) : (
+            <img src={cropResultUrl} alt="Résultat rogné" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={cropResultUrl} download="cropped">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ── Rotation / Miroir ── */}
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
@@ -1177,6 +1424,157 @@ export default function App() {
           )}
           <div style={{ marginTop: 8 }}>
             <a href={rotateResultUrl} download="rotated">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ── Filtres / Réglages ── */}
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Filtres / Réglages</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Ajuste la luminosité, le contraste, la saturation, la netteté ou applique un effet.
+      </p>
+
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+        <label>
+          Luminosité : {brightness.toFixed(2)}
+          <input
+            type="range"
+            min={0.3}
+            max={2}
+            step={0.05}
+            value={brightness}
+            onChange={(e) => { setBrightness(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Contraste : {contrast.toFixed(2)}
+          <input
+            type="range"
+            min={0.3}
+            max={2}
+            step={0.05}
+            value={contrast}
+            onChange={(e) => { setContrast(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Saturation : {saturation.toFixed(2)}
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={saturation}
+            onChange={(e) => { setSaturation(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Netteté : {sharpenAmount.toFixed(1)}
+          <input
+            type="range"
+            min={0}
+            max={10}
+            step={0.5}
+            value={sharpenAmount}
+            onChange={(e) => { setSharpenAmount(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Flou : {blurAmount.toFixed(1)}
+          <input
+            type="range"
+            min={0}
+            max={20}
+            step={0.5}
+            value={blurAmount}
+            onChange={(e) => { setBlurAmount(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Pixeliser : {pixelateSize === 0 ? "Désactivé" : pixelateSize}
+          <input
+            type="range"
+            min={0}
+            max={50}
+            step={1}
+            value={pixelateSize}
+            onChange={(e) => { setPixelateSize(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Vignette : {vignetteIntensity === 0 ? "Désactivée" : `${vignetteIntensity}%`}
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={vignetteIntensity}
+            onChange={(e) => { setVignetteIntensity(Number(e.target.value)); setFiltersTouched(true); }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          />
+        </label>
+        <label>
+          Réduction du bruit :{" "}
+          <select
+            value={reduceNoise}
+            onChange={(e) => { setReduceNoise(Number(e.target.value)); setFiltersTouched(true); }}
+          >
+            <option value={0}>Désactivée</option>
+            <option value={3}>Légère</option>
+            <option value={5}>Moyenne</option>
+            <option value={7}>Forte</option>
+          </select>
+        </label>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
+        <label>
+          Effet :{" "}
+          <select value={effect} onChange={(e) => { setEffect(e.target.value as "none" | "grayscale" | "sepia"); setFiltersTouched(true); }}>
+            <option value="none">Aucun</option>
+            <option value="grayscale">Niveaux de gris</option>
+            <option value="sepia">Sépia</option>
+          </select>
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={invertColors}
+            onChange={(e) => { setInvertColors(e.target.checked); setFiltersTouched(true); }}
+          />
+          Inverser les couleurs
+        </label>
+      </div>
+
+      <button
+        onClick={handleAdjust}
+        disabled={!file || adjustLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {adjustLoading ? "Application..." : "Appliquer"}
+      </button>
+
+      {adjustError && <p style={{ color: "red", marginTop: 16 }}>{adjustError}</p>}
+
+      {adjustResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={adjustResultUrl} />
+          ) : (
+            <img src={adjustResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={adjustResultUrl} download="adjusted">
               Télécharger le résultat
             </a>
           </div>
