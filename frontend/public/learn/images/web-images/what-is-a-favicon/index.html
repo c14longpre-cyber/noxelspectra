@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What is a Favicon? Sizes, Formats &amp; How to Create One | NOXEL Spectra</title>
+<meta name="description" content="What a favicon is, what sizes you need (16x16 to 512x512), what favicon.ico is, and how to generate a complete favicon package from your logo.">
+<link rel="canonical" href="https://noxelspectra.com/learn/images/web-images/what-is-a-favicon/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What is a Favicon? Sizes, Formats & How to Create One">
+<meta property="og:description" content="Everything you need to know about favicons, plus a free generator that builds the whole package from your logo.">
+<meta property="og:url" content="https://noxelspectra.com/learn/images/web-images/what-is-a-favicon/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "What is a Favicon? Sizes, Formats & How to Create One",
+  "description": "What a favicon is, what sizes you need, what favicon.ico is, and how to generate a complete favicon package.",
+  "author": { "@type": "Organization", "name": "NOXEL Spectra" },
+  "publisher": { "@type": "Organization", "name": "NOXEL Spectra" }
+}
+</script>
+<style>
+  :root {
+    --bg: #07090f;
+    --panel: #0f1320;
+    --border: rgba(255,255,255,0.1);
+    --text: #e8e8ef;
+    --muted: #9a9aab;
+    --green: #3ddc84;
+    --purple: #a855f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header a.brand { color: var(--text); text-decoration: none; font-weight: 800; font-size: 18px; }
+  header a.brand span { color: var(--green); }
+  header nav a { color: var(--muted); text-decoration: none; margin-left: 20px; font-size: 14px; }
+  header nav a:hover { color: var(--text); }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+  .breadcrumb { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .breadcrumb a { color: var(--muted); }
+  h1 { font-size: 32px; margin: 0 0 6px; }
+  .subtitle { color: var(--muted); font-size: 16px; margin-bottom: 24px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 32px; }
+  .facts span { background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 13px; color: var(--muted); }
+  .facts span b { color: var(--text); }
+  h2 { font-size: 22px; margin-top: 40px; margin-bottom: 12px; border-left: 3px solid var(--green); padding-left: 12px; }
+  h3 { font-size: 17px; margin-top: 24px; color: var(--text); }
+  p { color: #cfcfdb; }
+  ul { color: #cfcfdb; }
+  pre {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    color: var(--green);
+  }
+  code { font-family: "SF Mono", Consolas, monospace; }
+  .size-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .size-grid span {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: monospace;
+    font-size: 14px;
+  }
+  .tree {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #cfcfdb;
+    line-height: 1.8;
+  }
+  .cta {
+    margin-top: 48px;
+    background: linear-gradient(135deg, rgba(61,220,132,0.12), rgba(168,85,247,0.12));
+    border: 1px solid rgba(61,220,132,0.3);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .cta h3 { margin-top: 0; }
+  .cta a.btn {
+    display: inline-block;
+    background: var(--green);
+    color: #06210f;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 15px;
+    margin-top: 10px;
+  }
+  .related { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 14px; }
+  .related a { color: var(--purple); text-decoration: none; display: block; margin: 6px 0; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">NOXEL<span>Spectra</span></a>
+  <nav>
+    <a href="/learn/">Learn</a>
+    <a href="/">Convert</a>
+  </nav>
+</header>
+
+<main>
+  <div class="breadcrumb"><a href="/learn/">Learn</a> / <a href="/learn/images/web-images/">Web Images</a> / What is a Favicon?</div>
+
+  <h1>What is a Favicon?</h1>
+  <p class="subtitle">A favicon isn't really an image format — it's a specific <em>use</em> of an image.</p>
+
+  <div class="facts">
+    <span><b>Type:</b>&nbsp;Website icon</span>
+    <span><b>Common formats:</b>&nbsp;ICO, PNG</span>
+    <span><b>Shape:</b>&nbsp;Square</span>
+    <span><b>Used for:</b>&nbsp;Website identification</span>
+  </div>
+
+  <h2>What is a favicon?</h2>
+  <p>A favicon is the small icon associated with a website. You commonly see favicons in:</p>
+  <ul>
+    <li><strong>Browser tabs</strong> — next to the page title</li>
+    <li><strong>Bookmarks</strong> — alongside a saved site's name</li>
+    <li><strong>Browser history</strong></li>
+    <li><strong>Shortcuts</strong> — on a phone or desktop home screen</li>
+    <li><strong>Search results</strong> — Google Search can display a site's favicon next to its organic listing</li>
+  </ul>
+
+  <h2>What does "favicon" mean?</h2>
+  <p>The name comes from <strong>"favorite icon"</strong>, referring to icons shown next to bookmarked/favorite websites.</p>
+
+  <h2>What size should a favicon be?</h2>
+  <p>Different platforms request different dimensions, so most sites generate multiple sizes rather than a single file:</p>
+  <div class="size-grid">
+    <span>16 × 16</span>
+    <span>32 × 32</span>
+    <span>48 × 48</span>
+    <span>96 × 96</span>
+    <span>180 × 180</span>
+    <span>192 × 192</span>
+    <span>512 × 512</span>
+  </div>
+  <p>For Google Search specifically, Google requires a square favicon of at least 8×8 px and recommends one larger than 48×48 px for visibility across its surfaces.</p>
+
+  <h2>What is favicon.ico?</h2>
+  <p>ICO is a container format historically associated with Windows icons and website favicons. One useful trait: a single <code>.ico</code> file can contain multiple sizes at once.</p>
+  <div class="tree">
+favicon.ico<br>
+&nbsp;├── 16×16<br>
+&nbsp;├── 32×32<br>
+&nbsp;└── 48×48
+  </div>
+
+  <h2>How is a favicon added to a website?</h2>
+  <pre>&lt;link rel="icon" href="/favicon.ico"&gt;</pre>
+  <p>Modern sites typically add several tags covering the PNG sizes and the Apple touch icon as well.</p>
+
+  <h2>Favicon vs logo</h2>
+  <p>They're related but not identical.</p>
+  <p><strong>Logo</strong> — can be detailed, horizontal, and contain text.<br>
+  <strong>Favicon</strong> — needs to stay recognizable at extremely small sizes.</p>
+  <p>For example, a full wordmark logo makes little sense at 16×16px — a simplified mark or monogram is usually the better source image for a favicon.</p>
+
+  <div class="cta">
+    <h3>Have a logo? Generate your complete favicon package.</h3>
+    <p style="color:#cfcfdb;">Upload your logo and NOXEL Spectra generates the full set:</p>
+    <div class="tree">
+favicon.ico<br>
+favicon-16x16.png<br>
+favicon-32x32.png<br>
+favicon-48x48.png<br>
+apple-touch-icon.png<br>
+favicon-192x192.png<br>
+favicon-512x512.png
+    </div>
+    <a class="btn" href="/">Generate Favicon Package →</a>
+  </div>
+
+  <div class="related">
+    <strong>Related:</strong>
+    <a href="/learn/images/image-formats/what-is-svg/">What is SVG?</a>
+    <a href="/learn/images/image-formats/what-is-png/">What is PNG?</a>
+  </div>
+</main>
+
+<footer>NOXEL Spectra — part of the NOXEL ecosystem</footer>
+
+</body>
+</html>

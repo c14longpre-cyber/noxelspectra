@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>What is SVG? Scalable Vector Graphics Explained | NOXEL Spectra</title>
+<meta name="description" content="SVG (Scalable Vector Graphics) explained: what it is, when to use it for logos and icons, how it compares to PNG, and how to convert to and from SVG.">
+<link rel="canonical" href="https://noxelspectra.com/learn/images/image-formats/what-is-svg/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What is SVG? Scalable Vector Graphics Explained">
+<meta property="og:description" content="What SVG is, when to use it, and how it compares to PNG — with a free converter and vectorizer.">
+<meta property="og:url" content="https://noxelspectra.com/learn/images/image-formats/what-is-svg/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "What is SVG? Scalable Vector Graphics Explained",
+  "description": "SVG (Scalable Vector Graphics) explained: what it is, when to use it for logos and icons, and how it compares to PNG.",
+  "author": { "@type": "Organization", "name": "NOXEL Spectra" },
+  "publisher": { "@type": "Organization", "name": "NOXEL Spectra" }
+}
+</script>
+<style>
+  :root {
+    --bg: #07090f;
+    --panel: #0f1320;
+    --border: rgba(255,255,255,0.1);
+    --text: #e8e8ef;
+    --muted: #9a9aab;
+    --green: #3ddc84;
+    --purple: #a855f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.65;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  header a.brand {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 18px;
+  }
+  header a.brand span { color: var(--green); }
+  header nav a {
+    color: var(--muted);
+    text-decoration: none;
+    margin-left: 20px;
+    font-size: 14px;
+  }
+  header nav a:hover { color: var(--text); }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .breadcrumb {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .breadcrumb a { color: var(--muted); }
+  h1 {
+    font-size: 32px;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .facts span {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .facts span b { color: var(--text); }
+  h2 {
+    font-size: 22px;
+    margin-top: 40px;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--green);
+    padding-left: 12px;
+  }
+  h3 {
+    font-size: 17px;
+    margin-top: 24px;
+    color: var(--text);
+  }
+  p { color: #cfcfdb; }
+  ul { color: #cfcfdb; }
+  .yes-no {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+  }
+  .yes-no .box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .yes-no .box.yes { border-color: rgba(61,220,132,0.35); }
+  .yes-no .box.no { border-color: rgba(255,255,255,0.08); }
+  .yes-no .box div { margin: 6px 0; font-size: 14px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+  }
+  th { background: var(--panel); color: var(--text); }
+  td { color: #cfcfdb; }
+  .cta {
+    margin-top: 48px;
+    background: linear-gradient(135deg, rgba(61,220,132,0.12), rgba(168,85,247,0.12));
+    border: 1px solid rgba(61,220,132,0.3);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .cta h3 { margin-top: 0; }
+  .cta .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 18px;
+  }
+  .cta .tags span {
+    background: rgba(255,255,255,0.06);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-family: monospace;
+  }
+  .cta a.btn {
+    display: inline-block;
+    background: var(--green);
+    color: #06210f;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 15px;
+  }
+  .related {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .related a {
+    color: var(--purple);
+    text-decoration: none;
+    display: block;
+    margin: 6px 0;
+  }
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    padding: 24px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="/">NOXEL<span>Spectra</span></a>
+  <nav>
+    <a href="/learn/">Learn</a>
+    <a href="/">Convert</a>
+  </nav>
+</header>
+
+<main>
+  <div class="breadcrumb"><a href="/learn/">Learn</a> / <a href="/learn/images/image-formats/">Image Formats</a> / What is SVG?</div>
+
+  <h1>SVG — Scalable Vector Graphics</h1>
+  <p class="subtitle">What SVG is, when to use it, and how it compares to raster formats like PNG.</p>
+
+  <div class="facts">
+    <span><b>Type:</b>&nbsp;Vector</span>
+    <span><b>Extension:</b>&nbsp;.svg</span>
+    <span><b>MIME type:</b>&nbsp;image/svg+xml</span>
+    <span><b>Transparency:</b>&nbsp;Yes</span>
+    <span><b>Animation:</b>&nbsp;Yes</span>
+    <span><b>Scalable:</b>&nbsp;Yes</span>
+  </div>
+
+  <p><strong>Best for:</strong> Logos, icons, illustrations, diagrams and interface graphics.</p>
+
+  <h2>What is SVG?</h2>
+  <p>SVG stands for <strong>Scalable Vector Graphics</strong>.</p>
+  <p>Unlike JPEG, PNG, WebP and AVIF images, which are primarily composed of pixels, SVG describes graphics using shapes, paths, coordinates and other instructions.</p>
+  <p>Because of this, an SVG can usually be enlarged or reduced without becoming pixelated. The SVG specification also allows graphics to contain shapes, images and text, and supports styling, transformations, clipping, masks, filters, interactivity and animation.</p>
+
+  <h2>What is SVG used for?</h2>
+  <p>SVG is particularly well suited for:</p>
+
+  <h3>Logos</h3>
+  <p>A company logo may need to appear at 24 pixels in a navigation bar and several thousand pixels on a large display. SVG can remain sharp at both sizes.</p>
+
+  <h3>Icons</h3>
+  <p>Interface icons, navigation elements and symbols are excellent candidates for SVG.</p>
+
+  <h3>Illustrations</h3>
+  <p>Simple illustrations composed of geometric shapes can often be stored efficiently as vectors.</p>
+
+  <h3>Charts and diagrams</h3>
+  <p>Graphs, maps and diagrams benefit from the resolution-independent nature of SVG.</p>
+
+  <h3>Web interfaces</h3>
+  <p>SVG elements can be styled and manipulated directly in web applications.</p>
+
+  <h2>When should you use SVG?</h2>
+  <div class="yes-no">
+    <div class="box yes">
+      <strong>Use SVG when:</strong>
+      <div>✓ Creating a logo</div>
+      <div>✓ Creating an icon</div>
+      <div>✓ Working with geometric graphics</div>
+      <div>✓ The image must stay sharp at every size</div>
+      <div>✓ You need interactive or programmable graphics</div>
+    </div>
+    <div class="box no">
+      <strong>Avoid SVG when:</strong>
+      <div>✗ Working with photographs</div>
+      <div>✗ Working with complex photorealistic imagery</div>
+      <div>✗ Vectorizing would create thousands of unnecessary paths</div>
+    </div>
+  </div>
+  <p>For complex photographic content, raster formats such as AVIF, WebP or JPEG are generally more appropriate.</p>
+
+  <h2>SVG vs PNG</h2>
+  <table>
+    <tr><th>SVG</th><th>PNG</th></tr>
+    <tr><td>Vector</td><td>Raster</td></tr>
+    <tr><td>Resolution independent</td><td>Pixel based</td></tr>
+    <tr><td>Excellent for logos</td><td>Excellent for lossless raster images</td></tr>
+    <tr><td>Scales without pixelation</td><td>Can pixelate when enlarged</td></tr>
+    <tr><td>Can contain interactive elements</td><td>Static raster image</td></tr>
+    <tr><td>Often excellent for simple graphics</td><td>Better for complex pixel imagery</td></tr>
+  </table>
+
+  <h2>Can SVG have a transparent background?</h2>
+  <p><strong>Yes.</strong> SVG doesn't require a rectangular opaque background — objects can be drawn independently while the rest of the canvas stays transparent.</p>
+
+  <h2>Can SVG lose quality?</h2>
+  <p>A true vector SVG can be resized without the pixelation associated with enlarging raster images. However, an SVG can also contain embedded raster images — those embedded images remain resolution-dependent.</p>
+
+  <h2>Converting to and from SVG</h2>
+  <p><strong>Convert SVG to:</strong> PNG · WebP · AVIF · JPEG</p>
+  <p><strong>Convert to SVG:</strong> Raster → SVG requires <strong>vectorization</strong> rather than a simple format conversion — the image is traced into shapes rather than just re-encoded.</p>
+
+  <div class="cta">
+    <h3>Vectorize an image with NOXEL Spectra</h3>
+    <p style="color:#cfcfdb; margin-top:0;">Upload a PNG or WebP logo and trace it into a clean, editable SVG — free, and it runs right in your browser session.</p>
+    <div class="tags"><span>PNG → SVG</span><span>WebP → SVG</span><span>Editable colors</span></div>
+    <a class="btn" href="/">Open the Vectorizer →</a>
+  </div>
+
+  <div class="related">
+    <strong>Related:</strong>
+    <a href="/learn/images/image-formats/what-is-png/">What is PNG?</a>
+    <a href="/learn/images/web-images/what-is-a-favicon/">What is a favicon?</a>
+  </div>
+</main>
+
+<footer>NOXEL Spectra — part of the NOXEL ecosystem</footer>
+
+</body>
+</html>

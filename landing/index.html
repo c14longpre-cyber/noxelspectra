@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOXEL Spectra — Coming Soon</title>
+<meta name="description" content="NOXEL Spectra is an image toolkit for the web — conversion, compression, and vectorization. Coming soon.">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NOXEL Spectra — Coming Soon">
+<meta property="og:description" content="An image toolkit for the web — conversion, compression, and vectorization. Coming soon.">
+<meta property="og:url" content="https://noxelspectra.com">
+<style>
+  :root {
+    --bg: #07090f;
+    --text: #e8e8ef;
+    --muted: #9a9aab;
+    --green: #3ddc84;
+    --purple: #a855f7;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+  }
+  .glow {
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 900px;
+    background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%);
+    pointer-events: none;
+  }
+  main {
+    position: relative;
+    max-width: 560px;
+  }
+  .logo {
+    width: 220px;
+    margin-bottom: 32px;
+  }
+  h1 {
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    font-weight: 700;
+    margin: 0 0 12px;
+  }
+  h2 {
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1.25;
+    margin: 0 0 20px;
+  }
+  h2 span {
+    background: linear-gradient(90deg, var(--green), var(--purple));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  p {
+    color: #cfcfdb;
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 0 0 32px;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 40px;
+  }
+  .tags span {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .back {
+    color: var(--green);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .back:hover { text-decoration: underline; }
+  footer {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<main>
+  <img class="logo" src="/logo.png" alt="NOXEL Spectra">
+
+  <h1>NOXEL Spectra</h1>
+  <h2>An image toolkit for the web,<br><span>built for speed and simplicity</span></h2>
+  <p>
+    Conversion, compression, and vectorization — designed to help you ship
+    lighter, faster images without the guesswork. Part of the NOXEL ecosystem,
+    launching soon.
+  </p>
+
+  <div class="tags">
+    <span>Format conversion</span>
+    <span>Target-size compression</span>
+    <span>Color palettes</span>
+    <span>SVG vectorization</span>
+    <span>Favicon generation</span>
+  </div>
+
+  <a class="back" href="https://noxel360.com">← Back to NOXEL360</a>
+</main>
+
+<footer>NOXEL Spectra — part of the NOXEL ecosystem</footer>
+
+</body>
+</html>
