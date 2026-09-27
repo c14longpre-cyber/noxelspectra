@@ -17,8 +17,9 @@
 .sp-inspector h2{font-size:18px;margin:0 0 8px}.sp-inspector h3{font-size:13px;margin:0 0 10px}
 .sp-help{color:var(--sp-muted);font-size:12px;margin:0 0 12px}
 .sp-section{border-top:2px solid transparent;border-image:linear-gradient(90deg,var(--sp-green),var(--sp-purple),transparent) 1;padding-top:15px;margin-top:17px}
-.sp-stickers{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-.sp-stickers button{font-size:20px;padding:3px 0}
+.sp-stickers{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-height:150px;overflow-y:auto;padding-right:2px}
+.sp-stickers button{font-size:20px;padding:4px;display:flex;align-items:center;justify-content:center}
+.sp-stickers img{width:20px;height:20px;display:block}
 .sp-layers{display:grid;gap:5px}.sp-layers button{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sp-layers button.active{border-color:var(--sp-green);color:var(--sp-green)}
 .sp-section label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:8px 0;color:#cbd8e8;font-size:12px}
@@ -31,3 +32,8 @@
 .sp-order{display:flex;flex-wrap:wrap;gap:5px;margin-top:13px}.sp-order button{font-size:11px;padding:6px}
 .sp-status{padding:8px 13px;border-top:1px solid var(--sp-border);color:var(--sp-muted);font:11px ui-monospace,SFMono-Regular,Consolas,monospace}
 @media(max-width:850px){.sp-body{grid-template-columns:1fr}.sp-inspector{border-left:0;border-top:1px solid var(--sp-border);max-height:none}.sp-stage{min-height:300px}.sp-toolbar .sp-primary{margin-left:0}}
+
+.sg-gradient-stops{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.sg-gradient-stop{display:flex;align-items:center;gap:6px}
+.sg-gradient-stop input[type=color]{width:32px;height:28px;padding:2px;border:1px solid var(--sp-border);border-radius:6px;background:#101a2b}
+.sg-gradient-stop button{padding:2px 8px;font-size:13px}

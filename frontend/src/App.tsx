@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
+import { GradientTool } from "./components/spectra-gradient/GradientTool";
 
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
 type Format = (typeof FORMATS)[number];
@@ -289,6 +290,7 @@ export default function App() {
   const glowSectionRef = useRef<HTMLDivElement | null>(null);
   const socialSectionRef = useRef<HTMLDivElement | null>(null);
   const editorSectionRef = useRef<HTMLDivElement | null>(null);
+  const gradientSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
 
@@ -308,6 +310,7 @@ export default function App() {
     { id: "glow", label: "Effet lumineux", icon: "☼", ref: glowSectionRef },
     { id: "social", label: "Réseaux sociaux", icon: "⚑", ref: socialSectionRef },
     { id: "editor", label: "Éditeur", icon: "✎", ref: editorSectionRef },
+    { id: "gradient", label: "Dégradé", icon: "◐", ref: gradientSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -2489,6 +2492,20 @@ export default function App() {
       </p>
       <div style={{ marginTop: 12 }}>
         <OverlayEditor file={file} />
+      </div>
+      </>
+      )}
+
+      {activeSection === "gradient" && (
+      <>
+      {/* ── Dégradé ── */}
+      <div ref={gradientSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Dégradé</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Crée un dégradé linéaire ou radial (2 à 10 couleurs) et exporte en PNG, SVG, CSS ou JSON.
+      </p>
+      <div style={{ marginTop: 12 }}>
+        <GradientTool />
       </div>
       </>
       )}

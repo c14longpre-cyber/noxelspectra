@@ -1,5 +1,88 @@
 /** NOXEL Spectra overlay editor. Browser-only, no dependencies. */
 export class SpectraOverlayEditor {
+  static STICKERS = [
+    { key: "stickers/01_Reactions/coeur", label: "Coeur" },
+    { key: "stickers/01_Reactions/pouce_leve", label: "Pouce leve" },
+    { key: "stickers/01_Reactions/applaudissements", label: "Applaudissements" },
+    { key: "stickers/01_Reactions/sourire", label: "Sourire" },
+    { key: "stickers/01_Reactions/clin_oeil", label: "Clin oeil" },
+    { key: "stickers/01_Reactions/surprise", label: "Surprise" },
+    { key: "stickers/01_Reactions/feu", label: "Feu" },
+    { key: "stickers/01_Reactions/etincelles", label: "Etincelles" },
+    { key: "stickers/02_Succes/etoile", label: "Etoile" },
+    { key: "stickers/02_Succes/trophee", label: "Trophee" },
+    { key: "stickers/02_Succes/medaille", label: "Medaille" },
+    { key: "stickers/02_Succes/couronne", label: "Couronne" },
+    { key: "stickers/02_Succes/coche", label: "Coche" },
+    { key: "stickers/02_Succes/cible", label: "Cible" },
+    { key: "stickers/02_Succes/fusee", label: "Fusee" },
+    { key: "stickers/02_Succes/confettis", label: "Confettis" },
+    { key: "stickers/03_Creation/ampoule", label: "Ampoule" },
+    { key: "stickers/03_Creation/crayon", label: "Crayon" },
+    { key: "stickers/03_Creation/pinceau", label: "Pinceau" },
+    { key: "stickers/03_Creation/palette", label: "Palette" },
+    { key: "stickers/03_Creation/appareil_photo", label: "Appareil photo" },
+    { key: "stickers/03_Creation/baguette_magique", label: "Baguette magique" },
+    { key: "stickers/03_Creation/bulle_dialogue", label: "Bulle dialogue" },
+    { key: "stickers/03_Creation/note_musique", label: "Note musique" },
+    { key: "stickers/04_Web_Affaires/graphique_hausse", label: "Graphique hausse" },
+    { key: "stickers/04_Web_Affaires/loupe", label: "Loupe" },
+    { key: "stickers/04_Web_Affaires/globe", label: "Globe" },
+    { key: "stickers/04_Web_Affaires/lien", label: "Lien" },
+    { key: "stickers/04_Web_Affaires/eclair", label: "Eclair" },
+    { key: "stickers/04_Web_Affaires/bouclier", label: "Bouclier" },
+    { key: "stickers/04_Web_Affaires/panier", label: "Panier" },
+    { key: "stickers/04_Web_Affaires/calendrier", label: "Calendrier" },
+    { key: "stickers/04_Web_Affaires/ordinateur", label: "Ordinateur" },
+    { key: "stickers/04_Web_Affaires/telephone", label: "Telephone" },
+    { key: "stickers/05_Decoration/soleil", label: "Soleil" },
+    { key: "stickers/05_Decoration/lune", label: "Lune" },
+    { key: "stickers/05_Decoration/nuage", label: "Nuage" },
+    { key: "stickers/05_Decoration/arc_en_ciel", label: "Arc en ciel" },
+    { key: "stickers/05_Decoration/fleur", label: "Fleur" },
+    { key: "stickers/05_Decoration/feuille", label: "Feuille" },
+    { key: "stickers/05_Decoration/papillon", label: "Papillon" },
+    { key: "stickers/05_Decoration/flocon", label: "Flocon" },
+    { key: "stickers/05_Decoration/goutte", label: "Goutte" },
+    { key: "stickers/05_Decoration/diamant", label: "Diamant" },
+    { key: "stickers/06_Etiquettes/nouveau", label: "Nouveau" },
+    { key: "stickers/06_Etiquettes/promo", label: "Promo" },
+    { key: "stickers/06_Etiquettes/gratuit", label: "Gratuit" },
+    { key: "stickers/06_Etiquettes/top_choix", label: "Top choix" },
+    { key: "stickers/06_Etiquettes/avant", label: "Avant" },
+    { key: "stickers/06_Etiquettes/apres", label: "Apres" },
+    { key: "stickers/06_Etiquettes/cent_pour_cent", label: "Cent pour cent" },
+    { key: "stickers/06_Etiquettes/a_decouvrir", label: "A decouvrir" },
+  ];
+  static FORMES = [
+    { key: "formes/01_Geometriques/rectangle", label: "Rectangle" },
+    { key: "formes/01_Geometriques/rectangle_arrondi", label: "Rectangle arrondi" },
+    { key: "formes/01_Geometriques/carre", label: "Carre" },
+    { key: "formes/01_Geometriques/cercle", label: "Cercle" },
+    { key: "formes/01_Geometriques/ellipse", label: "Ellipse" },
+    { key: "formes/01_Geometriques/triangle", label: "Triangle" },
+    { key: "formes/01_Geometriques/losange", label: "Losange" },
+    { key: "formes/01_Geometriques/pentagone", label: "Pentagone" },
+    { key: "formes/01_Geometriques/hexagone", label: "Hexagone" },
+    { key: "formes/01_Geometriques/etoile", label: "Etoile" },
+    { key: "formes/01_Geometriques/coeur", label: "Coeur" },
+    { key: "formes/02_Reperes/ligne", label: "Ligne" },
+    { key: "formes/02_Reperes/fleche_droite", label: "Fleche droite" },
+    { key: "formes/02_Reperes/fleche_courbe", label: "Fleche courbe" },
+    { key: "formes/02_Reperes/chevron", label: "Chevron" },
+    { key: "formes/02_Reperes/croix", label: "Croix" },
+    { key: "formes/02_Reperes/coche", label: "Coche" },
+    { key: "formes/02_Reperes/arc", label: "Arc" },
+    { key: "formes/02_Reperes/ligne_pointillee", label: "Ligne pointillee" },
+    { key: "formes/03_Composition/banniere", label: "Banniere" },
+    { key: "formes/03_Composition/ruban", label: "Ruban" },
+    { key: "formes/03_Composition/badge", label: "Badge" },
+    { key: "formes/03_Composition/bulle_dialogue", label: "Bulle dialogue" },
+    { key: "formes/03_Composition/legende", label: "Legende" },
+    { key: "formes/03_Composition/encadre", label: "Encadre" },
+    { key: "formes/03_Composition/grille", label: "Grille" },
+    { key: "formes/03_Composition/masque_circulaire", label: "Masque circulaire" },
+  ];
   constructor(root, options = {}) {
     if (!(root instanceof HTMLElement)) throw new TypeError('root must be an HTMLElement');
     this.root = root;
@@ -17,10 +100,23 @@ export class SpectraOverlayEditor {
     this.root.innerHTML = this.markup();
     this.canvas = this.root.querySelector('[data-canvas]');
     this.ctx = this.canvas.getContext('2d');
+    this.assetImages = new Map();
+    this.assetSvgTextCache = new Map();
+    this.coloredImageCache = new Map();
     this.bind();
+    this.preloadAssets();
     this.resetHistory();
     this.render();
     if (options.image) this.setImage(options.image);
+  }
+
+  preloadAssets() {
+    const all = [...SpectraOverlayEditor.STICKERS, ...SpectraOverlayEditor.FORMES];
+    for (const asset of all) {
+      const img = new Image();
+      img.onload = () => { this.assetImages.set(asset.key, img); this.render(); };
+      img.src = `/stickers-pack/${asset.key}.svg`;
+    }
   }
 
   markup() {
@@ -39,7 +135,7 @@ export class SpectraOverlayEditor {
         <aside class="sp-inspector">
           <h2>Éléments</h2>
           <p class="sp-help">Cliquez sur un élément pour le déplacer. Glissez le carré vert pour changer sa taille.</p>
-          <div class="sp-section"><h3>Ajouter un sticker</h3><div class="sp-stickers" data-stickers></div></div>
+          <div class="sp-section"><h3>Ajouter un sticker</h3><div class="sp-stickers" data-stickers></div></div><div class="sp-section"><h3>Ajouter une forme</h3><div class="sp-stickers" data-formes></div></div>
           <div class="sp-section"><h3>Calques</h3><div class="sp-layers" data-layers></div></div>
           <div class="sp-section" data-properties><h3>Propriétés</h3><p class="sp-help">Sélectionnez un élément.</p></div>
         </aside>
@@ -54,6 +150,8 @@ export class SpectraOverlayEditor {
       if (action) this.action(action);
       const sticker = event.target.closest('[data-sticker]')?.dataset.sticker;
       if (sticker) this.addSticker(sticker);
+      const forme = event.target.closest('[data-forme]')?.dataset.forme;
+      if (forme) this.addSticker(forme);
       const layer = event.target.closest('[data-layer]')?.dataset.layer;
       if (layer) { this.selectedId = Number(layer); this.render(); }
     });
@@ -70,7 +168,8 @@ export class SpectraOverlayEditor {
       const item = this.hitTest(this.point(event));
       if (item?.type === 'text') this.editText(item);
     });
-    this.root.querySelector('[data-stickers]').innerHTML = ['⭐','✨','❤️','🔥','✅','🎯','🚀','💡','📈','👑','🌈','👍'].map(s => `<button type="button" data-sticker="${s}" aria-label="Ajouter ${s}">${s}</button>`).join('');
+    this.root.querySelector('[data-stickers]').innerHTML = SpectraOverlayEditor.STICKERS.map(a => `<button type="button" data-sticker="${a.key}" title="${a.label}" aria-label="Ajouter ${a.label}"><img src="/stickers-pack/${a.key}.svg" alt="" width="20" height="20" /></button>`).join('');
+    this.root.querySelector('[data-formes]').innerHTML = SpectraOverlayEditor.FORMES.map(a => `<button type="button" data-forme="${a.key}" title="${a.label}" aria-label="Ajouter ${a.label}"><img src="/stickers-pack/${a.key}.svg" alt="" width="20" height="20" /></button>`).join('');
     // Keyboard shortcuts only act while the editor has focus.
     this.root.tabIndex = 0;
     this.keydown = event => {
@@ -136,15 +235,50 @@ export class SpectraOverlayEditor {
 
   base(type) {
     const size = Math.max(36, Math.min(140, Math.round(this.width * .075)));
-    return { id:this.nextId++, type, x:this.width/2, y:this.height/2, size, rotation:0, opacity:1, color:'#ffffff', shadow:false };
+    return { id:this.nextId++, type, x:this.width/2, y:this.height/2, size, rotation:0, opacity:1, color:'#ffffff', shadow:false, fillMode:'solid', gradientStops:[{position:0,color:'#3ddc84'},{position:100,color:'#a855f7'}] };
   }
   addText(value = 'Votre texte') {
-    const item = { ...this.base('text'), text:value, font:'Arial', bold:true, stroke:'#07090f', strokeWidth:0 };
+    const item = { ...this.base('text'), text:value, font:'Inter', bold:true, stroke:'#07090f', strokeWidth:0 };
     this.items.push(item); this.selectedId=item.id; this.commit(); return item;
   }
-  addSticker(value = '⭐') {
-    const item = { ...this.base('sticker'), value, size:Math.max(50,Math.round(this.width*.1)) };
+  addSticker(value = SpectraOverlayEditor.STICKERS[0].key) {
+    const item = { ...this.base('sticker'), value, fillMode:'original', strokeColor:'__original__', strokeWidth:'__original__', size:Math.max(50,Math.round(this.width*.1)) };
     this.items.push(item); this.selectedId=item.id; this.commit(); return item;
+  }
+
+  async getStyledImage(key, fillStops, strokeColor, strokeWidth) {
+    const cacheKey = [key, fillStops?JSON.stringify(fillStops):'orig', strokeColor, strokeWidth].join('::');
+    if (this.coloredImageCache.has(cacheKey)) return this.coloredImageCache.get(cacheKey);
+    let svgText = this.assetSvgTextCache.get(key);
+    if (!svgText) {
+      const res = await fetch(`/stickers-pack/${key}.svg`);
+      svgText = await res.text();
+      this.assetSvgTextCache.set(key, svgText);
+    }
+    let styled = svgText;
+    if (fillStops) {
+      const sorted = fillStops.slice().sort((a,b) => a.position - b.position);
+      const stopsMarkup = sorted.map(s => `<stop offset="${s.position}%" stop-color="${s.color}"/>`).join('');
+      styled = styled.replace(
+        /<linearGradient id="spectrum"[^>]*>[\s\S]*?<\/linearGradient>/i,
+        `<linearGradient id="spectrum" x1="0" x2="1" y1="0" y2="1">${stopsMarkup}</linearGradient>`
+      );
+    }
+    if (strokeColor !== '__original__') {
+      styled = styled.replace(/stroke="#142132"/gi, `stroke="${strokeColor}"`);
+    }
+    if (strokeWidth !== '__original__') {
+      styled = styled.replace(/stroke-width="[\d.]+"/gi, `stroke-width="${strokeWidth}"`);
+    }
+    const img = new Image();
+    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(styled);
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+    this.coloredImageCache.set(cacheKey, img);
+    return img;
   }
   addShape(shape = 'rectangle') {
     const item = { ...this.base('shape'), shape, size:Math.max(80,Math.round(this.width*.16)), color:'#3ddc84' };
@@ -191,20 +325,38 @@ export class SpectraOverlayEditor {
     const {w,h}=this.measure(item,ctx);
     ctx.save(); ctx.translate(item.x,item.y); ctx.rotate(item.rotation*Math.PI/180); ctx.globalAlpha=item.opacity;
     if(item.shadow) { ctx.shadowColor='#000c';ctx.shadowBlur=Math.max(8,item.size*.16);ctx.shadowOffsetX=item.size*.06;ctx.shadowOffsetY=item.size*.06; }
+    const fillStyle=()=>{
+      if(item.fillMode==='gradient'){
+        const g=ctx.createLinearGradient(-w/2,0,w/2,0);
+        item.gradientStops.slice().sort((a,b)=>a.position-b.position).forEach(s=>g.addColorStop(s.position/100,s.color));
+        return g;
+      }
+      return item.color;
+    };
     if(item.type==='text') {
       ctx.font=`${item.bold?'700 ':''}${item.size}px ${item.font}`;
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
       const lines=item.text.split('\n');
+      const fs=fillStyle();
       lines.forEach((line,index)=>{
         const y=(index-(lines.length-1)/2)*item.size*1.25;
         if(item.strokeWidth){ctx.strokeStyle=item.stroke;ctx.lineWidth=item.strokeWidth;ctx.strokeText(line,0,y);}
-        ctx.fillStyle=item.color;ctx.fillText(line,0,y);
+        ctx.fillStyle=fs;ctx.fillText(line,0,y);
       });
     } else if(item.type==='sticker') {
-      ctx.font=`${item.size}px "Segoe UI Emoji","Apple Color Emoji",sans-serif`;
-      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.value,0,0);
+      let fillStops=null;
+      if(item.fillMode==='solid')fillStops=[{position:0,color:item.color},{position:100,color:item.color}];
+      else if(item.fillMode==='gradient')fillStops=item.gradientStops;
+      let img;
+      if(fillStops||item.strokeColor!=='__original__'||item.strokeWidth!=='__original__'){
+        const cacheKey=[item.value,fillStops?JSON.stringify(fillStops):'orig',item.strokeColor,item.strokeWidth].join('::');
+        img=this.coloredImageCache.get(cacheKey);
+        if(!img)this.getStyledImage(item.value,fillStops,item.strokeColor,item.strokeWidth).then(()=>this.drawOnly());
+      }
+      if(!img) img=this.assetImages.get(item.value);
+      if(img) ctx.drawImage(img,-item.size/2,-item.size/2,item.size,item.size);
     } else {
-      ctx.fillStyle=item.color;ctx.beginPath();
+      ctx.fillStyle=fillStyle();ctx.beginPath();
       if(item.shape==='circle')ctx.arc(0,0,item.size/2,0,Math.PI*2);
       else if(item.shape==='star') {
         for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=item.size*(i%2?.22:.5);const x=Math.cos(a)*r,y=Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
@@ -247,9 +399,11 @@ export class SpectraOverlayEditor {
     const sizeLabel=item.type==='text'?'Taille du texte':'Taille';
     const number=(label,key,value,min,max,step=1)=>`<label>${label}<input data-prop="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
     host.innerHTML=`<h3>Propriétés</h3>
-      ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><label>Police<select data-prop="font">${['Arial','Georgia','Verdana','Impact','Courier New'].map(f=>`<option ${item.font===f?'selected':''}>${f}</option>`).join('')}</select></label><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
+      ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><label>Police<select data-prop="font">${['Inter','Manrope','Space Grotesk','Anton','Bebas Neue','Oswald','Playfair Display','Lora','Merriweather','JetBrains Mono','Space Mono','Fira Code','Caveat','Pacifico','Dancing Script','Fredoka','Quicksand','Baloo 2'].map(f=>`<option ${item.font===f?'selected':''}>${f}</option>`).join('')}</select></label><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
       ${item.type==='shape'?`<label>Forme<select data-prop="shape">${['rectangle','circle','star'].map(s=>`<option ${item.shape===s?'selected':''} value="${s}">${s}</option>`).join('')}</select></label>`:''}
-      ${item.type!=='sticker'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
+      <label>Type de remplissage<select data-prop="fillMode">${item.type==='sticker'?`<option value="original" ${item.fillMode==='original'?'selected':''}>Original (pack NOXEL)</option>`:''}<option value="solid" ${item.fillMode==='solid'?'selected':''}>Uni</option><option value="gradient" ${item.fillMode==='gradient'?'selected':''}>Dégradé</option></select></label>
+      ${item.fillMode==='gradient'?`<div class="sg-gradient-stops">${item.gradientStops.map((s,i)=>`<div class="sg-gradient-stop" data-stop-index="${i}"><input type="color" data-stop-prop="color" value="${s.color}"><input type="number" data-stop-prop="position" min="0" max="100" value="${s.position}" style="width:55px"><span>%</span><button type="button" data-remove-stop="${i}" ${item.gradientStops.length<=2?'disabled':''}>×</button></div>`).join('')}</div><button type="button" data-action="add-stop" ${item.gradientStops.length>=10?'disabled':''} style="width:100%;margin:4px 0 8px">+ Couleur (${item.gradientStops.length}/10)</button>`:item.fillMode==='solid'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
+      ${item.type==='sticker'?`<label>Couleur du contour<input type="color" data-prop="strokeColor" value="${item.strokeColor==='__original__'?'#142132':item.strokeColor}"></label>${number("Épaisseur du contour","strokeWidthSticker",item.strokeWidth==='__original__'?18:item.strokeWidth,0,60)}<button type="button" data-action="reset-color" style="width:100%;margin:4px 0 8px">Réinitialiser (dégradé et contour d'origine)</button>`:''}
       ${number(sizeLabel,'size',Math.round(item.size),12,Math.max(this.width,this.height)*2)}
       ${number('Rotation (°)','rotation',item.rotation,-360,360)}
       <label>Opacité <span>${Math.round(item.opacity*100)} %</span><input data-prop="opacity" type="range" min="0" max="100" value="${Math.round(item.opacity*100)}"></label>
@@ -262,6 +416,25 @@ export class SpectraOverlayEditor {
         else if(key==='bold'||key==='shadow')item[key]=input.checked;
         else if(key==='size'||key==='rotation'||key==='strokeWidth')item[key]=Number(input.value)||0;
         else if(key==='opacity')item.opacity=Number(input.value)/100;
+        else if(key==='fillMode'){
+          item.fillMode=input.value;
+          if(item.type==='sticker')this.refreshStickerImage(item);
+          this.commit();
+          this.renderProperties();
+          return;
+        }
+        else if((key==='color'||key==='gradientColor1'||key==='gradientColor2')&&item.type==='sticker'){
+          item[key]=input.value;
+          this.refreshStickerImage(item);
+        }
+        else if(key==='strokeColor'&&item.type==='sticker'){
+          item.strokeColor=input.value;
+          this.refreshStickerImage(item);
+        }
+        else if(key==='strokeWidthSticker'){
+          item.strokeWidth=Number(input.value)||0;
+          this.refreshStickerImage(item);
+        }
         else item[key]=input.value;
         // Do not rebuild focused controls on each keystroke.
         this.drawOnly();
@@ -271,6 +444,53 @@ export class SpectraOverlayEditor {
       input.addEventListener('change',()=>this.commit());
       if(input.dataset.prop==='text')input.addEventListener('blur',()=>this.commit());
     });
+    const resetColorBtn=host.querySelector('[data-action="reset-color"]');
+    if(resetColorBtn)resetColorBtn.addEventListener('click',()=>{
+      item.fillMode='original';
+      item.strokeColor='__original__';
+      item.strokeWidth='__original__';
+      this.commit();
+      this.renderProperties();
+    });
+    host.querySelectorAll('[data-stop-index]').forEach(row=>{
+      const index=Number(row.dataset.stopIndex);
+      row.querySelectorAll('[data-stop-prop]').forEach(input=>{
+        input.addEventListener('input',()=>{
+          const prop=input.dataset.stopProp;
+          item.gradientStops[index][prop]=prop==='position'?(Number(input.value)||0):input.value;
+          if(item.type==='sticker')this.refreshStickerImage(item);
+          this.drawOnly();
+        });
+        input.addEventListener('change',()=>this.commit());
+      });
+    });
+    host.querySelectorAll('[data-remove-stop]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(item.gradientStops.length<=2)return;
+        item.gradientStops.splice(Number(btn.dataset.removeStop),1);
+        if(item.type==='sticker')this.refreshStickerImage(item);
+        this.commit();
+        this.renderProperties();
+      });
+    });
+    const addStopBtn=host.querySelector('[data-action="add-stop"]');
+    if(addStopBtn)addStopBtn.addEventListener('click',()=>{
+      if(item.gradientStops.length>=10)return;
+      const sorted=item.gradientStops.slice().sort((a,b)=>a.position-b.position);
+      let gap=-1,at=0;
+      for(let i=0;i<sorted.length-1;i++){const d=sorted[i+1].position-sorted[i].position;if(d>gap){gap=d;at=i;}}
+      const newPosition=Math.round((sorted[at].position+sorted[at+1].position)/2);
+      item.gradientStops.push({position:newPosition,color:'#ffffff'});
+      if(item.type==='sticker')this.refreshStickerImage(item);
+      this.commit();
+      this.renderProperties();
+    });
+  }
+  refreshStickerImage(item){
+    let fillStops=null;
+    if(item.fillMode==='solid')fillStops=[{position:0,color:item.color},{position:100,color:item.color}];
+    else if(item.fillMode==='gradient')fillStops=item.gradientStops;
+    this.getStyledImage(item.value,fillStops,item.strokeColor,item.strokeWidth).then(()=>this.drawOnly());
   }
   drawOnly(){this.paintCanvas();}
   point(event) {const r=this.canvas.getBoundingClientRect();return {x:(event.clientX-r.left)*this.width/r.width,y:(event.clientY-r.top)*this.height/r.height};}
