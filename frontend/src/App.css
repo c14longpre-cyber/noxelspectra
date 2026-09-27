@@ -140,6 +140,14 @@ select:focus {
   border-color: var(--panel-border-active);
 }
 
+/* The expanded dropdown popup is browser-native and mostly ignores page
+   CSS, but Chromium-based browsers do respect background/color on
+   <option> — this fixes light text becoming invisible on a white popup. */
+option {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--green);

@@ -1,10 +1,51 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
+import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
 type Format = (typeof FORMATS)[number];
 
 const TARGET_SIZE_FORMATS: Format[] = ["jpeg", "webp", "avif"];
+
+type SocialPreset = { label: string; width: number; height: number };
+
+const SOCIAL_PRESETS: Record<string, SocialPreset[]> = {
+  Facebook: [
+    { label: "Photo de profil", width: 320, height: 320 },
+    { label: "Photo de couverture", width: 820, height: 312 },
+    { label: "Image de publication", width: 1200, height: 630 },
+    { label: "Couverture d'événement", width: 1920, height: 1005 },
+  ],
+  Instagram: [
+    { label: "Photo de profil", width: 320, height: 320 },
+    { label: "Publication (carré)", width: 1080, height: 1080 },
+    { label: "Story / Reel", width: 1080, height: 1920 },
+  ],
+  YouTube: [
+    { label: "Icône de chaîne", width: 800, height: 800 },
+    { label: "Bannière de chaîne", width: 2560, height: 1440 },
+    { label: "Vignette de vidéo", width: 1280, height: 720 },
+  ],
+  TikTok: [
+    { label: "Photo de profil", width: 200, height: 200 },
+    { label: "Vidéo", width: 1080, height: 1920 },
+  ],
+  LinkedIn: [
+    { label: "Photo de profil (personnel)", width: 400, height: 400 },
+    { label: "Bannière (personnel)", width: 1584, height: 396 },
+    { label: "Logo d'entreprise", width: 300, height: 300 },
+    { label: "Bannière d'entreprise", width: 1128, height: 191 },
+  ],
+  "X (Twitter)": [
+    { label: "Photo de profil", width: 400, height: 400 },
+    { label: "Bannière d'en-tête", width: 1500, height: 500 },
+    { label: "Image de publication", width: 1200, height: 675 },
+  ],
+  Pinterest: [
+    { label: "Photo de profil", width: 165, height: 165 },
+    { label: "Épingle", width: 1000, height: 1500 },
+  ],
+};
 
 type ConversionStats = {
   originalSize: number;
@@ -246,6 +287,8 @@ export default function App() {
   const metaCleanSectionRef = useRef<HTMLDivElement | null>(null);
   const shadowSectionRef = useRef<HTMLDivElement | null>(null);
   const glowSectionRef = useRef<HTMLDivElement | null>(null);
+  const socialSectionRef = useRef<HTMLDivElement | null>(null);
+  const editorSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
 
@@ -263,6 +306,8 @@ export default function App() {
     { id: "metaclean", label: "Nettoyer les métadonnées", icon: "▤", ref: metaCleanSectionRef },
     { id: "shadow", label: "Ombre portée", icon: "▢", ref: shadowSectionRef },
     { id: "glow", label: "Effet lumineux", icon: "☼", ref: glowSectionRef },
+    { id: "social", label: "Réseaux sociaux", icon: "⚑", ref: socialSectionRef },
+    { id: "editor", label: "Éditeur", icon: "✎", ref: editorSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -352,6 +397,13 @@ export default function App() {
   const [glowError, setGlowError] = useState<string | null>(null);
   const [glowResultUrl, setGlowResultUrl] = useState<string | null>(null);
 
+  const [socialPlatform, setSocialPlatform] = useState<string>(Object.keys(SOCIAL_PRESETS)[0]);
+  const [socialPresetIndex, setSocialPresetIndex] = useState(0);
+  const [socialLoading, setSocialLoading] = useState(false);
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [socialResultUrl, setSocialResultUrl] = useState<string | null>(null);
+  const [socialStats, setSocialStats] = useState<ResizeStats | null>(null);
+
   const [cropNaturalWidth, setCropNaturalWidth] = useState(0);
   const [cropNaturalHeight, setCropNaturalHeight] = useState(0);
   const [cropX, setCropX] = useState(0);
@@ -425,6 +477,9 @@ export default function App() {
     setShadowError(null);
     setGlowResultUrl(null);
     setGlowError(null);
+    setSocialResultUrl(null);
+    setSocialError(null);
+    setSocialStats(null);
   }
 
   async function handleAnalyze() {
@@ -768,6 +823,49 @@ export default function App() {
       setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
     } finally {
       setMetaCleanLoading(false);
+    }
+  }
+
+  async function handleApplySocialPreset() {
+    if (!file) return;
+    const preset = SOCIAL_PRESETS[socialPlatform][socialPresetIndex];
+    if (!preset) return;
+
+    setSocialLoading(true);
+    setSocialError(null);
+    setSocialResultUrl(null);
+    setSocialStats(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("width", String(preset.width));
+    formData.append("height", String(preset.height));
+    formData.append("maintainAspect", "false");
+
+    try {
+      const res = await fetch(`${apiUrl}/api/resize`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+
+      const originalWidth = Number(res.headers.get("X-Original-Width") || 0);
+      const originalHeight = Number(res.headers.get("X-Original-Height") || 0);
+      const outputWidth = Number(res.headers.get("X-Output-Width") || 0);
+      const outputHeight = Number(res.headers.get("X-Output-Height") || 0);
+      const originalSize = Number(res.headers.get("X-Original-Size") || file.size);
+      const outputSize = Number(res.headers.get("X-Output-Size") || 0);
+
+      const blob = await res.blob();
+      setSocialResultUrl(URL.createObjectURL(blob));
+      setSocialStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
+    } catch (err) {
+      setSocialError(err instanceof Error ? err.message : "Redimensionnement échoué");
+    } finally {
+      setSocialLoading(false);
     }
   }
 
@@ -2289,6 +2387,109 @@ export default function App() {
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {activeSection === "social" && (
+      <>
+      {/* ── Réseaux sociaux ── */}
+      <div ref={socialSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tailles pour réseaux sociaux</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Redimensionne l'image sélectionnée aux dimensions exactes recommandées par
+        chaque réseau. Ajuste précisément la taille (donc peut légèrement déformer
+        une image dont le ratio diffère) — utilise Rogner avant si tu veux éviter
+        toute déformation.
+      </p>
+
+      <div className="controls-grid" style={{ marginTop: 12 }}>
+        <label>
+          Réseau :{" "}
+          <select
+            value={socialPlatform}
+            onChange={(e) => {
+              setSocialPlatform(e.target.value);
+              setSocialPresetIndex(0);
+            }}
+          >
+            {Object.keys(SOCIAL_PRESETS).map((platform) => (
+              <option key={platform} value={platform}>{platform}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Type d'image :{" "}
+          <select
+            value={socialPresetIndex}
+            onChange={(e) => setSocialPresetIndex(Number(e.target.value))}
+          >
+            {SOCIAL_PRESETS[socialPlatform].map((preset, i) => (
+              <option key={preset.label} value={i}>
+                {preset.label} — {preset.width}×{preset.height}px
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <button
+        onClick={handleApplySocialPreset}
+        disabled={!file || socialLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {socialLoading ? "Redimensionnement..." : "Redimensionner à cette taille"}
+      </button>
+
+      {socialError && <p style={{ color: "red", marginTop: 16 }}>{socialError}</p>}
+
+      {socialStats && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: 12,
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+            fontSize: 14,
+          }}
+        >
+          <div>
+            Avant : {socialStats.originalWidth}×{socialStats.originalHeight}px ({formatBytes(socialStats.originalSize)})
+          </div>
+          <div>
+            Après : {socialStats.outputWidth}×{socialStats.outputHeight}px ({formatBytes(socialStats.outputSize)})
+          </div>
+        </div>
+      )}
+
+      {socialResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={socialResultUrl} />
+          ) : (
+            <img src={socialResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={socialResultUrl} download="social-image">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {activeSection === "editor" && (
+      <>
+      {/* ── Éditeur ── */}
+      <div ref={editorSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Éditeur</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Ajoute du texte, des stickers et des formes sur l'image sélectionnée en haut.
+        Utilise le bouton "Exporter PNG" dans la barre d'outils pour télécharger le résultat.
+      </p>
+      <div style={{ marginTop: 12 }}>
+        <OverlayEditor file={file} />
+      </div>
       </>
       )}
         </div>
