@@ -983,10 +983,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <span className="dot" />
-          <span>
-            NOXEL <span className="gradient-text">Spectra</span>
-          </span>
+          <img src="/noxel_spectra_logo.svg" alt="NOXEL Spectra" className="sidebar-logo-img" />
         </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
