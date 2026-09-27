@@ -234,6 +234,40 @@ export default function App() {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
   const convertSectionRef = useRef<HTMLDivElement | null>(null);
+  const analyzeSectionRef = useRef<HTMLDivElement | null>(null);
+  const resizeSectionRef = useRef<HTMLDivElement | null>(null);
+  const cropSectionRef = useRef<HTMLDivElement | null>(null);
+  const rotateSectionRef = useRef<HTMLDivElement | null>(null);
+  const adjustSectionRef = useRef<HTMLDivElement | null>(null);
+  const responsiveSectionRef = useRef<HTMLDivElement | null>(null);
+  const paletteSectionRef = useRef<HTMLDivElement | null>(null);
+  const vectorizeSectionRef = useRef<HTMLDivElement | null>(null);
+  const faviconSectionRef = useRef<HTMLDivElement | null>(null);
+  const metaCleanSectionRef = useRef<HTMLDivElement | null>(null);
+  const shadowSectionRef = useRef<HTMLDivElement | null>(null);
+  const glowSectionRef = useRef<HTMLDivElement | null>(null);
+
+  const [activeSection, setActiveSection] = useState("analyze");
+
+  const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
+    { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
+    { id: "convert", label: "Convertir", icon: "↔", ref: convertSectionRef },
+    { id: "resize", label: "Redimensionner", icon: "⤢", ref: resizeSectionRef },
+    { id: "crop", label: "Rogner", icon: "⊡", ref: cropSectionRef },
+    { id: "rotate", label: "Rotation / Miroir", icon: "↻", ref: rotateSectionRef },
+    { id: "adjust", label: "Filtres / Réglages", icon: "☷", ref: adjustSectionRef },
+    { id: "responsive", label: "Tailles responsives", icon: "▣", ref: responsiveSectionRef },
+    { id: "palette", label: "Palette de couleurs", icon: "◉", ref: paletteSectionRef },
+    { id: "vectorize", label: "Vectoriser", icon: "◇", ref: vectorizeSectionRef },
+    { id: "favicon", label: "Favicons", icon: "☆", ref: faviconSectionRef },
+    { id: "metaclean", label: "Nettoyer les métadonnées", icon: "▤", ref: metaCleanSectionRef },
+    { id: "shadow", label: "Ombre portée", icon: "▢", ref: shadowSectionRef },
+    { id: "glow", label: "Effet lumineux", icon: "☼", ref: glowSectionRef },
+  ];
+
+  function goToSection(id: string) {
+    setActiveSection(id);
+  }
 
   const [paletteCount, setPaletteCount] = useState(6);
   const [paletteLoading, setPaletteLoading] = useState(false);
@@ -427,7 +461,7 @@ export default function App() {
     }
     setMode("quality");
     setQuality(rec.quality);
-    convertSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setActiveSection("convert");
   }
 
   async function handleConvert() {
@@ -946,9 +980,31 @@ export default function App() {
   }
 
   return (
-    <div style={{ maxWidth: 480, margin: "60px auto", fontFamily: "sans-serif", padding: 20 }}>
-      <h1>NOXEL Spectra</h1>
-      <p style={{ color: "#888" }}>Conversion d'images — v0.1</p>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <span className="dot" />
+          <span>
+            NOXEL <span className="gradient-text">Spectra</span>
+          </span>
+        </div>
+        <nav className="sidebar-nav">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`sidebar-nav-item${activeSection === item.id ? " active" : ""}`}
+              onClick={() => goToSection(item.id)}
+            >
+              <span aria-hidden="true">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      <main className="app-main">
+        <div style={{ width: "100%", fontFamily: "sans-serif" }}>
+      <p style={{ color: "var(--muted)" }}>Conversion d'images — v0.1</p>
 
       <div style={{ marginTop: 24 }}>
         <input
@@ -958,15 +1014,13 @@ export default function App() {
         />
       </div>
 
+      {activeSection === "analyze" && (
+      <>
       {/* ── Analyser / Smart Optimize ── */}
       <div
-        style={{
-          marginTop: 24,
-          padding: 16,
-          borderRadius: 10,
-          border: "1px solid rgba(61,220,132,0.35)",
-          background: "linear-gradient(135deg, rgba(61,220,132,0.06), rgba(168,85,247,0.06))",
-        }}
+        ref={analyzeSectionRef}
+        className="glass-panel glass-panel--accent"
+        style={{ marginTop: 24 }}
       >
         <h2 style={{ fontSize: 17, margin: "0 0 4px" }}>✨ Analyser (recommandation intelligente)</h2>
         <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
@@ -1015,7 +1069,7 @@ export default function App() {
                       alignItems: "center",
                       padding: "8px 12px",
                       borderRadius: 8,
-                      background: isRecommended ? "rgba(61,220,132,0.12)" : "#f5f5f5",
+                      background: isRecommended ? "rgba(61,220,132,0.12)" : "rgba(255,255,255,0.06)",
                       border: isRecommended ? "1px solid rgba(61,220,132,0.4)" : "1px solid transparent",
                       fontSize: 14,
                     }}
@@ -1041,13 +1095,17 @@ export default function App() {
                 onClick={applyRecommendation}
                 style={{ marginTop: 14, padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
               >
-                Utiliser cette recommandation ↓
+                Utiliser cette recommandation →
               </button>
             )}
           </div>
         )}
       </div>
 
+      </>
+      )}
+      {activeSection === "convert" && (
+      <>
       {/* ── Conversion ── */}
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
@@ -1149,7 +1207,7 @@ export default function App() {
             style={{
               marginTop: 20,
               padding: 12,
-              background: "#f5f5f5",
+              background: "rgba(255,255,255,0.06)",
               borderRadius: 8,
               fontSize: 14,
             }}
@@ -1191,7 +1249,12 @@ export default function App() {
         )}
       </div>
 
+      </>
+      )}
+      {activeSection === "resize" && (
+      <>
       {/* ── Redimensionner ── */}
+      <div ref={resizeSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Redimensionner</h2>
@@ -1265,7 +1328,7 @@ export default function App() {
           style={{
             marginTop: 20,
             padding: 12,
-            background: "#f5f5f5",
+            background: "rgba(255,255,255,0.06)",
             borderRadius: 8,
             fontSize: 14,
           }}
@@ -1294,7 +1357,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "crop" && (
+      <>
       {/* ── Rogner ── */}
+      <div ref={cropSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rogner</h2>
@@ -1409,7 +1477,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "rotate" && (
+      <>
       {/* ── Rotation / Miroir ── */}
+      <div ref={rotateSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rotation / Miroir</h2>
@@ -1508,7 +1581,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "adjust" && (
+      <>
       {/* ── Filtres / Réglages ── */}
+      <div ref={adjustSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Filtres / Réglages</h2>
@@ -1516,7 +1594,7 @@ export default function App() {
         Ajuste la luminosité, le contraste, la saturation, la netteté ou applique un effet.
       </p>
 
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
           Luminosité : {brightness.toFixed(2)}
           <input
@@ -1526,7 +1604,7 @@ export default function App() {
             step={0.05}
             value={brightness}
             onChange={(e) => { setBrightness(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1538,7 +1616,7 @@ export default function App() {
             step={0.05}
             value={contrast}
             onChange={(e) => { setContrast(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1550,7 +1628,7 @@ export default function App() {
             step={0.05}
             value={saturation}
             onChange={(e) => { setSaturation(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1562,7 +1640,7 @@ export default function App() {
             step={0.5}
             value={sharpenAmount}
             onChange={(e) => { setSharpenAmount(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1574,7 +1652,7 @@ export default function App() {
             step={0.5}
             value={blurAmount}
             onChange={(e) => { setBlurAmount(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1586,7 +1664,7 @@ export default function App() {
             step={1}
             value={pixelateSize}
             onChange={(e) => { setPixelateSize(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1598,7 +1676,7 @@ export default function App() {
             step={5}
             value={vignetteIntensity}
             onChange={(e) => { setVignetteIntensity(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -1622,7 +1700,7 @@ export default function App() {
             step={4}
             value={quantizeColors}
             onChange={(e) => { setQuantizeColors(Number(e.target.value)); setFiltersTouched(true); }}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
           <div style={{ fontSize: 12, color: "#888" }}>
             Fonctionne uniquement quand le format de sortie est PNG.
@@ -1674,7 +1752,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "responsive" && (
+      <>
       {/* ── Tailles responsives / srcset ── */}
+      <div ref={responsiveSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Générer des tailles responsives (srcset)</h2>
@@ -1728,7 +1811,7 @@ export default function App() {
         <div style={{ marginTop: 12 }}>
           <div
             style={{
-              background: "#f5f5f5",
+              background: "rgba(255,255,255,0.06)",
               borderRadius: 8,
               padding: 12,
               fontSize: 12,
@@ -1757,7 +1840,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "palette" && (
+      <>
       {/* ── Palette de couleurs ── */}
+      <div ref={paletteSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Palette de couleurs</h2>
@@ -1837,7 +1925,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "vectorize" && (
+      <>
       {/* ── Vectoriser ── */}
+      <div ref={vectorizeSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Vectoriser (PNG/WebP → SVG)</h2>
@@ -1964,7 +2057,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "favicon" && (
+      <>
       {/* ── Favicons ── */}
+      <div ref={faviconSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Générer les favicons</h2>
@@ -1992,7 +2090,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "metaclean" && (
+      <>
       {/* ── Nettoyer les métadonnées ── */}
+      <div ref={metaCleanSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Nettoyer les métadonnées</h2>
@@ -2016,7 +2119,7 @@ export default function App() {
           style={{
             marginTop: 20,
             padding: 12,
-            background: "#f5f5f5",
+            background: "rgba(255,255,255,0.06)",
             borderRadius: 8,
             fontSize: 14,
           }}
@@ -2048,7 +2151,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "shadow" && (
+      <>
       {/* ── Ombre portée ── */}
+      <div ref={shadowSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Ombre portée</h2>
@@ -2056,7 +2164,7 @@ export default function App() {
         Fonctionne mieux sur une image avec transparence (logo, icône vectorisée).
       </p>
 
-      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
           Décalage X : {shadowOffsetX}px
           <input
@@ -2065,7 +2173,7 @@ export default function App() {
             max={50}
             value={shadowOffsetX}
             onChange={(e) => setShadowOffsetX(Number(e.target.value))}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -2076,7 +2184,7 @@ export default function App() {
             max={50}
             value={shadowOffsetY}
             onChange={(e) => setShadowOffsetY(Number(e.target.value))}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -2087,7 +2195,7 @@ export default function App() {
             max={30}
             value={shadowBlur}
             onChange={(e) => setShadowBlur(Number(e.target.value))}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
         <label>
@@ -2098,7 +2206,7 @@ export default function App() {
             max={100}
             value={shadowOpacity}
             onChange={(e) => setShadowOpacity(Number(e.target.value))}
-            style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
         </label>
       </div>
@@ -2133,7 +2241,12 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "glow" && (
+      <>
       {/* ── Effet lumineux (Glow) ── */}
+      <div ref={glowSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Effet lumineux (Glow)</h2>
@@ -2149,7 +2262,7 @@ export default function App() {
           max={30}
           value={glowIntensity}
           onChange={(e) => setGlowIntensity(Number(e.target.value))}
-          style={{ marginLeft: 8, verticalAlign: "middle", width: 200 }}
+          style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
         />
       </label>
 
@@ -2179,6 +2292,10 @@ export default function App() {
           </div>
         </div>
       )}
+      </>
+      )}
+        </div>
+      </main>
     </div>
   );
 }

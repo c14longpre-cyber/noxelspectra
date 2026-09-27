@@ -1371,13 +1371,20 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
     const canvasWidth = width + padding * 2;
     const canvasHeight = height + padding * 2;
 
+    // Force PNG at every intermediate step — the original upload's format
+    // (e.g. JPEG) may not support alpha at all, which otherwise silently
+    // breaks the alpha-channel extraction a few lines below.
     const sourceWithAlpha = await sharp(req.file.buffer)
       .ensureAlpha()
+      .png()
       .toBuffer();
 
     // Build the shadow: take the alpha channel as a mask, recolor it solid
     // black at the requested opacity, then blur it for a soft edge.
-    const alphaMask = await sharp(sourceWithAlpha).extractChannel(3).toBuffer();
+    const alphaMask = await sharp(sourceWithAlpha)
+      .extractChannel(3)
+      .png()
+      .toBuffer();
     const shadowLayer = await sharp({
       create: {
         width,
@@ -1388,10 +1395,12 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
     })
       .composite([{ input: alphaMask, blend: "dest-in" }])
       .ensureAlpha()
+      .png()
       .toBuffer();
 
     const blurredShadow = await sharp(shadowLayer)
       .blur(blurAmount)
+      .png()
       .toBuffer();
 
     const shadowWithOpacity = await sharp(blurredShadow)
@@ -1408,6 +1417,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
           blend: "dest-in",
         },
       ])
+      .png()
       .toBuffer();
 
     const outputBuffer = await sharp({

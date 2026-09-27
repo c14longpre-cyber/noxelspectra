@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NOXEL Spectra — maquette interactive</title>
+  <style>
+    :root { color-scheme:dark; --bg:#07090f; --surface:#0d1320; --line:#243145; --text:#e9f0f8; --muted:#9aaac0; --green:#3ddc84; --purple:#a855f7; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:var(--bg); color:var(--text); font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,input:focus-visible { outline:2px solid var(--green); outline-offset:3px; }
+    .app { min-height:100vh; display:grid; grid-template-columns:238px minmax(0,1fr); grid-template-rows:64px 1fr; }
+    .top { grid-column:1/-1; display:flex; align-items:center; gap:20px; padding:0 22px; border-bottom:1px solid var(--line); background:#090d16; }
+    .brand { min-width:216px; font-size:24px; font-weight:850; letter-spacing:-.06em; white-space:nowrap; }
+    .brand::before { content:"▥"; margin-right:13px; color:var(--purple); }
+    .brand span { color:var(--purple); }
+    .file-summary { display:flex; align-items:center; gap:12px; min-width:0; }
+    .file-summary small { display:block; color:var(--muted); font:11px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .filename { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .top-actions { margin-left:auto; display:flex; align-items:center; gap:10px; }
+    .subtle-button,.primary,.tool,.tab,.ghost { border:1px solid var(--line); color:var(--text); background:#111a28; border-radius:9px; padding:9px 12px; }
+    .primary { border-color:transparent; color:#06140e; background:var(--green); font-weight:800; box-shadow:0 0 22px #3ddc8438; }
+    .primary.busy { animation:pulse 1.1s infinite alternate; }
+    @keyframes pulse { to { box-shadow:0 0 34px #3ddc84b0; } }
+    .sidebar { border-right:1px solid var(--line); padding:14px 10px; background:#090e18; overflow:auto; }
+    .nav-title { padding:14px 13px 8px; color:var(--muted); font:11px ui-monospace,Consolas,monospace; text-transform:uppercase; letter-spacing:.12em; }
+    .tool { width:100%; display:flex; gap:12px; align-items:center; text-align:left; margin:3px 0; border:1px solid transparent; background:none; color:#cad5e4; }
+    .tool:hover,.tab:hover { background:#152139; }
+    .tool.active { color:var(--green); border-left:2px solid var(--green); background:linear-gradient(90deg,#3ddc8421,#3ddc8409); }
+    .tool i { display:inline-grid; width:19px; place-items:center; color:#aab9d1; font-style:normal; }
+    .tool.active i { color:var(--green); }
+    main { min-width:0; padding:16px; background:radial-gradient(ellipse at 75% -30%,#a855f718,transparent 52%),var(--bg); }
+    .workspace { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr); gap:14px; }
+    .panel { position:relative; overflow:hidden; border:1px solid #36405e; border-radius:12px; background:linear-gradient(135deg,#192338bf,#0c1421e8 70%); box-shadow:inset 0 1px #ffffff14,0 12px 40px #0005; backdrop-filter:blur(16px); }
+    .preview { min-height:540px; display:flex; flex-direction:column; }
+    .compare { position:relative; flex:1; min-height:410px; overflow:hidden; touch-action:none; background:#122039; }
+    .art { position:absolute; inset:0; background:radial-gradient(circle at 62% 32%,#ffb151 0 7%,#ec586b 11%,transparent 35%),radial-gradient(ellipse at 25% 62%,#0876c8 5%,#102272 31%,transparent 58%),radial-gradient(ellipse at 80% 74%,#8d25c0 5%,#2c1a70 46%,transparent 73%),repeating-radial-gradient(ellipse at 60% 40%,#fb60ac 0 8px,#fd9756 10px 17px,#351459 21px 32px); background-blend-mode:screen,normal,normal,normal; }
+    .art::after { content:""; position:absolute; inset:0; background:repeating-linear-gradient(125deg,transparent 0 22px,#ffffff07 23px 25px,transparent 28px 55px); }
+    .art.after { filter:saturate(.78) contrast(1.1); clip-path:inset(0 0 0 var(--split,50%)); }
+    .compare-line { position:absolute; top:0; bottom:0; left:var(--split,50%); width:2px; background:#fff; box-shadow:0 0 12px #fff9; transform:translateX(-50%); pointer-events:none; }
+    .compare-line::after { content:"↔"; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:grid; place-items:center; width:42px; height:42px; border-radius:50%; border:2px solid white; background:#432947; font-size:19px; }
+    .badge { position:absolute; top:12px; padding:6px 11px; background:#08101ce8; border:1px solid #6c789d; border-radius:7px; font-weight:700; }
+    .badge.before { left:12px; } .badge.after { right:12px; }
+    .preview-bottom { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 16px; background:#08111e; }
+    .mono { font:12px ui-monospace,SFMono-Regular,Consolas,monospace; color:#bccce0; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:20px; margin-bottom:12px; }
+    h1::before { content:""; display:inline-block; width:4px; height:22px; vertical-align:-5px; margin-right:10px; background:linear-gradient(var(--green),var(--purple)); box-shadow:0 0 14px var(--green); border-radius:4px; }
+    h2 { font-size:15px; margin-bottom:10px; } h3 { font-size:13px; margin-bottom:7px; }
+    .analysis { padding:18px; }
+    .spectrum { height:2px; border:0; margin:16px 0; background:linear-gradient(90deg,var(--green),#21b9d6,var(--purple),transparent); }
+    .detect { display:grid; grid-template-columns:110px 1fr; gap:14px; align-items:center; }
+    .detect-thumb { height:90px; border-radius:8px; border:1px solid #6172a2; background:radial-gradient(circle at 45% 40%,#ffac5c,#e54983 27%,#7a37d4 45%,#103388 76%); }
+    .bar { height:8px; border-radius:99px; background:#253142; margin:6px 0 13px; overflow:hidden; }
+    .bar span { display:block; height:100%; width:82%; border-radius:inherit; background:var(--green); }
+    .bar.purple span { width:18%; background:var(--purple); }
+    .formats { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+    .format { padding:10px 8px; border:1px solid #375077; border-radius:8px; background:#101c30; min-width:0; }
+    .format.best { border-color:var(--green); background:#0e302a; }
+    .format strong,.format small { display:block; } .format small { margin-top:8px; color:#d0ddef; font:11px ui-monospace,Consolas,monospace; white-space:nowrap; }
+    .format b { color:var(--green); font-size:11px; }
+    .recommend { display:flex; justify-content:space-between; align-items:center; padding:13px; border:1px solid #227f65; border-radius:8px; background:#103a31; color:var(--green); }
+    .recommend small { display:block; color:#c2d6d3; margin-top:3px; }
+    .control { display:grid; grid-template-columns:120px 1fr 55px; gap:10px; align-items:center; margin-top:13px; }
+    .value { border:1px solid var(--line); background:#121d2c; padding:6px; text-align:center; border-radius:6px; font:12px ui-monospace,Consolas,monospace; }
+    input[type=range] { width:100%; accent-color:var(--green); cursor:pointer; }
+    .hint { margin:16px 0 0; padding:11px; border:1px solid #334255; border-radius:8px; background:#0d1b2b; color:#cbd7e5; font-size:12px; }
+    .secondary { margin-top:16px; }
+    .tabs { display:flex; gap:4px; overflow:auto; border-bottom:1px solid var(--line); }
+    .tab { border:0; border-radius:0; background:transparent; white-space:nowrap; }
+    .tab.active { border-bottom:2px solid var(--green); color:var(--green); }
+    .cards { display:grid; grid-template-columns:repeat(7,minmax(170px,1fr)); gap:9px; padding-top:12px; overflow:auto; }
+    .mini { min-height:185px; padding:12px; border:1px solid #30405c; border-radius:9px; background:linear-gradient(145deg,#152033,#0a121f); }
+    .mini p { font-size:12px; color:var(--muted); }
+    .mini .mono { font-size:11px; overflow-wrap:anywhere; }
+    .swatches { display:flex; gap:5px; margin:14px 0; }
+    .swatches span { width:28px; height:28px; border-radius:5px; background:var(--c); }
+    .mini .ghost { font-size:11px; margin-top:8px; width:100%; }
+    .mini-art { height:58px; margin:8px 0; border-radius:5px; background:radial-gradient(circle at 60% 35%,#ffb85b,#e35c79 26%,#822cc5 50%,#135db5 75%); }
+    .tool-detail { margin-top:12px; color:#a9bed3; font-size:12px; }
+    @media(max-width:1250px) { .workspace { grid-template-columns:1fr; } .preview { min-height:390px; } .compare { min-height:330px; } }
+    @media(max-width:700px) { .app { display:block; } .top { min-height:64px; padding:10px; flex-wrap:wrap; } .brand { min-width:0; font-size:19px; } .file-summary { order:3; width:100%; } .top-actions { margin-left:auto; } .sidebar { display:flex; overflow-x:auto; border-right:0; border-bottom:1px solid var(--line); padding:7px; } .nav-title { display:none; } .tool { flex:none; width:auto; white-space:nowrap; padding:8px; } main { padding:9px; } .analysis { padding:12px; } .detect { grid-template-columns:75px 1fr; } .detect-thumb { height:75px; } .formats { grid-template-columns:repeat(3,1fr); } .control { grid-template-columns:95px 1fr 44px; } .preview-bottom { flex-wrap:wrap; } }
+    @media(prefers-reduced-motion:reduce) { .primary.busy { animation:none; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">NOXEL <span>Spectra</span></div>
+      <div class="file-summary"><button type="button" class="subtle-button" id="uploadBtn" aria-label="Choisir une image">⇧</button><div><div class="filename" id="filename">spectra-test.png</div><small id="fileMeta">1920 × 1080 px&nbsp; | &nbsp;2,31 Mo&nbsp; | &nbsp;sRGB</small></div></div>
+      <input id="fileInput" type="file" accept="image/*" hidden>
+      <div class="top-actions"><button type="button" class="primary" id="analyzeBtn">Analyser</button></div>
+    </header>
+    <aside class="sidebar" aria-label="Outils Spectra">
+      <div class="nav-title">Outils</div>
+      <button class="tool active" type="button" data-tool="Analyser"><i>⌁</i>Analyser</button>
+      <button class="tool" type="button" data-tool="Convertir"><i>↔</i>Convertir</button>
+      <button class="tool" type="button" data-tool="Redimensionner"><i>⤢</i>Redimensionner</button>
+      <button class="tool" type="button" data-tool="Rogner"><i>⊡</i>Rogner</button>
+      <button class="tool" type="button" data-tool="Rotation / Miroir"><i>↻</i>Rotation / Miroir</button>
+      <button class="tool" type="button" data-tool="Filtres / Réglages"><i>☷</i>Filtres / Réglages</button>
+      <button class="tool" type="button" data-tool="Tailles responsives (srcset)"><i>▣</i>Tailles responsives</button>
+      <button class="tool" type="button" data-tool="Palette de couleurs"><i>◉</i>Palette de couleurs</button>
+      <button class="tool" type="button" data-tool="Vectoriser"><i>◇</i>Vectoriser</button>
+      <button class="tool" type="button" data-tool="Favicons"><i>☆</i>Favicons</button>
+      <button class="tool" type="button" data-tool="Nettoyer les métadonnées"><i>▤</i>Nettoyer les métadonnées</button>
+      <button class="tool" type="button" data-tool="Ombre portée"><i>▢</i>Ombre portée</button>
+      <button class="tool" type="button" data-tool="Effet lumineux (Glow)"><i>☼</i>Effet lumineux</button>
+    </aside>
+    <main>
+      <div class="workspace">
+        <section class="panel preview" aria-label="Comparaison avant et après">
+          <div class="compare" id="compare" role="slider" tabindex="0" aria-label="Position de la comparaison avant/après" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+            <div class="art" id="before"></div><div class="art after" id="after"></div><div class="compare-line"></div>
+            <span class="badge before">Avant</span><span class="badge after">Après (aperçu)</span>
+          </div>
+          <div class="preview-bottom"><div><strong id="previewName">spectra-test.png</strong><div class="mono" id="previewMeta">1920 × 1080 px&nbsp; | &nbsp;2,31 Mo</div></div><span class="mono" id="splitLabel">50 %</span></div>
+        </section>
+        <section class="panel analysis" aria-live="polite">
+          <h1 id="panelTitle">Analyse de l’image</h1>
+          <div class="detect"><div class="detect-thumb"></div><div><div>Type détecté : <strong>Photographique</strong></div><div class="bar"><span></span></div><div>Contenu graphique</div><div class="bar purple"><span></span></div></div></div>
+          <hr class="spectrum">
+          <h2>Formats testés <span style="color:var(--muted);font-weight:400">(données de démonstration)</span></h2>
+          <div class="formats"><div class="format"><strong>JPEG</strong><small>642 Ko</small><b>−73 %</b></div><div class="format"><strong>PNG</strong><small>1,24 Mo</small><b>−46 %</b></div><div class="format"><strong>WebP</strong><small>498 Ko</small><b>−79 %</b></div><div class="format best"><strong>AVIF</strong><small>412 Ko</small><b>−82 %</b></div><div class="format"><strong>GIF</strong><small>2,08 Mo</small><b>−10 %</b></div></div>
+          <hr class="spectrum">
+          <div class="recommend"><div><strong>✦ Format recommandé : AVIF</strong><small>Exemple visuel — à brancher aux vrais résultats de l’API.</small></div><strong class="mono">≈ 412 Ko</strong></div>
+          <label class="control"><span>Qualité</span><input id="quality" type="range" min="1" max="100" value="75"><output class="value" id="qualityValue">75</output></label>
+          <label class="control"><span>Taille cible (Ko)</span><input id="target" type="range" min="20" max="1000" value="400"><output class="value" id="targetValue">400</output></label>
+          <p class="hint" id="toolHint">ⓘ EXIF / GPS / ICC : 3 blocs détectés (exemple). Les résultats affichés sont fictifs et ne changent pas après l’importation.</p>
+        </section>
+      </div>
+      <section class="secondary" aria-label="Autres capacités">
+        <div class="tabs"><button type="button" class="tab active">Srcset 320–1920 px</button><button type="button" class="tab">Palette HEX</button><button type="button" class="tab">PNG / WebP → SVG</button><button type="button" class="tab">Pack favicons</button><button type="button" class="tab">Ombre</button><button type="button" class="tab">Glow</button></div>
+        <div class="cards">
+          <article class="mini"><h3>Tailles responsives</h3><div class="mini-art"></div><p>320, 640, 960, 1280, 1920 px</p><div class="mono">srcset="image-320.avif 320w, …"</div><button class="ghost" type="button" data-demo="zip">Pack ZIP + code à copier</button></article>
+          <article class="mini"><h3>Palette de couleurs</h3><div class="swatches"><span style="--c:#fa8a3d"></span><span style="--c:#a855f7"></span><span style="--c:#3d8ef6"></span><span style="--c:#06b6d4"></span><span style="--c:#07090f"></span></div><div class="mono">#FA8A3D · #A855F7 · #3D8EF6</div><button class="ghost" type="button" data-demo="palette">Copier HEX</button></article>
+          <article class="mini"><h3>Vectoriser</h3><div class="mini-art"></div><p>PNG / WebP → SVG multi-couleurs</p><div class="mono">Palette éditable avant conversion</div></article>
+          <article class="mini"><h3>Rotation / Rogner</h3><div class="mini-art"></div><p>Angle libre par pas de 5°, miroir horizontal/vertical, rectangle de recadrage.</p></article>
+          <article class="mini"><h3>Nettoyer les métadonnées</h3><p>EXIF, GPS et ICC; garde-fou anti-grossissement.</p><div class="mono">☑ EXIF&nbsp;&nbsp; ☑ GPS&nbsp;&nbsp; ☑ ICC</div></article>
+          <article class="mini"><h3>Ombre portée</h3><div class="mini-art" style="box-shadow:9px 9px 16px #000"></div><p>Décalage, flou et opacité configurables.</p></article>
+          <article class="mini"><h3>Effet lumineux</h3><div class="mini-art" style="box-shadow:0 0 23px #a855f7aa"></div><p>Intensité du halo réglable.</p></article>
+        </div>
+        <p class="tool-detail">Maquette d’interface : les traitements réels (conversion, analyse, vectorisation, ZIP, etc.) doivent être reliés aux fonctions existantes de Spectra.</p>
+      </section>
+    </main>
+  </div>
+  <script>
+    const compare=document.getElementById('compare');
+    const setSplit=value=>{const n=Math.max(0,Math.min(100,value));compare.style.setProperty('--split',`${n}%`);compare.setAttribute('aria-valuenow',Math.round(n));document.getElementById('splitLabel').textContent=`${Math.round(n)} %`;};
+    const move=e=>{const r=compare.getBoundingClientRect();setSplit((e.clientX-r.left)/r.width*100);};
+    compare.addEventListener('pointerdown',e=>{compare.setPointerCapture(e.pointerId);move(e);});
+    compare.addEventListener('pointermove',e=>{if(e.buttons)move(e);});
+    compare.addEventListener('keydown',e=>{const v=Number(compare.getAttribute('aria-valuenow'));if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();setSplit(v+(e.key==='ArrowLeft'?-5:5));}});
+    for(const id of ['quality','target'])document.getElementById(id).addEventListener('input',e=>document.getElementById(id+'Value').textContent=e.target.value);
+    const descriptions={Analyser:'Teste les formats réels, détecte photo/graphique et signale les métadonnées superflues.',Convertir:'JPEG, PNG, WebP, AVIF et GIF; qualité manuelle ou taille cible.',Redimensionner:'Largeur et hauteur, ratio verrouillable, format optionnel.',Rogner:'Coordonnées et aperçu de la zone de recadrage.', 'Rotation / Miroir':'Angle libre par pas de 5° et miroir horizontal ou vertical.', 'Filtres / Réglages':'Luminosité, contraste, saturation, netteté, flou, pixelisation, vignette, réduction du bruit, quantize, niveaux de gris, sépia et inversion.', 'Tailles responsives (srcset)':'Génère 320 à 1920 px, ZIP et code srcset copiable.', 'Palette de couleurs':'Couleurs dominantes en hexadécimal, copiables.',Vectoriser:'PNG / WebP vers SVG multi-couleurs avec palette éditable.',Favicons:'ICO, six tailles PNG et apple-touch-icon.', 'Nettoyer les métadonnées':'Retire EXIF/GPS/ICC avec garde-fou anti-grossissement.', 'Ombre portée':'Décalage, flou et opacité.', 'Effet lumineux (Glow)':'Halo lumineux avec intensité réglable.'};
+    document.querySelectorAll('.tool').forEach(btn=>btn.addEventListener('click',()=>{document.querySelector('.tool.active')?.classList.remove('active');btn.classList.add('active');const name=btn.dataset.tool;document.getElementById('panelTitle').textContent=name==='Analyser'?'Analyse de l’image':name;document.getElementById('toolHint').textContent=`ⓘ ${descriptions[name]} Maquette : brancher cette commande au traitement existant.`;}));
+    document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',()=>{document.querySelector('.tab.active')?.classList.remove('active');btn.classList.add('active');btn.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});}));
+    document.getElementById('uploadBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+    document.getElementById('fileInput').addEventListener('change',e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/'))return;const url=URL.createObjectURL(file);const image=new Image();image.onload=()=>{document.getElementById('fileMeta').textContent=`${image.naturalWidth} × ${image.naturalHeight} px | ${(file.size/1048576).toFixed(2)} Mo`;document.getElementById('previewMeta').textContent=document.getElementById('fileMeta').textContent;URL.revokeObjectURL(url);};image.src=url;document.getElementById('filename').textContent=file.name;document.getElementById('previewName').textContent=file.name;const preview=URL.createObjectURL(file);for(const id of ['before','after'])document.getElementById(id).style.background=`center / contain no-repeat url(${JSON.stringify(preview)}) #101826`;document.getElementById('toolHint').textContent='ⓘ Image chargée pour aperçu. Les statistiques et résultats de format restent des données de démonstration.';});
+    document.getElementById('analyzeBtn').addEventListener('click',e=>{const btn=e.currentTarget;btn.classList.add('busy');btn.textContent='Traitement…';setTimeout(()=>{btn.classList.remove('busy');btn.textContent='Analyser';document.getElementById('toolHint').textContent='ⓘ Démonstration visuelle terminée. Brancher ici la véritable API d’analyse Spectra.';},1000);});
+    document.querySelectorAll('[data-demo]').forEach(btn=>btn.addEventListener('click',()=>{document.getElementById('toolHint').textContent='ⓘ Cette action doit être branchée à la fonction correspondante dans Spectra.';}));
+  </script>
+</body>
+</html>
