@@ -1520,6 +1520,249 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Glow failed" });
   }
 });
+// POST /api/watermark — multipart form:
+//   file        required — the image to watermark
+//   type        "text" | "logo" (default "text")
+//   text        required if type=text — watermark text
+//   logo        required if type=logo — the logo/image file
+//   position    "top-left"|"top-right"|"bottom-left"|"bottom-right"|"center"|"tiled" (default "bottom-right")
+//   opacity     0-100 (default 60)
+//   size        text: font size px (0 = auto); logo: target width as % of image width (0 = auto 20%)
+//   color       text watermark color (default #ffffff)
+//   format      optional, default keeps the original format
+//   quality     optional 1-100, default 90 (ignored for png/gif)
+app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name: "logo", maxCount: 1 }]), async (req, res) => {
+  try {
+    const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+    const mainFile = files?.file?.[0];
+    if (!mainFile) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(mainFile.buffer).metadata();
+    const width = meta.width || 0;
+    const height = meta.height || 0;
+
+    const type = req.body.type === "logo" ? "logo" : "text";
+    const position = req.body.position || "bottom-right";
+    const opacity = Math.min(100, Math.max(0, parseInt(req.body.opacity) || 60)) / 100;
+    const sizeParam = parseInt(req.body.size) || 0;
+
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+
+    let overlayBuffer: Buffer;
+    let overlayWidth: number;
+    let overlayHeight: number;
+
+    if (type === "text") {
+      const text = (req.body.text || "NOXEL").slice(0, 200);
+      const color = req.body.color || "#ffffff";
+      const fontSize = sizeParam > 0 ? sizeParam : Math.max(18, Math.round(width * 0.04));
+      const escaped = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      const padding = Math.round(fontSize * 0.6);
+      const textWidth = Math.round(escaped.length * fontSize * 0.6) + padding * 2;
+      const textHeight = Math.round(fontSize * 1.5) + padding;
+      const svg =
+        '<svg width="' + textWidth + '" height="' + textHeight + '" xmlns="http://www.w3.org/2000/svg">' +
+        '<text x="' + padding + '" y="' + Math.round(textHeight * 0.68) + '" font-family="Arial, sans-serif" font-size="' + fontSize + '" font-weight="700" fill="' + color + '" fill-opacity="' + opacity + '">' + escaped + "</text>" +
+        "</svg>";
+      overlayBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+      const ometa = await sharp(overlayBuffer).metadata();
+      overlayWidth = ometa.width || textWidth;
+      overlayHeight = ometa.height || textHeight;
+    } else {
+      const logoFile = files?.logo?.[0];
+      if (!logoFile) {
+        return res.status(400).json({ ok: false, error: "No logo uploaded" });
+      }
+      const targetWidth = sizeParam > 0 ? Math.round(width * (sizeParam / 100)) : Math.round(width * 0.2);
+      const resizedLogo = await sharp(logoFile.buffer)
+        .resize({ width: Math.max(1, targetWidth) })
+        .ensureAlpha()
+        .png()
+        .toBuffer();
+      const lmeta = await sharp(resizedLogo).metadata();
+      overlayWidth = lmeta.width || targetWidth;
+      overlayHeight = lmeta.height || targetWidth;
+      overlayBuffer = await sharp(resizedLogo)
+        .composite([
+          {
+            input: {
+              create: {
+                width: overlayWidth,
+                height: overlayHeight,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: opacity },
+              },
+            },
+            blend: "dest-in",
+          },
+        ])
+        .png()
+        .toBuffer();
+    }
+
+    const margin = Math.round(Math.min(width, height) * 0.03);
+    const composites: { input: Buffer; left: number; top: number }[] = [];
+
+    if (position === "tiled") {
+      const stepX = overlayWidth + margin * 2;
+      const stepY = overlayHeight + margin * 2;
+      for (let y = margin; y < height; y += stepY) {
+        for (let x = margin; x < width; x += stepX) {
+          composites.push({
+            input: overlayBuffer,
+            left: Math.min(x, Math.max(0, width - overlayWidth)),
+            top: Math.min(y, Math.max(0, height - overlayHeight)),
+          });
+        }
+      }
+    } else {
+      let left: number;
+      let top: number;
+      switch (position) {
+        case "top-left":
+          left = margin;
+          top = margin;
+          break;
+        case "top-right":
+          left = width - overlayWidth - margin;
+          top = margin;
+          break;
+        case "bottom-left":
+          left = margin;
+          top = height - overlayHeight - margin;
+          break;
+        case "center":
+          left = Math.round((width - overlayWidth) / 2);
+          top = Math.round((height - overlayHeight) / 2);
+          break;
+        case "bottom-right":
+        default:
+          left = width - overlayWidth - margin;
+          top = height - overlayHeight - margin;
+      }
+      composites.push({
+        input: overlayBuffer,
+        left: Math.max(0, left),
+        top: Math.max(0, top),
+      });
+    }
+
+    let pipeline = sharp(mainFile.buffer).composite(composites);
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="watermarked.' + format + '"'
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Watermark error:", err);
+    return res.status(500).json({ ok: false, error: "Watermark failed" });
+  }
+});
+
+// POST /api/copyright — multipart form:
+//   file            required
+//   author          optional — embedded as EXIF Artist
+//   copyrightText   optional — embedded as EXIF Copyright
+//   format          optional, default keeps the original format
+//   quality         optional 1-100, default 90 (ignored for png/gif)
+// Most reliable on JPEG — other formats' EXIF support varies by viewer.
+app.post("/api/copyright", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+
+    const meta = await sharp(req.file.buffer).metadata();
+    const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
+    let format = req.body.format;
+    if (!format || !allowedFormats.includes(format)) {
+      const sourceFormat = meta.format || "png";
+      format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
+    }
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
+    const author = (req.body.author || "").slice(0, 200);
+    const copyrightText = (req.body.copyrightText || "").slice(0, 300);
+
+    let pipeline = sharp(req.file.buffer).withMetadata({
+      exif: {
+        IFD0: {
+          ...(copyrightText ? { Copyright: copyrightText } : {}),
+          ...(author ? { Artist: author } : {}),
+        },
+      },
+    });
+
+    switch (format) {
+      case "jpeg":
+        pipeline = pipeline.jpeg({ quality });
+        break;
+      case "png":
+        pipeline = pipeline.png({ quality });
+        break;
+      case "webp":
+        pipeline = pipeline.webp({ quality });
+        break;
+      case "avif":
+        pipeline = pipeline.avif({ quality });
+        break;
+      case "gif":
+        pipeline = pipeline.gif();
+        break;
+    }
+
+    const outputBuffer = await pipeline.toBuffer();
+    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="protected.' + format + '"'
+    );
+    res.setHeader("X-Original-Size", String(req.file.size));
+    res.setHeader("X-Output-Size", String(outputBuffer.length));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Original-Size, X-Output-Size"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Copyright metadata error:", err);
+    return res.status(500).json({ ok: false, error: "Copyright metadata embed failed" });
+  }
+});
 app.listen(PORT, () => {
   console.log(`✅ NOXEL Spectra backend running on http://localhost:${PORT}`);
 });

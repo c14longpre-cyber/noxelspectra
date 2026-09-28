@@ -291,6 +291,8 @@ export default function App() {
   const socialSectionRef = useRef<HTMLDivElement | null>(null);
   const editorSectionRef = useRef<HTMLDivElement | null>(null);
   const gradientSectionRef = useRef<HTMLDivElement | null>(null);
+  const watermarkSectionRef = useRef<HTMLDivElement | null>(null);
+  const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
 
@@ -311,6 +313,8 @@ export default function App() {
     { id: "social", label: "Réseaux sociaux", icon: "⚑", ref: socialSectionRef },
     { id: "editor", label: "Éditeur", icon: "✎", ref: editorSectionRef },
     { id: "gradient", label: "Dégradé", icon: "◐", ref: gradientSectionRef },
+    { id: "watermark", label: "Filigrane", icon: "⛆", ref: watermarkSectionRef },
+    { id: "copyright", label: "Copyright", icon: "©", ref: copyrightSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -400,6 +404,23 @@ export default function App() {
   const [glowError, setGlowError] = useState<string | null>(null);
   const [glowResultUrl, setGlowResultUrl] = useState<string | null>(null);
 
+  const [watermarkType, setWatermarkType] = useState<"text" | "logo">("text");
+  const [watermarkText, setWatermarkText] = useState("NOXEL");
+  const [watermarkColor, setWatermarkColor] = useState("#ffffff");
+  const [watermarkLogoFile, setWatermarkLogoFile] = useState<File | null>(null);
+  const [watermarkPosition, setWatermarkPosition] = useState("bottom-right");
+  const [watermarkOpacity, setWatermarkOpacity] = useState(60);
+  const [watermarkSize, setWatermarkSize] = useState(0);
+  const [watermarkLoading, setWatermarkLoading] = useState(false);
+  const [watermarkError, setWatermarkError] = useState<string | null>(null);
+  const [watermarkResultUrl, setWatermarkResultUrl] = useState<string | null>(null);
+
+  const [copyrightAuthor, setCopyrightAuthor] = useState("");
+  const [copyrightText, setCopyrightText] = useState("");
+  const [copyrightLoading, setCopyrightLoading] = useState(false);
+  const [copyrightError, setCopyrightError] = useState<string | null>(null);
+  const [copyrightResultUrl, setCopyrightResultUrl] = useState<string | null>(null);
+
   const [socialPlatform, setSocialPlatform] = useState<string>(Object.keys(SOCIAL_PRESETS)[0]);
   const [socialPresetIndex, setSocialPresetIndex] = useState(0);
   const [socialLoading, setSocialLoading] = useState(false);
@@ -483,6 +504,10 @@ export default function App() {
     setSocialResultUrl(null);
     setSocialError(null);
     setSocialStats(null);
+    setWatermarkResultUrl(null);
+    setWatermarkError(null);
+    setCopyrightResultUrl(null);
+    setCopyrightError(null);
   }
 
   async function handleAnalyze() {
@@ -897,6 +922,77 @@ export default function App() {
       setGlowError(err instanceof Error ? err.message : "Effet lumineux échoué");
     } finally {
       setGlowLoading(false);
+    }
+  }
+
+  async function handleWatermark() {
+    if (!file) return;
+    setWatermarkLoading(true);
+    setWatermarkError(null);
+    setWatermarkResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", watermarkType);
+    formData.append("position", watermarkPosition);
+    formData.append("opacity", String(watermarkOpacity));
+    formData.append("size", String(watermarkSize));
+    if (watermarkType === "text") {
+      formData.append("text", watermarkText);
+      formData.append("color", watermarkColor);
+    } else {
+      if (!watermarkLogoFile) {
+        setWatermarkError("Choisis d'abord un logo");
+        setWatermarkLoading(false);
+        return;
+      }
+      formData.append("logo", watermarkLogoFile);
+    }
+
+    try {
+      const res = await fetch(`${apiUrl}/api/watermark`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setWatermarkResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setWatermarkError(err instanceof Error ? err.message : "Filigrane échoué");
+    } finally {
+      setWatermarkLoading(false);
+    }
+  }
+
+  async function handleCopyright() {
+    if (!file) return;
+    setCopyrightLoading(true);
+    setCopyrightError(null);
+    setCopyrightResultUrl(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("author", copyrightAuthor);
+    formData.append("copyrightText", copyrightText);
+
+    try {
+      const res = await fetch(`${apiUrl}/api/copyright`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const blob = await res.blob();
+      setCopyrightResultUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      setCopyrightError(err instanceof Error ? err.message : "Protection échouée");
+    } finally {
+      setCopyrightLoading(false);
     }
   }
 
@@ -2507,6 +2603,181 @@ export default function App() {
       <div style={{ marginTop: 12 }}>
         <GradientTool />
       </div>
+      </>
+      )}
+
+      {activeSection === "watermark" && (
+      <>
+      {/* ── Filigrane ── */}
+      <div ref={watermarkSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Filigrane</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Applique un filigrane texte ou logo sur l'image sélectionnée en haut.
+      </p>
+
+      <div style={{ marginTop: 12, display: "flex", gap: 16 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="radio"
+            checked={watermarkType === "text"}
+            onChange={() => setWatermarkType("text")}
+          />
+          Texte
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="radio"
+            checked={watermarkType === "logo"}
+            onChange={() => setWatermarkType("logo")}
+          />
+          Logo
+        </label>
+      </div>
+
+      {watermarkType === "text" ? (
+        <div className="controls-grid" style={{ marginTop: 12 }}>
+          <label>
+            Texte :{" "}
+            <input
+              type="text"
+              value={watermarkText}
+              onChange={(e) => setWatermarkText(e.target.value)}
+              style={{ width: 160 }}
+            />
+          </label>
+          <label>
+            Couleur<input
+              type="color"
+              value={watermarkColor}
+              onChange={(e) => setWatermarkColor(e.target.value)}
+              style={{ marginLeft: 8 }}
+            />
+          </label>
+        </div>
+      ) : (
+        <div style={{ marginTop: 12 }}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setWatermarkLogoFile(e.target.files?.[0] || null)}
+          />
+        </div>
+      )}
+
+      <div className="controls-grid" style={{ marginTop: 12 }}>
+        <label>
+          Position :{" "}
+          <select value={watermarkPosition} onChange={(e) => setWatermarkPosition(e.target.value)}>
+            <option value="bottom-right">Bas droite</option>
+            <option value="bottom-left">Bas gauche</option>
+            <option value="top-right">Haut droite</option>
+            <option value="top-left">Haut gauche</option>
+            <option value="center">Centre</option>
+            <option value="tiled">Mosaïque (répété)</option>
+          </select>
+        </label>
+        <label>
+          Opacité : {watermarkOpacity}%
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={watermarkOpacity}
+            onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
+          />
+        </label>
+        <label>
+          Taille : {watermarkSize === 0 ? "Auto" : watermarkSize}
+          <input
+            type="range"
+            min={0}
+            max={watermarkType === "text" ? 200 : 60}
+            value={watermarkSize}
+            onChange={(e) => setWatermarkSize(Number(e.target.value))}
+            style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleWatermark}
+        disabled={!file || watermarkLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {watermarkLoading ? "Application..." : "Appliquer le filigrane"}
+      </button>
+
+      {watermarkError && <p style={{ color: "red", marginTop: 16 }}>{watermarkError}</p>}
+
+      {watermarkResultUrl && (
+        <div style={{ marginTop: 20 }}>
+          {originalPreviewUrl ? (
+            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={watermarkResultUrl} />
+          ) : (
+            <img src={watermarkResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          )}
+          <div style={{ marginTop: 8 }}>
+            <a href={watermarkResultUrl} download="watermarked">
+              Télécharger le résultat
+            </a>
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {activeSection === "copyright" && (
+      <>
+      {/* ── Copyright ── */}
+      <div ref={copyrightSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Protection copyright</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Intègre une mention d'auteur/copyright dans les métadonnées du fichier — invisible à
+        l'œil, mais présente dans les propriétés du fichier. Fonctionne mieux en JPEG ; le
+        support varie selon le format pour les autres.
+      </p>
+
+      <div className="controls-grid" style={{ marginTop: 12 }}>
+        <label>
+          Auteur :{" "}
+          <input
+            type="text"
+            value={copyrightAuthor}
+            onChange={(e) => setCopyrightAuthor(e.target.value)}
+            placeholder="Ton nom ou celui de NOXEL"
+            style={{ width: 200 }}
+          />
+        </label>
+        <label>
+          Copyright :{" "}
+          <input
+            type="text"
+            value={copyrightText}
+            onChange={(e) => setCopyrightText(e.target.value)}
+            placeholder="© 2026 NOXEL"
+            style={{ width: 200 }}
+          />
+        </label>
+      </div>
+
+      <button
+        onClick={handleCopyright}
+        disabled={!file || copyrightLoading}
+        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {copyrightLoading ? "Application..." : "Protéger"}
+      </button>
+
+      {copyrightError && <p style={{ color: "red", marginTop: 16 }}>{copyrightError}</p>}
+
+      {copyrightResultUrl && (
+        <div style={{ marginTop: 16 }}>
+          <a href={copyrightResultUrl} download="protected">
+            Télécharger le fichier protégé
+          </a>
+        </div>
+      )}
       </>
       )}
         </div>
