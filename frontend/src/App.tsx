@@ -295,6 +295,7 @@ export default function App() {
   const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
@@ -319,6 +320,7 @@ export default function App() {
 
   function goToSection(id: string) {
     setActiveSection(id);
+    setSidebarOpen(false);
   }
 
   const [paletteCount, setPaletteCount] = useState(6);
@@ -1178,7 +1180,18 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      <button
+        className="mobile-menu-btn"
+        aria-label="Ouvrir le menu"
+        onClick={() => setSidebarOpen((v) => !v)}
+      >
+        ☰
+      </button>
+      <div
+        className={`sidebar-backdrop${sidebarOpen ? " open" : ""}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
         <div className="sidebar-logo">
           <img src="/noxel_spectra_logo.svg" alt="NOXEL Spectra" className="sidebar-logo-img" />
         </div>
