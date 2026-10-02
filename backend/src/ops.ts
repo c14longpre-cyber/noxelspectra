@@ -386,7 +386,8 @@ export async function runRecipe(input: Buffer, recipe: Recipe): Promise<RecipeRe
     buf = await applyStep(buf, step);
   }
 
-  const source = meta.format as string;
+  // Sharp signale l'AVIF comme « heif » (compression av1)
+  const source = meta.format === "heif" && meta.compression === "av1" ? "avif" : (meta.format as string);
   const format: OutputFormat =
     recipe.output.format !== "original"
       ? recipe.output.format
@@ -401,6 +402,26 @@ export async function runRecipe(input: Buffer, recipe: Recipe): Promise<RecipeRe
     if (!r.metTarget) notes.push(`impossible de descendre sous ${recipe.output.targetSizeKB} Ko`);
   } else {
     data = await encode(buf, format, recipe.output.quality, recipe.output.copyright);
+  }
+
+  // « Format d'origine » = garder le fichier comme il était : si un format
+  // avec perte gonfle au réencodage (source déjà très compressée), on baisse
+  // la qualité jusqu'à repasser sous le poids d'origine.
+  if (
+    recipe.output.format === "original" &&
+    !recipe.output.targetSizeKB &&
+    ["jpeg", "webp", "avif"].includes(format) &&
+    data.length > input.length
+  ) {
+    for (const q of [80, 70, 60, 50]) {
+      if (q >= recipe.output.quality) continue;
+      const candidate = await encode(buf, format, q, recipe.output.copyright);
+      if (candidate.length < data.length) data = candidate;
+      if (candidate.length <= input.length) {
+        notes.push(`qualité ramenée à ${q} pour ne pas dépasser le poids d'origine`);
+        break;
+      }
+    }
   }
 
   const out = await sharp(data).metadata();

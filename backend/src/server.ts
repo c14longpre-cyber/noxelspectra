@@ -25,6 +25,14 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r, g, b };
 }
 
+// Sharp signale l'AVIF comme « heif » (compression av1). Sans cette
+// correction, tout outil qui garde le format d'origine transformait
+// silencieusement un AVIF en PNG (fichier 4x plus lourd).
+function detectFormat(meta: { format?: string; compression?: string }, fallback: string): string {
+  if (meta.format === "heif" && meta.compression === "av1") return "avif";
+  return meta.format || fallback;
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -299,7 +307,7 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format) {
-      const sourceFormat = meta.format;
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     if (!allowedFormats.includes(format)) {
@@ -770,7 +778,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const hasAlpha = !!meta.hasAlpha;
     const width = meta.width || 0;
     const height = meta.height || 0;
-    const sourceFormat = meta.format || "unknown";
+    const sourceFormat = detectFormat(meta, "unknown");
     const isAnimated = (meta.pages || 1) > 1;
 
     const metadataOverheadBytes =
@@ -996,7 +1004,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
       (meta.xmp ? meta.xmp.length : 0);
 
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
-    const sourceFormat = meta.format || "png";
+    const sourceFormat = detectFormat(meta, "png");
     const format: SupportedFormat = (allowedFormats.includes(sourceFormat) ? sourceFormat : "png") as SupportedFormat;
 
     // Sharp only carries over metadata when withMetadata() is called, so a
@@ -1028,7 +1036,19 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     // photographic PNGs. Silently keeping the original just to save a few
     // KB would mean quietly keeping the GPS/EXIF data this tool exists to
     // remove — the frontend explains the size change instead.
-    const outputBuffer: Buffer = await pipeline.toBuffer();
+    let outputBuffer: Buffer = await pipeline.toBuffer();
+
+    // Formats avec perte : une qualité fixe élevée peut gonfler un fichier
+    // déjà compressé (ex. AVIF q70 réencodé en q88 = 4x plus lourd, sans
+    // gain visuel). On descend la qualité jusqu'à repasser sous le poids
+    // d'origine — encodeAtQuality ne recopie jamais les métadonnées.
+    if (outputBuffer.length > req.file.size && QUALITY_ADJUSTABLE_FORMATS.includes(format)) {
+      for (const q of [80, 70, 60, 50]) {
+        const candidate = await encodeAtQuality(req.file.buffer, format, q);
+        if (candidate.length < outputBuffer.length) outputBuffer = candidate;
+        if (candidate.length <= req.file.size) break;
+      }
+    }
     const grewLarger = outputBuffer.length > req.file.size;
 
     const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
@@ -1042,9 +1062,10 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     res.setHeader("X-Output-Size", String(outputBuffer.length));
     res.setHeader("X-Metadata-Bytes-Removed", String(metadataBytesRemoved));
     res.setHeader("X-Grew-Larger", String(grewLarger));
+    res.setHeader("X-Format", format);
     res.setHeader(
       "Access-Control-Expose-Headers",
-      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger"
+      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger, X-Format"
     );
     return res.send(outputBuffer);
   } catch (err) {
@@ -1072,7 +1093,7 @@ app.post("/api/rotate", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1160,7 +1181,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1315,7 +1336,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1493,7 +1514,7 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1572,7 +1593,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1730,7 +1751,7 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
-      const sourceFormat = meta.format || "png";
+      const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
@@ -1799,11 +1820,18 @@ const batchUpload = multer({
 
 function batchSafeName(name: string): string {
   const base = name.replace(/\.[^.]+$/, "");
-  return base.replace(/[^\w\-. ]+/g, "_").trim().slice(0, 80) || "image";
+  // Garde lettres (accentuées incluses), chiffres, espace, tiret, point,
+  // soulignement et parenthèses — retire tout ce qui est dangereux (/ \ : * ? " < > |)
+  return base.replace(/[^A-Za-z0-9À-ÖØ-öø-ÿ_\-. ()]+/g, "_").trim().slice(0, 80) || "image";
 }
 
 app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
+  // Multer décode les noms UTF-8 comme du Latin-1 (« été » → « Ã©tÃ© »)
+  files.forEach((f) => {
+    const decoded = Buffer.from(f.originalname, "latin1").toString("utf8");
+    if (!decoded.includes("\uFFFD")) f.originalname = decoded;
+  });
   if (files.length === 0) {
     return res.status(400).json({ ok: false, error: "Aucune image reçue" });
   }

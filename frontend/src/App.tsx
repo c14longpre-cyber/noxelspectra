@@ -102,6 +102,7 @@ type MetaCleanStats = {
   outputSize: number;
   bytesRemoved: number;
   grewLarger: boolean;
+  format: string;
 };
 
 type RotateDims = {
@@ -113,7 +114,118 @@ type HistoryEntry = {
   file: File;
   label: string;
   lossy: boolean;
+  part?: RecipePart;
 };
+
+// Une recette = des étapes (appliquées sans perte côté serveur) + une sortie
+// (format/qualité/copyright, encodée une seule fois à la fin).
+type RecipeStep = { op: string } & Record<string, unknown>;
+
+type RecipeOutput = {
+  format: "original" | Format;
+  quality: number;
+  targetSizeKB?: number;
+  copyright?: { author: string; text: string };
+};
+
+type Recipe = { steps: RecipeStep[]; output: RecipeOutput };
+
+type SavedRecipe = { id: string; name: string; recipe: Recipe; preset?: boolean };
+
+// Ce qu'une étape de l'historique apporte à une recette
+type RecipePart = {
+  steps?: RecipeStep[];
+  output?: Partial<RecipeOutput>;
+  skip?: string; // étape non transposable dans une recette
+};
+
+const RECIPES_STORAGE_KEY = "noxel-spectra-recipes";
+const BATCH_MAX_FILES = 20;
+const BATCH_MAX_BYTES = 100 * 1024 * 1024;
+
+const PRESET_RECIPES: SavedRecipe[] = [
+  {
+    id: "preset-web",
+    name: "Optimisé web (1920 px max, WebP)",
+    preset: true,
+    recipe: {
+      steps: [{ op: "resize", width: 1920, height: 1920, maintainAspect: true }],
+      output: { format: "webp", quality: 80 },
+    },
+  },
+  {
+    id: "preset-thumb",
+    name: "Vignette (400 px max, WebP)",
+    preset: true,
+    recipe: {
+      steps: [{ op: "resize", width: 400, height: 400, maintainAspect: true }],
+      output: { format: "webp", quality: 75 },
+    },
+  },
+  {
+    id: "preset-share",
+    name: "Partage réseaux (1200 px max, JPEG)",
+    preset: true,
+    recipe: {
+      steps: [{ op: "resize", width: 1200, height: 1200, maintainAspect: true }],
+      output: { format: "jpeg", quality: 85 },
+    },
+  },
+  {
+    id: "preset-privacy",
+    name: "Confidentialité (retirer EXIF/GPS seulement)",
+    preset: true,
+    recipe: { steps: [], output: { format: "original", quality: 92 } },
+  },
+];
+
+function describeRecipe(r: Recipe): string[] {
+  const lines = r.steps.map((s) => {
+    switch (s.op) {
+      case "resize": {
+        const w = s.width ? `${s.width}` : "auto";
+        const h = s.height ? `${s.height}` : "auto";
+        return s.maintainAspect === false
+          ? `Redimensionner exactement à ${w}×${h} px`
+          : `Redimensionner à ${w}×${h} px maximum (ratio conservé)`;
+      }
+      case "rotate": {
+        const parts = [];
+        if (s.angle) parts.push(`rotation ${s.angle}°`);
+        if (s.flipHorizontal) parts.push("miroir horizontal");
+        if (s.flipVertical) parts.push("miroir vertical");
+        return parts.length ? parts.join(", ").replace(/^./, (c) => c.toUpperCase()) : "Rotation (aucune)";
+      }
+      case "adjust":
+        return "Filtres / réglages";
+      case "shadow":
+        return "Ombre portée";
+      case "glow":
+        return "Effet lumineux";
+      case "watermarkText":
+        return `Filigrane « ${String(s.text)} »`;
+      default:
+        return s.op;
+    }
+  });
+  const o = r.output;
+  const fmt = o.format === "original" ? "format d'origine" : o.format.toUpperCase();
+  const q = o.targetSizeKB ? `${o.targetSizeKB} Ko max` : `qualité ${o.quality}`;
+  lines.push(`Sortie : ${fmt} (${q})${o.copyright ? " + copyright" : ""}`);
+  lines.push("Métadonnées EXIF/GPS retirées, orientation corrigée");
+  return lines;
+}
+
+function loadSavedRecipes(): SavedRecipe[] {
+  try {
+    const raw = localStorage.getItem(RECIPES_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 
 const MAX_HISTORY = 10;
 const LOSSY_MIME = ["image/jpeg", "image/webp", "image/avif"];
@@ -318,6 +430,7 @@ export default function App() {
   const gradientSectionRef = useRef<HTMLDivElement | null>(null);
   const watermarkSectionRef = useRef<HTMLDivElement | null>(null);
   const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
+  const batchSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -326,10 +439,31 @@ export default function App() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [continuing, setContinuing] = useState(false);
   const [chainError, setChainError] = useState<string | null>(null);
+  // Réglages exacts utilisés pour produire chaque résultat (clé = URL du résultat)
+  const recipeParts = useRef<Record<string, RecipePart>>({});
+  const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>(loadSavedRecipes);
+  const [recipeNotice, setRecipeNotice] = useState<string | null>(null);
+
+  const [batchFiles, setBatchFiles] = useState<File[]>([]);
+  const [batchRecipeId, setBatchRecipeId] = useState(PRESET_RECIPES[0].id);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchResultUrl, setBatchResultUrl] = useState<string | null>(null);
+  const [batchCounts, setBatchCounts] = useState<{ ok: number; failed: number } | null>(null);
+  const [batchDragging, setBatchDragging] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECIPES_STORAGE_KEY, JSON.stringify(savedRecipes));
+    } catch {
+      // stockage plein ou désactivé : les recettes restent pour la session
+    }
+  }, [savedRecipes]);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
     { id: "convert", label: "Convertir", icon: "↔", ref: convertSectionRef },
+    { id: "batch", label: "Traitement par lots", icon: "▦", ref: batchSectionRef },
     { id: "resize", label: "Redimensionner", icon: "⤢", ref: resizeSectionRef },
     { id: "crop", label: "Rogner", icon: "⊡", ref: cropSectionRef },
     { id: "rotate", label: "Rotation / Miroir", icon: "↻", ref: rotateSectionRef },
@@ -485,7 +619,7 @@ export default function App() {
   }, [vectorizeSvg]);
 
   function handleFileChange(f: File | null) {
-    setHistory(f ? [{ file: f, label: "Original", lossy: false }] : []);
+    setHistory(f ? [{ file: f, label: "Original", lossy: false, part: {} }] : []);
     setHistoryIndex(f ? 0 : -1);
     setChainError(null);
     setWorkingFile(f);
@@ -596,6 +730,7 @@ export default function App() {
         file: next,
         label: label.replace("{fmt}", extFromMime(mime).toUpperCase()),
         lossy: LOSSY_MIME.includes(mime),
+        part: recipeParts.current[url] ?? { skip: label.replace(" {fmt}", "") },
       };
       let nextHistory = [...history.slice(0, historyIndex + 1), entry];
       if (nextHistory.length > MAX_HISTORY) {
@@ -619,6 +754,105 @@ export default function App() {
     setChainError(null);
     resetStackingParams();
     setWorkingFile(history[index].file);
+  }
+
+  function buildRecipeFromHistory(): { recipe: Recipe; skipped: string[] } {
+    const steps: RecipeStep[] = [];
+    const output: RecipeOutput = { format: "original", quality: 80 };
+    const skipped: string[] = [];
+    for (const entry of history.slice(1, historyIndex + 1)) {
+      const part = entry.part;
+      if (!part || part.skip) {
+        skipped.push(part?.skip || entry.label);
+        continue;
+      }
+      if (part.steps) steps.push(...part.steps);
+      if (part.output) {
+        const o = part.output;
+        if (o.format) output.format = o.format;
+        if (o.quality) {
+          output.quality = o.quality;
+          delete output.targetSizeKB;
+        }
+        if (o.targetSizeKB) output.targetSizeKB = o.targetSizeKB;
+        if (o.copyright) output.copyright = o.copyright;
+      }
+    }
+    return { recipe: { steps, output }, skipped };
+  }
+
+  function saveCurrentAsRecipe() {
+    const { recipe, skipped } = buildRecipeFromHistory();
+    const name = window.prompt("Nom de la recette :", `Ma recette ${savedRecipes.length + 1}`);
+    if (!name || !name.trim()) return;
+    const id = `user-${Date.now()}`;
+    setSavedRecipes((prev) => [...prev, { id, name: name.trim().slice(0, 60), recipe }]);
+    setBatchRecipeId(id);
+    setRecipeNotice(
+      `Recette « ${name.trim()} » enregistrée.` +
+        (skipped.length ? ` Ignoré (non transposable en lot) : ${skipped.join(", ")}.` : "")
+    );
+  }
+
+  function deleteRecipe(id: string) {
+    setSavedRecipes((prev) => prev.filter((r) => r.id !== id));
+    if (batchRecipeId === id) setBatchRecipeId(PRESET_RECIPES[0].id);
+  }
+
+  function addBatchFiles(list: FileList | null) {
+    if (!list) return;
+    const images = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    setBatchError(null);
+    setBatchFiles((prev) => {
+      const merged = [...prev, ...images];
+      if (merged.length > BATCH_MAX_FILES) {
+        setBatchError(`${BATCH_MAX_FILES} images maximum par lot — les suivantes ont été ignorées.`);
+      }
+      return merged.slice(0, BATCH_MAX_FILES);
+    });
+  }
+
+  function clearBatchResult() {
+    setBatchResultUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setBatchCounts(null);
+  }
+
+  async function handleBatch() {
+    const selected = [...PRESET_RECIPES, ...savedRecipes].find((r) => r.id === batchRecipeId);
+    if (!selected || batchFiles.length === 0) return;
+    const total = batchFiles.reduce((sum, f) => sum + f.size, 0);
+    if (total > BATCH_MAX_BYTES) {
+      setBatchError(`Lot trop lourd (${formatBytes(total)}) — 100 Mo maximum au total.`);
+      return;
+    }
+
+    setBatchLoading(true);
+    setBatchError(null);
+    clearBatchResult();
+
+    const formData = new FormData();
+    batchFiles.forEach((f) => formData.append("files", f));
+    formData.append("recipe", JSON.stringify(selected.recipe));
+
+    try {
+      const res = await fetch(`${apiUrl}/api/batch`, { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Erreur ${res.status}`);
+      }
+      const ok = Number(res.headers.get("X-Batch-Ok") || 0);
+      const failed = Number(res.headers.get("X-Batch-Failed") || 0);
+      const blob = await res.blob();
+      setBatchResultUrl(URL.createObjectURL(blob));
+      setBatchCounts({ ok, failed });
+    } catch (err) {
+      setBatchError(err instanceof Error ? err.message : "Traitement par lots échoué");
+    } finally {
+      setBatchLoading(false);
+    }
   }
 
   function renderContinueButton(url: string | null, label: string) {
@@ -705,7 +939,11 @@ export default function App() {
       const metTarget = res.headers.get("X-Met-Target") !== "false";
 
       const blob = await res.blob();
-      setResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = mode === "targetSize" && targetSizeAvailable
+        ? { output: { format, targetSizeKB } }
+        : { output: { format, quality } };
+      setResultUrl(outUrl);
       setStats({ originalSize, outputSize, reductionPct, qualityUsed, metTarget });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Conversion échouée");
@@ -778,7 +1016,17 @@ export default function App() {
       const outputSize = Number(res.headers.get("X-Output-Size") || 0);
 
       const blob = await res.blob();
-      setResizeResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = {
+        steps: [{
+          op: "resize",
+          width: resizeWidth ? Number(resizeWidth) : undefined,
+          height: resizeHeight ? Number(resizeHeight) : undefined,
+          maintainAspect,
+        }],
+        output: resizeFormat !== "original" ? { format: resizeFormat } : undefined,
+      };
+      setResizeResultUrl(outUrl);
       setResizeStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
     } catch (err) {
       setResizeError(err instanceof Error ? err.message : "Redimensionnement échoué");
@@ -967,10 +1215,13 @@ export default function App() {
       const outputSize = Number(res.headers.get("X-Output-Size") || 0);
       const bytesRemoved = Number(res.headers.get("X-Metadata-Bytes-Removed") || 0);
       const grewLarger = res.headers.get("X-Grew-Larger") === "true";
+      const cleanedFormat = res.headers.get("X-Format") || "";
 
       const blob = await res.blob();
-      setMetaCleanResultUrl(URL.createObjectURL(blob));
-      setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger });
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = {};
+      setMetaCleanResultUrl(outUrl);
+      setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger, format: cleanedFormat });
     } catch (err) {
       setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
     } finally {
@@ -1012,7 +1263,9 @@ export default function App() {
       const outputSize = Number(res.headers.get("X-Output-Size") || 0);
 
       const blob = await res.blob();
-      setSocialResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { steps: [{ op: "resize", width: preset.width, height: preset.height, maintainAspect: false, allowEnlarge: true }] };
+      setSocialResultUrl(outUrl);
       setSocialStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
     } catch (err) {
       setSocialError(err instanceof Error ? err.message : "Redimensionnement échoué");
@@ -1041,7 +1294,9 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setGlowResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { steps: [{ op: "glow", intensity: glowIntensity }] };
+      setGlowResultUrl(outUrl);
     } catch (err) {
       setGlowError(err instanceof Error ? err.message : "Effet lumineux échoué");
     } finally {
@@ -1083,7 +1338,11 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setWatermarkResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = watermarkType === "text"
+        ? { steps: [{ op: "watermarkText", text: watermarkText, color: watermarkColor, position: watermarkPosition, opacity: watermarkOpacity, size: watermarkSize }] }
+        : { skip: "Filigrane (logo)" };
+      setWatermarkResultUrl(outUrl);
     } catch (err) {
       setWatermarkError(err instanceof Error ? err.message : "Filigrane échoué");
     } finally {
@@ -1112,7 +1371,9 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setCopyrightResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { output: { copyright: { author: copyrightAuthor, text: copyrightText } } };
+      setCopyrightResultUrl(outUrl);
     } catch (err) {
       setCopyrightError(err instanceof Error ? err.message : "Protection échouée");
     } finally {
@@ -1143,7 +1404,9 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setShadowResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity }] };
+      setShadowResultUrl(outUrl);
     } catch (err) {
       setShadowError(err instanceof Error ? err.message : "Ombre portée échouée");
     } finally {
@@ -1190,7 +1453,14 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setAdjustResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = {
+        steps: [{
+          op: "adjust", brightness, contrast, saturation, sharpen: sharpenAmount, blurAmount,
+          effect, invert: invertColors, pixelate: pixelateSize, reduceNoise, vignetteIntensity,
+        }],
+      };
+      setAdjustResultUrl(outUrl);
     } catch (err) {
       setAdjustError(err instanceof Error ? err.message : "Ajustement échoué");
     } finally {
@@ -1240,7 +1510,9 @@ export default function App() {
         throw new Error(data.error || `Erreur ${res.status}`);
       }
       const blob = await res.blob();
-      setCropResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { skip: "Rognage" };
+      setCropResultUrl(outUrl);
     } catch (err) {
       setCropError(err instanceof Error ? err.message : "Recadrage échoué");
     } finally {
@@ -1284,7 +1556,9 @@ export default function App() {
       const height = Number(res.headers.get("X-Output-Height") || 0);
 
       const blob = await res.blob();
-      setRotateResultUrl(URL.createObjectURL(blob));
+      const outUrl = URL.createObjectURL(blob);
+      recipeParts.current[outUrl] = { steps: [{ op: "rotate", angle: rotateAngle, flipHorizontal, flipVertical }] };
+      setRotateResultUrl(outUrl);
       setRotateDims({ width, height });
     } catch (err) {
       setRotateError(err instanceof Error ? err.message : "Rotation échouée");
@@ -1335,6 +1609,8 @@ export default function App() {
         <div style={{ width: "100%", fontFamily: "sans-serif" }}>
       <p style={{ color: "var(--muted)" }}>Conversion d'images — v0.1</p>
 
+      {activeSection !== "batch" && activeSection !== "gradient" && (
+      <>
       <div
         className={`dropzone${isDraggingOver ? " dropzone-active" : ""}`}
         style={{ marginTop: 24 }}
@@ -1410,7 +1686,28 @@ export default function App() {
             </p>
           )}
           {chainError && <p style={{ margin: "8px 0 0", fontSize: 13, color: "red" }}>{chainError}</p>}
+          {historyIndex > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={saveCurrentAsRecipe}
+                style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}
+              >
+                💾 Enregistrer comme recette
+              </button>
+            </div>
+          )}
+          {recipeNotice && (
+            <p style={{ margin: "8px 0 0", fontSize: 13, color: "#3ddc84" }}>
+              {recipeNotice}{" "}
+              <a href="#" onClick={(e) => { e.preventDefault(); setRecipeNotice(null); goToSection("batch"); }}>
+                Utiliser en lot →
+              </a>
+            </p>
+          )}
         </div>
+      )}
+
+      </>
       )}
 
       {activeSection === "analyze" && (
@@ -2532,10 +2829,21 @@ export default function App() {
           <div>Après : {formatBytes(metaCleanStats.outputSize)}</div>
           {metaCleanStats.grewLarger ? (
             <div style={{ marginTop: 6, color: "#c89b3c" }}>
-              Tes métadonnées (EXIF/GPS/ICC) ont bien été retirées — ce fichier est
-              légèrement plus lourd parce qu'un réencodage sans perte d'un PNG déjà très
-              compact peut faire ça. Pour un vrai gain de poids sur une photo, utilise
-              plutôt <strong>Convertir</strong> (WebP ou AVIF) en plus de ce nettoyage.
+              Tes métadonnées (EXIF/GPS/ICC) ont bien été retirées.{" "}
+              {metaCleanStats.format === "png" ? (
+                <>
+                  Ce fichier est légèrement plus lourd parce qu'un réencodage sans perte d'un
+                  PNG déjà très compact peut faire ça. Pour un vrai gain de poids sur une photo,
+                  utilise plutôt <strong>Convertir</strong> (WebP ou AVIF) en plus de ce nettoyage.
+                </>
+              ) : (
+                <>
+                  Ce fichier {metaCleanStats.format.toUpperCase()} était déjà très compressé :
+                  même en baissant la qualité, le réencodage n'a pas pu repasser sous son poids
+                  d'origine. Astuce : chaque outil de NOXEL Spectra retire déjà les métadonnées,
+                  ce nettoyage est inutile après une conversion.
+                </>
+              )}
               {metaCleanStats.bytesRemoved > 0 && (
                 <> ({formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées)</>
               )}
@@ -2939,6 +3247,167 @@ export default function App() {
               Télécharger le résultat
             </a>
             {renderContinueButton(watermarkResultUrl, "Filigrane")}
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {activeSection === "batch" && (
+      <>
+      {/* ── Traitement par lots ── */}
+      <div ref={batchSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Traitement par lots</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Applique une recette à plusieurs images d'un coup ({BATCH_MAX_FILES} max, 100 Mo au total).
+        Les étapes sont appliquées sans perte : l'image n'est compressée qu'une seule fois, à la fin.
+      </p>
+
+      <div
+        className={`dropzone${batchDragging ? " dropzone-active" : ""}`}
+        style={{ marginTop: 12 }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setBatchDragging(true);
+        }}
+        onDragLeave={() => setBatchDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setBatchDragging(false);
+          addBatchFiles(e.dataTransfer.files);
+        }}
+      >
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => {
+            addBatchFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
+          ou glisse-dépose plusieurs images ici
+        </p>
+      </div>
+
+      {batchFiles.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 13, color: "#888", marginBottom: 6 }}>
+            {batchFiles.length} image(s) — {formatBytes(batchFiles.reduce((s, f) => s + f.size, 0))}
+            <button
+              onClick={() => { setBatchFiles([]); setBatchError(null); clearBatchResult(); }}
+              style={{ marginLeft: 12, padding: "2px 10px", fontSize: 12, cursor: "pointer" }}
+            >
+              Tout retirer
+            </button>
+          </div>
+          <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
+            {batchFiles.map((f, i) => (
+              <div
+                key={`${f.name}-${i}`}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "rgba(255,255,255,0.05)",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {f.name} <span style={{ color: "#888" }}>({formatBytes(f.size)})</span>
+                </span>
+                <button
+                  onClick={() => setBatchFiles((prev) => prev.filter((_, j) => j !== i))}
+                  title="Retirer"
+                  style={{ padding: "0 8px", fontSize: 13, cursor: "pointer" }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 16 }}>
+        <label>
+          Recette :{" "}
+          <select value={batchRecipeId} onChange={(e) => setBatchRecipeId(e.target.value)}>
+            <optgroup label="Prédéfinies" style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
+              {PRESET_RECIPES.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </optgroup>
+            {savedRecipes.length > 0 && (
+              <optgroup label="Mes recettes" style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
+                {savedRecipes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
+        </label>
+        {savedRecipes.some((r) => r.id === batchRecipeId) && (
+          <button
+            onClick={() => {
+              if (window.confirm("Supprimer cette recette ?")) deleteRecipe(batchRecipeId);
+            }}
+            style={{ marginLeft: 8, padding: "2px 10px", fontSize: 12, cursor: "pointer" }}
+          >
+            Supprimer
+          </button>
+        )}
+      </div>
+
+      {(() => {
+        const selected = [...PRESET_RECIPES, ...savedRecipes].find((r) => r.id === batchRecipeId);
+        if (!selected) return null;
+        return (
+          <ol style={{ fontSize: 13, color: "#aaa", paddingLeft: 20, margin: "10px 0 0" }}>
+            {describeRecipe(selected.recipe).map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ol>
+        );
+      })()}
+
+      <p style={{ fontSize: 12, color: "#888", margin: "10px 0 0" }}>
+        Astuce : bâtis ta chaîne sur une seule image avec « ➜ Continuer », puis clique sur
+        « 💾 Enregistrer comme recette » dans la barre d'historique.
+      </p>
+
+      <button
+        onClick={handleBatch}
+        disabled={batchFiles.length === 0 || batchLoading}
+        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
+      >
+        {batchLoading
+          ? `Traitement de ${batchFiles.length} image(s)...`
+          : `Traiter ${batchFiles.length} image(s)`}
+      </button>
+
+      {batchError && <p style={{ color: "red", marginTop: 16 }}>{batchError}</p>}
+
+      {batchCounts && batchResultUrl && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: 12,
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+            fontSize: 14,
+          }}
+        >
+          <div style={{ fontWeight: 600, color: batchCounts.failed === 0 ? "#2a8a4a" : "#c89b3c" }}>
+            {batchCounts.ok} réussie(s){batchCounts.failed > 0 ? `, ${batchCounts.failed} en échec (détails dans rapport.txt)` : ""}
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <a href={batchResultUrl} download="noxel-spectra-lot.zip">
+              Télécharger le lot (noxel-spectra-lot.zip)
+            </a>
           </div>
         </div>
       )}
