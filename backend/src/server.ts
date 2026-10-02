@@ -12,6 +12,7 @@ import archiver = require("archiver");
 import toIco from "to-ico";
 import { Potrace } from "potrace";
 import { parseRecipe, runRecipe, mapWithLimit } from "./ops";
+import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
 
 dotenv.config();
 
@@ -56,7 +57,7 @@ const upload = multer({
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "NOXEL Spectra", version: "0.1.0" });
+  res.json({ ok: true, service: "NOXEL Spectra", version: "0.1.0", backgroundRemoval: bgModelAvailable() ? BG_MODEL_NAME : false });
 });
 
 // Formats where "quality" meaningfully controls output size — target-size search only applies here
@@ -1805,6 +1806,47 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Copyright metadata embed failed" });
   }
 });
+// POST /api/remove-background — multipart form:
+//   file        requis
+//   background  optionnel #rrggbb — remplit le fond (sinon transparent)
+//   trim        optionnel "true" — recadre au sujet
+//   format      optionnel "png" (défaut, sans perte) | "webp"
+app.post("/api/remove-background", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+    if (!bgModelAvailable()) {
+      return res.status(503).json({ ok: false, error: "Suppression d'arrière-plan temporairement indisponible" });
+    }
+    const background = /^#[0-9a-fA-F]{6}$/.test(req.body.background || "") ? req.body.background : undefined;
+    const trim = req.body.trim === "true";
+    const format = req.body.format === "webp" ? "webp" : "png";
+
+    const png = await removeBackground(req.file.buffer, { background, trim });
+    const outputBuffer =
+      format === "webp"
+        ? await sharp(png).webp({ quality: 90, alphaQuality: 100 }).toBuffer()
+        : await sharp(png).png({ compressionLevel: 9, effort: 10 }).toBuffer();
+    const meta = await sharp(outputBuffer).metadata();
+
+    res.setHeader("Content-Type", format === "webp" ? "image/webp" : "image/png");
+    res.setHeader("Content-Disposition", `attachment; filename="sans-fond.${format}"`);
+    res.setHeader("X-Output-Width", String(meta.width || 0));
+    res.setHeader("X-Output-Height", String(meta.height || 0));
+    res.setHeader("X-Original-Size", String(req.file.size));
+    res.setHeader("X-Output-Size", String(outputBuffer.length));
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "X-Output-Width, X-Output-Height, X-Original-Size, X-Output-Size"
+    );
+    return res.send(outputBuffer);
+  } catch (err) {
+    console.error("Remove background error:", err);
+    return res.status(500).json({ ok: false, error: "Suppression d'arrière-plan échouée" });
+  }
+});
+
 // POST /api/batch — multipart form:
 //   files     1 à 20 images (25 Mo max chacune, 100 Mo max au total)
 //   recipe    JSON { steps: [...], output: { format, quality, targetSizeKB?, copyright? } }

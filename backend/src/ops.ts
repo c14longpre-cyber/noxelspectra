@@ -9,6 +9,7 @@
 // ajouter (copyright).
 
 import sharp from "sharp";
+import { removeBackground } from "./bgremove";
 
 export type OutputFormat = "jpeg" | "png" | "webp" | "avif" | "gif";
 const OUTPUT_FORMATS: OutputFormat[] = ["jpeg", "png", "webp", "avif", "gif"];
@@ -19,6 +20,7 @@ const SEPIA: [[number, number, number], [number, number, number], [number, numbe
 ];
 
 export type RecipeStep =
+  | { op: "removeBg"; background?: string; trim: boolean }
   | { op: "resize"; width?: number; height?: number; maintainAspect: boolean; allowEnlarge: boolean }
   | { op: "rotate"; angle: number; flipHorizontal: boolean; flipVertical: boolean }
   | {
@@ -114,6 +116,12 @@ export function parseRecipe(raw: unknown): Recipe {
           offsetY: Math.round(clamp(s.offsetY, -50, 50, 15)),
           blur: clamp(s.blur, 0.3, 30, 8),
           opacity: clamp(s.opacity, 0, 100, 60),
+        };
+      case "removeBg":
+        return {
+          op: "removeBg",
+          background: /^#[0-9a-fA-F]{6}$/.test(s.background) ? s.background : undefined,
+          trim: s.trim === true,
         };
       case "glow":
         return { op: "glow", intensity: clamp(s.intensity, 0, 30, 12) };
@@ -254,6 +262,9 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
       );
     }
 
+    case "removeBg":
+      return removeBackground(buf, { background: step.background, trim: step.trim });
+
     case "glow": {
       const sigma = Math.max(0.3, step.intensity * 0.3);
       const glowLayer = await sharp(buf)
@@ -328,7 +339,7 @@ function encode(buf: Buffer, format: OutputFormat, quality: number, copyright?: 
   }
   switch (format) {
     case "jpeg":
-      return p.jpeg({ quality, mozjpeg: true }).toBuffer();
+      return p.flatten({ background: "#ffffff" }).jpeg({ quality, mozjpeg: true }).toBuffer();
     case "webp":
       return p.webp({ quality }).toBuffer();
     case "avif":

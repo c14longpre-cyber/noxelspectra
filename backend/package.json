@@ -5,9 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/fetch-model.js",
     "start": "node dist/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fetch-model": "node scripts/fetch-model.js"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "dotenv": "^18.0.3",
     "express": "^5.2.1",
     "multer": "^2.4.0",
+    "onnxruntime-node": "^1.30.0",
     "potrace": "^2.1.8",
     "sharp": "^0.35.4",
     "to-ico": "^1.1.5"
