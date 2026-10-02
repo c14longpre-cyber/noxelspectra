@@ -296,6 +296,7 @@ export default function App() {
 
   const [activeSection, setActiveSection] = useState("analyze");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
@@ -1213,12 +1214,29 @@ export default function App() {
         <div style={{ width: "100%", fontFamily: "sans-serif" }}>
       <p style={{ color: "var(--muted)" }}>Conversion d'images — v0.1</p>
 
-      <div style={{ marginTop: 24 }}>
+      <div
+        className={`dropzone${isDraggingOver ? " dropzone-active" : ""}`}
+        style={{ marginTop: 24 }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(true);
+        }}
+        onDragLeave={() => setIsDraggingOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingOver(false);
+          const droppedFile = e.dataTransfer.files?.[0];
+          if (droppedFile) handleFileChange(droppedFile);
+        }}
+      >
         <input
           type="file"
           accept="image/*"
           onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
         />
+        <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
+          ou glisse-dépose une image ici
+        </p>
       </div>
 
       {activeSection === "analyze" && (

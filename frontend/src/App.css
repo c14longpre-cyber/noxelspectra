@@ -369,3 +369,16 @@ a {
     height: 40px;
   }
 }
+
+/* ── Drag-and-drop upload zone ── */
+.dropzone {
+  padding: 18px;
+  border: 2px dashed var(--panel-border);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dropzone-active {
+  border-color: var(--green);
+  background: rgba(61, 220, 132, 0.06);
+}
