@@ -1,3 +1,8 @@
+import * as Sentry from "@sentry/node";
+
+Sentry.init({
+  dsn: "https://ba780166e2a30533cb4531f9f15a47ae@o4512186773078016.ingest.us.sentry.io/4512186795229184",
+});
 import express from "express";
 import cors from "cors";
 import multer from "multer";
@@ -22,7 +27,18 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// ALLOWED_ORIGINS (comma-separated) restricts CORS in production.
+// Left unset, all origins are allowed — safe default for local dev.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  })
+);
 app.use(express.json());
 
 const upload = multer({
@@ -1761,6 +1777,32 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("Copyright metadata error:", err);
     return res.status(500).json({ ok: false, error: "Copyright metadata embed failed" });
+  }
+});
+// Let Sentry capture the error before our own handler responds to the client.
+// TEMPORARY — remove after confirming Sentry receives a real error.
+app.get("/api/sentry-test", () => {
+  throw new Error("Test Sentry volontaire");
+});
+
+Sentry.setupExpressErrorHandler(app);
+
+// Global error handler — catches multer errors (oversized file, wrong
+// field, etc.) and anything else that reaches next(err), so a failure
+// always comes back as a clean JSON response instead of a generic crash.
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        ok: false,
+        error: "Fichier trop volumineux (25 Mo maximum)",
+      });
+    }
+    return res.status(400).json({ ok: false, error: err.message });
+  }
+  console.error("Unhandled error:", err);
+  if (!res.headersSent) {
+    return res.status(500).json({ ok: false, error: "Erreur serveur" });
   }
 });
 app.listen(PORT, () => {
