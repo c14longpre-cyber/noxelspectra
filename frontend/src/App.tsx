@@ -2352,11 +2352,14 @@ export default function App() {
           <div>Avant : {formatBytes(metaCleanStats.originalSize)}</div>
           <div>Après : {formatBytes(metaCleanStats.outputSize)}</div>
           {metaCleanStats.grewLarger ? (
-            <div style={{ marginTop: 6, color: "#c0392b" }}>
-              Ce PNG est déjà plus compact que ce qu'un réencodage sans perte peut faire —
-              le fichier original a été gardé tel quel (métadonnées incluses) pour éviter de
-              te renvoyer un fichier plus lourd. Pour un vrai gain de poids sur une photo,
-              utilise plutôt <strong>Convertir</strong> (WebP ou AVIF).
+            <div style={{ marginTop: 6, color: "#c89b3c" }}>
+              Tes métadonnées (EXIF/GPS/ICC) ont bien été retirées — ce fichier est
+              légèrement plus lourd parce qu'un réencodage sans perte d'un PNG déjà très
+              compact peut faire ça. Pour un vrai gain de poids sur une photo, utilise
+              plutôt <strong>Convertir</strong> (WebP ou AVIF) en plus de ce nettoyage.
+              {metaCleanStats.bytesRemoved > 0 && (
+                <> ({formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées)</>
+              )}
             </div>
           ) : (
             <div style={{ fontWeight: 600, color: "#2a8a4a" }}>

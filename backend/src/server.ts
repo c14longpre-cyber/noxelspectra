@@ -770,6 +770,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const width = meta.width || 0;
     const height = meta.height || 0;
     const sourceFormat = meta.format || "unknown";
+    const isAnimated = (meta.pages || 1) > 1;
 
     const metadataOverheadBytes =
       (meta.exif ? meta.exif.length : 0) +
@@ -828,6 +829,11 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const recommendation = candidates[0] || null;
 
     const notes: string[] = [];
+    if (isAnimated) {
+      notes.push(
+        "This image is animated (" + (meta.pages || 1) + " frames) — every format below is a static re-encode and would lose the animation. Use Convertir with care, or keep the original if the animation matters."
+      );
+    }
     if (metadataOverheadBytes > 5000) {
       notes.push(
         Math.round(metadataOverheadBytes / 1024) +
@@ -852,6 +858,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
       height,
       originalSize,
       hasAlpha,
+      isAnimated,
       imageType,
       metadataOverheadBytes,
       recommendation,
@@ -1015,16 +1022,13 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
         break;
     }
 
-    let outputBuffer: Buffer = await pipeline.toBuffer();
-    let grewLarger = outputBuffer.length > req.file.size;
-
-    // A lossless re-encode can legitimately end up bigger for photographic
-    // content saved as PNG — if so, fall back to returning the ORIGINAL bytes
-    // (metadata intact) rather than silently handing back a larger file; the
-    // frontend flags this case and points the user at Convert instead.
-    if (grewLarger && format === "png") {
-      outputBuffer = req.file.buffer;
-    }
+    // Privacy comes first: always return the cleaned (metadata-stripped)
+    // file, even if a lossless re-encode ends up slightly larger for some
+    // photographic PNGs. Silently keeping the original just to save a few
+    // KB would mean quietly keeping the GPS/EXIF data this tool exists to
+    // remove — the frontend explains the size change instead.
+    const outputBuffer: Buffer = await pipeline.toBuffer();
+    const grewLarger = outputBuffer.length > req.file.size;
 
     const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
 
@@ -1035,7 +1039,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     );
     res.setHeader("X-Original-Size", String(req.file.size));
     res.setHeader("X-Output-Size", String(outputBuffer.length));
-    res.setHeader("X-Metadata-Bytes-Removed", String(grewLarger ? 0 : metadataBytesRemoved));
+    res.setHeader("X-Metadata-Bytes-Removed", String(metadataBytesRemoved));
     res.setHeader("X-Grew-Larger", String(grewLarger));
     res.setHeader(
       "Access-Control-Expose-Headers",
