@@ -109,6 +109,31 @@ type RotateDims = {
   height: number;
 };
 
+type HistoryEntry = {
+  file: File;
+  label: string;
+  lossy: boolean;
+};
+
+const MAX_HISTORY = 10;
+const LOSSY_MIME = ["image/jpeg", "image/webp", "image/avif"];
+
+function extFromMime(mime: string): string {
+  switch (mime) {
+    case "image/jpeg": return "jpg";
+    case "image/png": return "png";
+    case "image/webp": return "webp";
+    case "image/avif": return "avif";
+    case "image/gif": return "gif";
+    case "image/svg+xml": return "svg";
+    default: return "png";
+  }
+}
+
+function baseName(name: string): string {
+  return name.replace(/\.[^.]+$/, "") || "image";
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   const kb = bytes / 1024;
@@ -297,6 +322,10 @@ export default function App() {
   const [activeSection, setActiveSection] = useState("analyze");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [continuing, setContinuing] = useState(false);
+  const [chainError, setChainError] = useState<string | null>(null);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
@@ -456,10 +485,29 @@ export default function App() {
   }, [vectorizeSvg]);
 
   function handleFileChange(f: File | null) {
+    setHistory(f ? [{ file: f, label: "Original", lossy: false }] : []);
+    setHistoryIndex(f ? 0 : -1);
+    setChainError(null);
+    setWorkingFile(f);
+  }
+
+  function setWorkingFile(f: File | null) {
     setFile(f);
     setOriginalPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return f ? URL.createObjectURL(f) : null;
+    });
+    resetToolResults();
+  }
+
+  function resetToolResults() {
+    [
+      resultUrl, resizeResultUrl, responsiveResultUrl, faviconResultUrl,
+      metaCleanResultUrl, rotateResultUrl, adjustResultUrl, cropResultUrl,
+      shadowResultUrl, glowResultUrl, socialResultUrl, watermarkResultUrl,
+      copyrightResultUrl,
+    ].forEach((u) => {
+      if (u) URL.revokeObjectURL(u);
     });
     setResultUrl(null);
     setStats(null);
@@ -511,6 +559,79 @@ export default function App() {
     setWatermarkError(null);
     setCopyrightResultUrl(null);
     setCopyrightError(null);
+  }
+
+  function resetStackingParams() {
+    // Évite d'appliquer deux fois les mêmes réglages sur l'image déjà modifiée
+    setBrightness(1);
+    setContrast(1);
+    setSaturation(1);
+    setSharpenAmount(0);
+    setBlurAmount(0);
+    setEffect("none");
+    setInvertColors(false);
+    setPixelateSize(0);
+    setReduceNoise(0);
+    setVignetteIntensity(0);
+    setQuantizeColors(0);
+    setRotateAngle(0);
+    setFlipHorizontal(false);
+    setFlipVertical(false);
+  }
+
+  async function continueWith(url: string | null, label: string) {
+    if (!url || !file) return;
+    setContinuing(true);
+    setChainError(null);
+    try {
+      const blob = await (await fetch(url)).blob();
+      const mime = blob.type.startsWith("image/") ? blob.type : file.type;
+      const root = history[0] ? baseName(history[0].file.name) : "image";
+      const next = new File(
+        [blob],
+        `${root}-etape${historyIndex + 1}.${extFromMime(mime)}`,
+        { type: mime }
+      );
+      const entry: HistoryEntry = {
+        file: next,
+        label: label.replace("{fmt}", extFromMime(mime).toUpperCase()),
+        lossy: LOSSY_MIME.includes(mime),
+      };
+      let nextHistory = [...history.slice(0, historyIndex + 1), entry];
+      if (nextHistory.length > MAX_HISTORY) {
+        // On garde toujours l'original + les étapes les plus récentes
+        nextHistory = [nextHistory[0], ...nextHistory.slice(nextHistory.length - (MAX_HISTORY - 1))];
+      }
+      setHistory(nextHistory);
+      setHistoryIndex(nextHistory.length - 1);
+      resetStackingParams();
+      setWorkingFile(next);
+    } catch {
+      setChainError("Impossible de reprendre ce résultat — relance l'outil puis réessaie.");
+    } finally {
+      setContinuing(false);
+    }
+  }
+
+  function goToStep(index: number) {
+    if (index < 0 || index >= history.length || index === historyIndex) return;
+    setHistoryIndex(index);
+    setChainError(null);
+    resetStackingParams();
+    setWorkingFile(history[index].file);
+  }
+
+  function renderContinueButton(url: string | null, label: string) {
+    if (!url) return null;
+    return (
+      <button
+        onClick={() => continueWith(url, label)}
+        disabled={continuing}
+        style={{ marginLeft: 12, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
+      >
+        {continuing ? "Chargement..." : "➜ Continuer avec ce résultat"}
+      </button>
+    );
   }
 
   async function handleAnalyze() {
@@ -1239,6 +1360,59 @@ export default function App() {
         </p>
       </div>
 
+      {history.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => goToStep(historyIndex - 1)}
+              disabled={historyIndex <= 0}
+              title="Revenir à l'étape précédente"
+              style={{ padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
+            >
+              ↶ Annuler
+            </button>
+            <button
+              onClick={() => goToStep(historyIndex + 1)}
+              disabled={historyIndex >= history.length - 1}
+              title="Rétablir l'étape suivante"
+              style={{ padding: "4px 10px", fontSize: 13, cursor: "pointer", marginRight: 8 }}
+            >
+              ↷ Rétablir
+            </button>
+            {history.map((h, i) => (
+              <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {i > 0 && <span style={{ color: "var(--muted)" }}>→</span>}
+                <button
+                  onClick={() => goToStep(i)}
+                  title={`${h.file.name} — ${formatBytes(h.file.size)}${h.lossy ? " — format avec perte" : ""}`}
+                  style={{
+                    padding: "3px 10px",
+                    fontSize: 12,
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    border: i === historyIndex ? "1px solid #3ddc84" : "1px solid rgba(255,255,255,0.15)",
+                    background: i === historyIndex ? "rgba(61,220,132,0.15)" : "rgba(255,255,255,0.05)",
+                    opacity: i > historyIndex ? 0.45 : 1,
+                                        color: i === historyIndex ? "#3ddc84" : "#e6e6e6",
+                  }}
+                >
+                  {h.label}
+                  {h.lossy && i > 0 ? " ⚠" : ""}
+                </button>
+              </span>
+            ))}
+          </div>
+          {historyIndex > 0 && history[historyIndex]?.lossy && (
+            <p style={{ margin: "8px 0 0", fontSize: 12, color: "#c89b3c" }}>
+              ⚠ Cette étape est dans un format avec perte (JPG/WebP/AVIF). Chaque outil appliqué
+              ensuite recompresse l'image — pour une qualité maximale, garde la conversion finale
+              pour la dernière étape.
+            </p>
+          )}
+          {chainError && <p style={{ margin: "8px 0 0", fontSize: 13, color: "red" }}>{chainError}</p>}
+        </div>
+      )}
+
       {activeSection === "analyze" && (
       <>
       {/* ── Analyser / Smart Optimize ── */}
@@ -1469,6 +1643,7 @@ export default function App() {
               <a href={resultUrl} download={`converted.${format}`}>
                 Télécharger le résultat
               </a>
+            {renderContinueButton(resultUrl, "Conversion {fmt}")}
             </div>
           </div>
         )}
@@ -1578,6 +1753,7 @@ export default function App() {
             <a href={resizeResultUrl} download="resized">
               Télécharger le résultat
             </a>
+            {renderContinueButton(resizeResultUrl, "Redimension")}
           </div>
         </div>
       )}
@@ -1698,6 +1874,7 @@ export default function App() {
             <a href={cropResultUrl} download="cropped">
               Télécharger le résultat
             </a>
+            {renderContinueButton(cropResultUrl, "Rognage")}
           </div>
         </div>
       )}
@@ -1802,6 +1979,7 @@ export default function App() {
             <a href={rotateResultUrl} download="rotated">
               Télécharger le résultat
             </a>
+            {renderContinueButton(rotateResultUrl, "Rotation")}
           </div>
         </div>
       )}
@@ -1973,6 +2151,7 @@ export default function App() {
             <a href={adjustResultUrl} download="adjusted">
               Télécharger le résultat
             </a>
+            {renderContinueButton(adjustResultUrl, "Réglages")}
           </div>
         </div>
       )}
@@ -2376,6 +2555,7 @@ export default function App() {
           <a href={metaCleanResultUrl} download="cleaned">
             Télécharger le fichier nettoyé
           </a>
+            {renderContinueButton(metaCleanResultUrl, "Métadonnées")}
         </div>
       )}
 
@@ -2465,6 +2645,7 @@ export default function App() {
             <a href={shadowResultUrl} download="drop-shadow.png">
               Télécharger le résultat
             </a>
+            {renderContinueButton(shadowResultUrl, "Ombre")}
           </div>
         </div>
       )}
@@ -2517,6 +2698,7 @@ export default function App() {
             <a href={glowResultUrl} download="glow">
               Télécharger le résultat
             </a>
+            {renderContinueButton(glowResultUrl, "Lueur")}
           </div>
         </div>
       )}
@@ -2605,6 +2787,7 @@ export default function App() {
             <a href={socialResultUrl} download="social-image">
               Télécharger le résultat
             </a>
+            {renderContinueButton(socialResultUrl, socialPlatform)}
           </div>
         </div>
       )}
@@ -2755,6 +2938,7 @@ export default function App() {
             <a href={watermarkResultUrl} download="watermarked">
               Télécharger le résultat
             </a>
+            {renderContinueButton(watermarkResultUrl, "Filigrane")}
           </div>
         </div>
       )}
@@ -2810,6 +2994,7 @@ export default function App() {
           <a href={copyrightResultUrl} download="protected">
             Télécharger le fichier protégé
           </a>
+            {renderContinueButton(copyrightResultUrl, "Copyright")}
         </div>
       )}
       </>
