@@ -49,4 +49,4 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://noxelspectra.com/sitemap.xml
+Sitemap: https://app.noxelspectra.com/sitemap.xml
