@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import archiver = require("archiver");
 import toIco from "to-ico";
 import { Potrace } from "potrace";
+import { parseRecipe, runRecipe, mapWithLimit } from "./ops";
 
 dotenv.config();
 
@@ -1783,6 +1784,103 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
     return res.status(500).json({ ok: false, error: "Copyright metadata embed failed" });
   }
 });
+// POST /api/batch — multipart form:
+//   files     1 à 20 images (25 Mo max chacune, 100 Mo max au total)
+//   recipe    JSON { steps: [...], output: { format, quality, targetSizeKB?, copyright? } }
+// Retourne un zip : les images traitées + rapport.txt. Une image en échec
+// n'interrompt pas le lot — elle est notée dans le rapport.
+const BATCH_MAX_FILES = 20;
+const BATCH_MAX_TOTAL_BYTES = 100 * 1024 * 1024;
+
+const batchUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024, files: BATCH_MAX_FILES },
+});
+
+function batchSafeName(name: string): string {
+  const base = name.replace(/\.[^.]+$/, "");
+  return base.replace(/[^\w\-. ]+/g, "_").trim().slice(0, 80) || "image";
+}
+
+app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, res) => {
+  const files = (req.files as Express.Multer.File[]) || [];
+  if (files.length === 0) {
+    return res.status(400).json({ ok: false, error: "Aucune image reçue" });
+  }
+  const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  if (totalBytes > BATCH_MAX_TOTAL_BYTES) {
+    return res.status(413).json({ ok: false, error: "Lot trop lourd (100 Mo maximum au total)" });
+  }
+
+  let recipe;
+  try {
+    recipe = parseRecipe(req.body.recipe);
+  } catch (err) {
+    return res.status(400).json({ ok: false, error: err instanceof Error ? err.message : "Recette invalide" });
+  }
+
+  try {
+    const results = await mapWithLimit(files, 2, async (file) => {
+      try {
+        return { file, ok: true as const, result: await runRecipe(file.buffer, recipe) };
+      } catch (err) {
+        console.error("Batch item error:", file.originalname, err);
+        return { file, ok: false as const, error: "Traitement impossible (fichier illisible ou non supporté)" };
+      }
+    });
+
+    const usedNames = new Set<string>();
+    const report: string[] = ["NOXEL Spectra — rapport de traitement par lots", ""];
+    let okCount = 0;
+    const entries: { name: string; data: Buffer }[] = [];
+
+    for (const r of results) {
+      if (!r.ok) {
+        report.push(`✗ ${r.file.originalname} — ${r.error}`);
+        continue;
+      }
+      okCount++;
+      const ext = r.result.format === "jpeg" ? "jpg" : r.result.format;
+      const base = batchSafeName(r.file.originalname);
+      let name = `${base}.${ext}`;
+      for (let n = 2; usedNames.has(name.toLowerCase()); n++) name = `${base}-${n}.${ext}`;
+      usedNames.add(name.toLowerCase());
+      entries.push({ name, data: r.result.data });
+
+      const pct = Math.round((1 - r.result.outputSize / r.result.originalSize) * 100);
+      report.push(
+        `✓ ${r.file.originalname} → ${name} — ${r.result.width}×${r.result.height}px — ` +
+          `${(r.result.originalSize / 1024).toFixed(0)} Ko → ${(r.result.outputSize / 1024).toFixed(0)} Ko ` +
+          `(${pct >= 0 ? "-" : "+"}${Math.abs(pct)} %)` +
+          (r.result.note ? ` — ${r.result.note}` : "")
+      );
+    }
+    report.push("", `${okCount} réussie(s), ${files.length - okCount} en échec.`);
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", 'attachment; filename="noxel-spectra-lot.zip"');
+    res.setHeader("X-Batch-Ok", String(okCount));
+    res.setHeader("X-Batch-Failed", String(files.length - okCount));
+    res.setHeader("Access-Control-Expose-Headers", "X-Batch-Ok, X-Batch-Failed");
+
+    // Images déjà compressées : store (niveau 0) évite de recompresser pour rien
+    const archive = archiver("zip", { zlib: { level: 0 } });
+    archive.on("error", (err: Error) => {
+      console.error("Batch zip error:", err);
+      res.destroy(err);
+    });
+    archive.pipe(res);
+    for (const e of entries) archive.append(e.data, { name: e.name });
+    archive.append(report.join("\n"), { name: "rapport.txt" });
+    await archive.finalize();
+  } catch (err) {
+    console.error("Batch error:", err);
+    if (!res.headersSent) {
+      return res.status(500).json({ ok: false, error: "Traitement par lots échoué" });
+    }
+  }
+});
+
 // Let Sentry capture the error before our own handler responds to the client.
 // TEMPORARY — remove after confirming Sentry receives a real error.
 app.get("/api/sentry-test", () => {
@@ -1800,6 +1898,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
       return res.status(413).json({
         ok: false,
         error: "Fichier trop volumineux (25 Mo maximum)",
+      });
+    }
+    if (err.code === "LIMIT_FILE_COUNT" || (err.code === "LIMIT_UNEXPECTED_FILE" && err.field === "files")) {
+      return res.status(400).json({
+        ok: false,
+        error: "Trop d'images (20 maximum par lot)",
       });
     }
     return res.status(400).json({ ok: false, error: err.message });
