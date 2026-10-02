@@ -2,6 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 import { GradientTool } from "./components/spectra-gradient/GradientTool";
+import {
+  deleteProject,
+  exportProject,
+  getLastProjectId,
+  importProject,
+  isQuotaError,
+  listProjects,
+  loadProject,
+  newProjectId,
+  projectFileName,
+  requestPersistence,
+  saveProject,
+  setLastProjectId,
+  storageEstimate,
+} from "./projectStore";
+import type { Project, ProjectSummary } from "./projectStore";
 
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
 type Format = (typeof FORMATS)[number];
@@ -431,6 +447,7 @@ export default function App() {
   const watermarkSectionRef = useRef<HTMLDivElement | null>(null);
   const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
   const batchSectionRef = useRef<HTMLDivElement | null>(null);
+  const projectsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -439,6 +456,15 @@ export default function App() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [continuing, setContinuing] = useState(false);
   const [chainError, setChainError] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [projectCreatedAt, setProjectCreatedAt] = useState(0);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [projectThumbs, setProjectThumbs] = useState<Record<string, string>>({});
+  const [projectNotice, setProjectNotice] = useState<string | null>(null);
+  const [projectError, setProjectError] = useState<string | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number } | null>(null);
+  const skipNextSave = useRef(false);
   // Réglages exacts utilisés pour produire chaque résultat (clé = URL du résultat)
   const recipeParts = useRef<Record<string, RecipePart>>({});
   const [savedRecipes, setSavedRecipes] = useState<SavedRecipe[]>(loadSavedRecipes);
@@ -461,6 +487,7 @@ export default function App() {
   }, [savedRecipes]);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
+    { id: "projects", label: "Mes projets", icon: "❏", ref: projectsSectionRef },
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
     { id: "convert", label: "Convertir", icon: "↔", ref: convertSectionRef },
     { id: "batch", label: "Traitement par lots", icon: "▦", ref: batchSectionRef },
@@ -618,10 +645,210 @@ export default function App() {
     return () => URL.revokeObjectURL(url);
   }, [vectorizeSvg]);
 
+  // Restaure le dernier projet après un rechargement de la page
+  useEffect(() => {
+    requestPersistence();
+    const lastId = getLastProjectId();
+    if (!lastId) return;
+    loadProject(lastId)
+      .then((p) => {
+        if (p && p.entries.length > 0) openProject(p, true);
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sauvegarde automatique à chaque changement de l'historique
+  useEffect(() => {
+    if (!projectId || history.length === 0) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      const snapshot: Project = {
+        id: projectId,
+        name: projectName,
+        createdAt: projectCreatedAt,
+        updatedAt: Date.now(),
+        historyIndex,
+        entries: history.map((h) => ({ file: h.file, label: h.label, lossy: h.lossy, part: h.part })),
+      };
+      saveProject(snapshot)
+        .then(() => {
+          setLastProjectId(projectId);
+          setProjectError(null);
+        })
+        .catch((err) => {
+          setProjectError(
+            isQuotaError(err)
+              ? "Espace de stockage du navigateur plein — exporte puis supprime d'anciens projets dans « Mes projets »."
+              : "Sauvegarde automatique impossible dans ce navigateur (navigation privée ?)."
+          );
+        });
+    }, 600);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [history, historyIndex, projectId, projectName]);
+
+  useEffect(() => {
+    if (activeSection === "projects") refreshProjects();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
+
+  function currentProjectSnapshot(): Project | null {
+    if (!projectId || history.length === 0) return null;
+    return {
+      id: projectId,
+      name: projectName,
+      createdAt: projectCreatedAt,
+      updatedAt: Date.now(),
+      historyIndex,
+      entries: history.map((h) => ({ file: h.file, label: h.label, lossy: h.lossy, part: h.part })),
+    };
+  }
+
+  async function refreshProjects() {
+    try {
+      const list = await listProjects();
+      setProjects(list);
+      setProjectThumbs((prev) => {
+        Object.values(prev).forEach((u) => URL.revokeObjectURL(u));
+        const next: Record<string, string> = {};
+        list.forEach((p) => {
+          next[p.id] = URL.createObjectURL(p.thumb);
+        });
+        return next;
+      });
+      setStorageInfo(await storageEstimate());
+    } catch {
+      setProjectError("Impossible de lire les projets enregistrés dans ce navigateur.");
+    }
+  }
+
+  function openProject(p: Project, restored = false) {
+    const entries: HistoryEntry[] = p.entries.map((e) => ({
+      file: e.file,
+      label: e.label,
+      lossy: e.lossy,
+      part: e.part as RecipePart | undefined,
+    }));
+    const idx = Math.min(Math.max(p.historyIndex, 0), entries.length - 1);
+    skipNextSave.current = true;
+    setHistory(entries);
+    setHistoryIndex(idx);
+    setProjectId(p.id);
+    setProjectName(p.name);
+    setProjectCreatedAt(p.createdAt);
+    setChainError(null);
+    setProjectError(null);
+    resetStackingParams();
+    setWorkingFile(entries[idx].file);
+    setLastProjectId(p.id);
+    setProjectNotice(restored ? `Projet « ${p.name} » restauré.` : `Projet « ${p.name} » ouvert.`);
+  }
+
+  async function handleOpenProject(id: string) {
+    try {
+      const p = await loadProject(id);
+      if (!p) throw new Error();
+      openProject(p);
+      goToSection("analyze");
+    } catch {
+      setProjectError("Impossible d'ouvrir ce projet.");
+    }
+  }
+
+  function startNewProject() {
+    setHistory([]);
+    setHistoryIndex(-1);
+    setProjectId(null);
+    setProjectName("");
+    setChainError(null);
+    setProjectNotice(null);
+    setLastProjectId(null);
+    setWorkingFile(null);
+  }
+
+  async function handleRenameProject(id: string, currentName: string) {
+    const name = window.prompt("Nouveau nom du projet :", currentName);
+    if (!name || !name.trim()) return;
+    const clean = name.trim().slice(0, 80);
+    try {
+      if (id === projectId) {
+        setProjectName(clean); // la sauvegarde automatique s'en charge
+        const snap = currentProjectSnapshot();
+        if (snap) await saveProject({ ...snap, name: clean });
+      } else {
+        const p = await loadProject(id);
+        if (!p) throw new Error();
+        await saveProject({ ...p, name: clean, updatedAt: Date.now() });
+      }
+      await refreshProjects();
+    } catch {
+      setProjectError("Renommage impossible.");
+    }
+  }
+
+  async function handleDeleteProject(id: string, name: string) {
+    if (!window.confirm(`Supprimer définitivement le projet « ${name} » ?\nAstuce : exporte-le d'abord si tu veux le garder.`)) return;
+    try {
+      await deleteProject(id);
+      if (id === projectId) startNewProject();
+      await refreshProjects();
+    } catch {
+      setProjectError("Suppression impossible.");
+    }
+  }
+
+  async function handleExportProject(id: string) {
+    try {
+      const p = id === projectId ? currentProjectSnapshot() : await loadProject(id);
+      if (!p) throw new Error();
+      const blob = await exportProject(p);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = projectFileName(p.name);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setProjectError("Export impossible.");
+    }
+  }
+
+  async function handleImportProject(f: File | null) {
+    if (!f) return;
+    try {
+      const p = await importProject(f);
+      await saveProject(p);
+      openProject(p);
+      setProjectNotice(`Projet « ${p.name} » importé et ouvert.`);
+      goToSection("analyze");
+    } catch (err) {
+      setProjectError(
+        isQuotaError(err)
+          ? "Espace de stockage du navigateur plein — supprime d'anciens projets avant d'importer."
+          : err instanceof Error && err.message
+            ? err.message
+            : "Import impossible."
+      );
+    }
+  }
+
   function handleFileChange(f: File | null) {
     setHistory(f ? [{ file: f, label: "Original", lossy: false, part: {} }] : []);
     setHistoryIndex(f ? 0 : -1);
     setChainError(null);
+    setProjectNotice(null);
+    if (f) {
+      setProjectId(newProjectId());
+      setProjectName(baseName(f.name));
+      setProjectCreatedAt(Date.now());
+    } else {
+      setProjectId(null);
+      setLastProjectId(null);
+    }
     setWorkingFile(f);
   }
 
@@ -1609,7 +1836,7 @@ export default function App() {
         <div style={{ width: "100%", fontFamily: "sans-serif" }}>
       <p style={{ color: "var(--muted)" }}>Conversion d'images — v0.1</p>
 
-      {activeSection !== "batch" && activeSection !== "gradient" && (
+      {activeSection !== "batch" && activeSection !== "gradient" && activeSection !== "projects" && (
       <>
       <div
         className={`dropzone${isDraggingOver ? " dropzone-active" : ""}`}
@@ -1634,6 +1861,23 @@ export default function App() {
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
           ou glisse-dépose une image ici
         </p>
+        {file && projectId && (
+          <p style={{ margin: "6px 0 0", fontSize: 13 }}>
+            Projet : <strong>{projectName}</strong>{" "}
+            <span style={{ color: "var(--muted)" }}>
+              — image de travail : {file.name} ({formatBytes(file.size)}) — sauvegarde automatique
+            </span>
+          </p>
+        )}
+        {projectNotice && (
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#3ddc84" }}>
+            {projectNotice}{" "}
+            <a href="#" onClick={(e) => { e.preventDefault(); setProjectNotice(null); }}>OK</a>
+          </p>
+        )}
+        {projectError && (
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "#c89b3c" }}>{projectError}</p>
+        )}
       </div>
 
       {history.length > 0 && (
@@ -3248,6 +3492,107 @@ export default function App() {
             </a>
             {renderContinueButton(watermarkResultUrl, "Filigrane")}
           </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {activeSection === "projects" && (
+      <>
+      {/* ── Mes projets ── */}
+      <div ref={projectsSectionRef} />
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Mes projets</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        Chaque image que tu travailles devient un projet, sauvegardé automatiquement avec
+        tout son historique. Tes projets restent dans ce navigateur — ils ne sont jamais
+        envoyés sur nos serveurs. Exporte-les en <strong>.spectra</strong> pour les garder
+        en lieu sûr ou les ouvrir sur un autre ordinateur.
+      </p>
+
+      <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
+        <button
+          onClick={() => { startNewProject(); goToSection("analyze"); }}
+          style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
+        >
+          + Nouveau projet
+        </button>
+        <label style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6 }}>
+          Ouvrir un fichier .spectra
+          <input
+            type="file"
+            accept=".spectra,application/zip"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              handleImportProject(e.target.files?.[0] || null);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {storageInfo && storageInfo.quota > 0 && (
+          <span style={{ fontSize: 12, color: "#888" }}>
+            Espace utilisé dans ce navigateur : {formatBytes(storageInfo.used)} sur {formatBytes(storageInfo.quota)}
+          </span>
+        )}
+      </div>
+
+      {projectError && <p style={{ color: "#c89b3c", marginTop: 12, fontSize: 13 }}>{projectError}</p>}
+
+      {projects.length === 0 ? (
+        <p style={{ marginTop: 20, fontSize: 14, color: "#888" }}>
+          Aucun projet pour l'instant. Charge une image dans n'importe quel outil : le projet
+          est créé et sauvegardé automatiquement.
+        </p>
+      ) : (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {projects.map((p) => (
+            <div
+              key={p.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 10,
+                borderRadius: 8,
+                background: "rgba(255,255,255,0.05)",
+                border: p.id === projectId ? "1px solid #3ddc84" : "1px solid transparent",
+                flexWrap: "wrap",
+              }}
+            >
+              {projectThumbs[p.id] && (
+                <img
+                  src={projectThumbs[p.id]}
+                  alt=""
+                  style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 6, flexShrink: 0 }}
+                />
+              )}
+              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {p.name}
+                  {p.id === projectId && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#3ddc84", fontWeight: 400 }}>● en cours</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: "#888" }}>
+                  {p.stepCount} étape(s) — {formatBytes(p.totalBytes)} — modifié le{" "}
+                  {new Date(p.updatedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <button onClick={() => handleOpenProject(p.id)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
+                  Ouvrir
+                </button>
+                <button onClick={() => handleRenameProject(p.id, p.name)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
+                  Renommer
+                </button>
+                <button onClick={() => handleExportProject(p.id)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
+                  Exporter .spectra
+                </button>
+                <button onClick={() => handleDeleteProject(p.id, p.name)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
       </>
