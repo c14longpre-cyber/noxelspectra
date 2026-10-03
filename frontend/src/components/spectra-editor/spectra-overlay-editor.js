@@ -1,4 +1,6 @@
-/** NOXEL Spectra overlay editor. Browser-only, no dependencies. */
+import { gradientFill, stickerSpectrum, gradientPanelHtml, bindGradientPanel, hudHtml, hudLabelHtml } from "./editor-gradient";
+import "./editor-hud.css";
+/** NOXEL Spectra overlay editor. Dégradés : moteur partagé avec l'outil Dégradé. */
 export class SpectraOverlayEditor {
   static STICKERS = [
     { key: "stickers/01_Reactions/coeur", label: "Coeur" },
@@ -122,13 +124,15 @@ export class SpectraOverlayEditor {
   markup() {
     return `<div class="sp-editor">
       <div class="sp-toolbar">
-        <label class="sp-file">Ouvrir une image<input type="file" accept="image/*" data-open hidden></label>
-        <button type="button" data-action="text">+ Texte</button>
-        <button type="button" data-action="sticker">+ Sticker</button>
-        <button type="button" data-action="shape">+ Forme</button>
-        <button type="button" data-action="undo" title="Annuler (Ctrl+Z)">↶</button>
-        <button type="button" data-action="redo" title="Refaire (Ctrl+Y)">↷</button>
-        <button type="button" class="sp-primary" data-action="export">Exporter PNG</button>
+        ${hudLabelHtml('choose-file','Ouvrir une image','<input type="file" accept="image/*" data-open hidden>','sp-file')}
+        <span class="sp-sep" aria-hidden="true"></span>
+        ${hudHtml('add-text','+ Texte',{attrs:'data-action="text"'})}
+        ${hudHtml('add-sticker','+ Sticker',{attrs:'data-action="sticker"'})}
+        ${hudHtml('add-shape','+ Forme',{attrs:'data-action="shape"'})}
+        <span class="sp-sep" aria-hidden="true"></span>
+        ${hudHtml('undo','Annuler',{attrs:'data-action="undo"',title:'Annuler (Ctrl+Z)'})}
+        ${hudHtml('redo','Rétablir',{attrs:'data-action="redo"',title:'Rétablir (Ctrl+Y)'})}
+        <span class="sp-export">${hudHtml('export-png','Exporter PNG',{attrs:'data-action="export"'})}</span>
       </div>
       <div class="sp-body">
         <div class="sp-stage"><canvas data-canvas aria-label="Image avec éléments modifiables"></canvas><span class="sp-size" data-size></span></div>
@@ -256,7 +260,10 @@ export class SpectraOverlayEditor {
       this.assetSvgTextCache.set(key, svgText);
     }
     let styled = svgText;
-    if (fillStops) {
+    if (fillStops && fillStops.svg) {
+      // Motif calculé par le moteur : toutes les géométries, contours d'origine conservés
+      styled = styled.replace(/<linearGradient id="spectrum"[^>]*>[\s\S]*?<\/linearGradient>/i, fillStops.svg);
+    } else if (fillStops) {
       const sorted = fillStops.slice().sort((a,b) => a.position - b.position);
       const stopsMarkup = sorted.map(s => `<stop offset="${s.position}%" stop-color="${s.color}"/>`).join('');
       styled = styled.replace(
@@ -326,11 +333,7 @@ export class SpectraOverlayEditor {
     ctx.save(); ctx.translate(item.x,item.y); ctx.rotate(item.rotation*Math.PI/180); ctx.globalAlpha=item.opacity;
     if(item.shadow) { ctx.shadowColor='#000c';ctx.shadowBlur=Math.max(8,item.size*.16);ctx.shadowOffsetX=item.size*.06;ctx.shadowOffsetY=item.size*.06; }
     const fillStyle=()=>{
-      if(item.fillMode==='gradient'){
-        const g=ctx.createLinearGradient(-w/2,0,w/2,0);
-        item.gradientStops.slice().sort((a,b)=>a.position-b.position).forEach(s=>g.addColorStop(s.position/100,s.color));
-        return g;
-      }
+      if(item.fillMode==='gradient') return gradientFill(ctx,item,w,h);
       return item.color;
     };
     if(item.type==='text') {
@@ -346,7 +349,7 @@ export class SpectraOverlayEditor {
     } else if(item.type==='sticker') {
       let fillStops=null;
       if(item.fillMode==='solid')fillStops=[{position:0,color:item.color},{position:100,color:item.color}];
-      else if(item.fillMode==='gradient')fillStops=item.gradientStops;
+      else if(item.fillMode==='gradient')fillStops=stickerSpectrum(item);
       let img;
       if(fillStops||item.strokeColor!=='__original__'||item.strokeWidth!=='__original__'){
         const cacheKey=[item.value,fillStops?JSON.stringify(fillStops):'orig',item.strokeColor,item.strokeWidth].join('::');
@@ -389,7 +392,8 @@ export class SpectraOverlayEditor {
   renderLayers() {
     this.root.querySelector('[data-layers]').innerHTML=this.items.slice().reverse().map(item=>{
       const label=item.type==='text'?item.text.slice(0,24):item.type==='sticker'?item.value:`Forme : ${item.shape}`;
-      return `<button type="button" data-layer="${item.id}" class="${item.id===this.selectedId?'active':''}">${this.escape(label)}</button>`;
+      const kind=item.type==='text'?'TEXTE':item.type==='sticker'?'STICKER':'FORME';
+      return `<button type="button" data-layer="${item.id}" class="${item.id===this.selectedId?'active':''}"><span class="sp-layer-type">${kind}</span><span>${this.escape(label)}</span></button>`;
     }).join('')||'<p class="sp-help">Aucun calque ajouté.</p>';
   }
   escape(value) {return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -402,13 +406,13 @@ export class SpectraOverlayEditor {
       ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><label>Police<select data-prop="font">${['Inter','Manrope','Space Grotesk','Anton','Bebas Neue','Oswald','Playfair Display','Lora','Merriweather','JetBrains Mono','Space Mono','Fira Code','Caveat','Pacifico','Dancing Script','Fredoka','Quicksand','Baloo 2'].map(f=>`<option ${item.font===f?'selected':''}>${f}</option>`).join('')}</select></label><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
       ${item.type==='shape'?`<label>Forme<select data-prop="shape">${['rectangle','circle','star'].map(s=>`<option ${item.shape===s?'selected':''} value="${s}">${s}</option>`).join('')}</select></label>`:''}
       <label>Type de remplissage<select data-prop="fillMode">${item.type==='sticker'?`<option value="original" ${item.fillMode==='original'?'selected':''}>Original (pack NOXEL)</option>`:''}<option value="solid" ${item.fillMode==='solid'?'selected':''}>Uni</option><option value="gradient" ${item.fillMode==='gradient'?'selected':''}>Dégradé</option></select></label>
-      ${item.fillMode==='gradient'?`<div class="sg-gradient-stops">${item.gradientStops.map((s,i)=>`<div class="sg-gradient-stop" data-stop-index="${i}"><input type="color" data-stop-prop="color" value="${s.color}"><input type="number" data-stop-prop="position" min="0" max="100" value="${s.position}" style="width:55px"><span>%</span><button type="button" data-remove-stop="${i}" ${item.gradientStops.length<=2?'disabled':''}>×</button></div>`).join('')}</div><button type="button" data-action="add-stop" ${item.gradientStops.length>=10?'disabled':''} style="width:100%;margin:4px 0 8px">+ Couleur (${item.gradientStops.length}/10)</button>`:item.fillMode==='solid'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
-      ${item.type==='sticker'?`<label>Couleur du contour<input type="color" data-prop="strokeColor" value="${item.strokeColor==='__original__'?'#142132':item.strokeColor}"></label>${number("Épaisseur du contour","strokeWidthSticker",item.strokeWidth==='__original__'?18:item.strokeWidth,0,60)}<button type="button" data-action="reset-color" style="width:100%;margin:4px 0 8px">Réinitialiser (dégradé et contour d'origine)</button>`:''}
+      ${item.fillMode==='gradient'?gradientPanelHtml(item):item.fillMode==='solid'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
+      ${item.type==='sticker'?`<label>Couleur du contour<input type="color" data-prop="strokeColor" value="${item.strokeColor==='__original__'?'#142132':item.strokeColor}"></label>${number("Épaisseur du contour","strokeWidthSticker",item.strokeWidth==='__original__'?18:item.strokeWidth,0,60)}${hudHtml('reset-colors','Réinitialiser le sticker',{attrs:'data-action="reset-color"',title:"Remet le remplissage et le contour d'origine"})}`:''}
       ${number(sizeLabel,'size',Math.round(item.size),12,Math.max(this.width,this.height)*2)}
       ${number('Rotation (°)','rotation',item.rotation,-360,360)}
       <label>Opacité <span>${Math.round(item.opacity*100)} %</span><input data-prop="opacity" type="range" min="0" max="100" value="${Math.round(item.opacity*100)}"></label>
       <label>Ombre<input type="checkbox" data-prop="shadow" ${item.shadow?'checked':''}></label>
-      <div class="sp-order"><button type="button" data-action="down">Reculer</button><button type="button" data-action="up">Avancer</button><button type="button" data-action="delete">Supprimer</button></div>`;
+      <div class="sp-order">${hudHtml('layer-down','Reculer',{attrs:'data-action="down"'})}${hudHtml('layer-up','Avancer',{attrs:'data-action="up"'})}${hudHtml('delete-layer','Supprimer',{attrs:'data-action="delete"'})}</div>`;
     host.querySelectorAll('[data-prop]').forEach(input=>{
       input.addEventListener('input',()=>{
         const key=input.dataset.prop;
@@ -443,6 +447,11 @@ export class SpectraOverlayEditor {
       });
       input.addEventListener('change',()=>this.commit());
       if(input.dataset.prop==='text')input.addEventListener('blur',()=>this.commit());
+    });
+    if(item.fillMode==='gradient')bindGradientPanel(host,item,{
+      draw:()=>{if(item.type==='sticker')this.refreshStickerImage(item);else this.drawOnly();},
+      commit:()=>this.commit(),
+      rerender:()=>{if(item.type==='sticker')this.refreshStickerImage(item);this.commit();}
     });
     const resetColorBtn=host.querySelector('[data-action="reset-color"]');
     if(resetColorBtn)resetColorBtn.addEventListener('click',()=>{
@@ -489,7 +498,7 @@ export class SpectraOverlayEditor {
   refreshStickerImage(item){
     let fillStops=null;
     if(item.fillMode==='solid')fillStops=[{position:0,color:item.color},{position:100,color:item.color}];
-    else if(item.fillMode==='gradient')fillStops=item.gradientStops;
+    else if(item.fillMode==='gradient')fillStops=stickerSpectrum(item);
     this.getStyledImage(item.value,fillStops,item.strokeColor,item.strokeWidth).then(()=>this.drawOnly());
   }
   drawOnly(){this.paintCanvas();}

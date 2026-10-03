@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 import { GradientTool } from "./components/spectra-gradient/GradientTool";
+import { HudButton, HudLink } from "./components/hud/HudButton";
+import type { HudAction } from "./components/hud/hud-data";
+import { NavIcon } from "./components/hud/NavIcon";
+import { RightsTool } from "./components/spectra-rights/RightsTool";
 import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import {
   deleteProject,
@@ -143,6 +147,7 @@ type RecipeOutput = {
   quality: number;
   targetSizeKB?: number;
   copyright?: { author: string; text: string };
+  rights?: Record<string, string>;
 };
 
 type Recipe = { steps: RecipeStep[]; output: RecipeOutput };
@@ -230,7 +235,7 @@ function describeRecipe(r: Recipe): string[] {
   const o = r.output;
   const fmt = o.format === "original" ? "format d'origine" : o.format.toUpperCase();
   const q = o.targetSizeKB ? `${o.targetSizeKB} Ko max` : `qualité ${o.quality}`;
-  lines.push(`Sortie : ${fmt} (${q})${o.copyright ? " + copyright" : ""}`);
+  lines.push(`Sortie : ${fmt} (${q})${o.copyright || o.rights ? " + droits d'auteur" : ""}`);
   lines.push("Métadonnées EXIF/GPS retirées, orientation corrigée");
   return lines;
 }
@@ -451,6 +456,9 @@ export default function App() {
   const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
   const batchSectionRef = useRef<HTMLDivElement | null>(null);
   const projectsSectionRef = useRef<HTMLDivElement | null>(null);
+  const mainFileInputRef = useRef<HTMLInputElement | null>(null);
+  const batchFileInputRef = useRef<HTMLInputElement | null>(null);
+  const projectFileInputRef = useRef<HTMLInputElement | null>(null);
   const bgSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
@@ -511,7 +519,7 @@ export default function App() {
     { id: "editor", label: "Éditeur", icon: "✎", ref: editorSectionRef },
     { id: "gradient", label: "Dégradé", icon: "◐", ref: gradientSectionRef },
     { id: "watermark", label: "Filigrane", icon: "⛆", ref: watermarkSectionRef },
-    { id: "copyright", label: "Copyright", icon: "©", ref: copyrightSectionRef },
+    { id: "copyright", label: "Auteur et droits", icon: "©", ref: copyrightSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -613,11 +621,6 @@ export default function App() {
   const [watermarkError, setWatermarkError] = useState<string | null>(null);
   const [watermarkResultUrl, setWatermarkResultUrl] = useState<string | null>(null);
 
-  const [copyrightAuthor, setCopyrightAuthor] = useState("");
-  const [copyrightText, setCopyrightText] = useState("");
-  const [copyrightLoading, setCopyrightLoading] = useState(false);
-  const [copyrightError, setCopyrightError] = useState<string | null>(null);
-  const [copyrightResultUrl, setCopyrightResultUrl] = useState<string | null>(null);
 
   const [socialPlatform, setSocialPlatform] = useState<string>(Object.keys(SOCIAL_PRESETS)[0]);
   const [socialPresetIndex, setSocialPresetIndex] = useState(0);
@@ -881,7 +884,7 @@ export default function App() {
       resultUrl, resizeResultUrl, responsiveResultUrl, faviconResultUrl,
       metaCleanResultUrl, rotateResultUrl, adjustResultUrl, cropResultUrl,
       shadowResultUrl, glowResultUrl, socialResultUrl, watermarkResultUrl,
-      copyrightResultUrl, bgResultUrl,
+      bgResultUrl,
     ].forEach((u) => {
       if (u) URL.revokeObjectURL(u);
     });
@@ -933,8 +936,6 @@ export default function App() {
     setSocialStats(null);
     setWatermarkResultUrl(null);
     setWatermarkError(null);
-    setCopyrightResultUrl(null);
-    setCopyrightError(null);
     setBgResultUrl(null);
     setBgError(null);
     setBgStats(null);
@@ -1022,6 +1023,7 @@ export default function App() {
         }
         if (o.targetSizeKB) output.targetSizeKB = o.targetSizeKB;
         if (o.copyright) output.copyright = o.copyright;
+        if (o.rights) output.rights = o.rights;
       }
     }
     return { recipe: { steps, output }, skipped };
@@ -1104,13 +1106,7 @@ export default function App() {
   function renderContinueButton(url: string | null, label: string) {
     if (!url) return null;
     return (
-      <button
-        onClick={() => continueWith(url, label)}
-        disabled={continuing}
-        style={{ marginLeft: 12, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
-      >
-        {continuing ? "Chargement..." : "➜ Continuer avec ce résultat"}
-      </button>
+      <HudButton action="continue" compact busy={continuing} onClick={() => continueWith(url, label)} style={{ marginLeft: 12 }} />
     );
   }
 
@@ -1596,37 +1592,6 @@ export default function App() {
     }
   }
 
-  async function handleCopyright() {
-    if (!file) return;
-    setCopyrightLoading(true);
-    setCopyrightError(null);
-    setCopyrightResultUrl(null);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("author", copyrightAuthor);
-    formData.append("copyrightText", copyrightText);
-
-    try {
-      const res = await fetch(`${apiUrl}/api/copyright`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
-      }
-      const blob = await res.blob();
-      const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = { output: { copyright: { author: copyrightAuthor, text: copyrightText } } };
-      setCopyrightResultUrl(outUrl);
-    } catch (err) {
-      setCopyrightError(err instanceof Error ? err.message : "Protection échouée");
-    } finally {
-      setCopyrightLoading(false);
-    }
-  }
-
   async function handleDropShadow() {
     if (!file) return;
     setShadowLoading(true);
@@ -1888,7 +1853,7 @@ export default function App() {
               className={`sidebar-nav-item${activeSection === item.id ? " active" : ""}`}
               onClick={() => goToSection(item.id)}
             >
-              <span aria-hidden="true">{item.icon}</span>
+              <NavIcon id={item.id} fallback={item.icon} />
               {item.label}
             </button>
           ))}
@@ -1917,10 +1882,16 @@ export default function App() {
         }}
       >
         <input
+          ref={mainFileInputRef}
           type="file"
           accept="image/*"
-          onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+          style={{ display: "none" }}
+          onChange={(e) => {
+            handleFileChange(e.target.files?.[0] || null);
+            e.target.value = "";
+          }}
         />
+        <HudButton action="choose-file" compact onClick={() => mainFileInputRef.current?.click()} />
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
           ou glisse-dépose une image ici
         </p>
@@ -1935,7 +1906,7 @@ export default function App() {
         {projectNotice && (
           <p style={{ margin: "6px 0 0", fontSize: 13, color: "#3ddc84" }}>
             {projectNotice}{" "}
-            <a href="#" onClick={(e) => { e.preventDefault(); setProjectNotice(null); }}>OK</a>
+            <HudButton action="ok" compact onClick={() => setProjectNotice(null)} />
           </p>
         )}
         {projectError && (
@@ -1946,22 +1917,8 @@ export default function App() {
       {history.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-            <button
-              onClick={() => goToStep(historyIndex - 1)}
-              disabled={historyIndex <= 0}
-              title="Revenir à l'étape précédente"
-              style={{ padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
-            >
-              ↶ Annuler
-            </button>
-            <button
-              onClick={() => goToStep(historyIndex + 1)}
-              disabled={historyIndex >= history.length - 1}
-              title="Rétablir l'étape suivante"
-              style={{ padding: "4px 10px", fontSize: 13, cursor: "pointer", marginRight: 8 }}
-            >
-              ↷ Rétablir
-            </button>
+            <HudButton action="undo" compact disabled={historyIndex <= 0} onClick={() => goToStep(historyIndex - 1)} title="Revenir à l'étape précédente" />
+            <HudButton action="redo" compact disabled={historyIndex >= history.length - 1} onClick={() => goToStep(historyIndex + 1)} title="Rétablir l'étape suivante" />
             {history.map((h, i) => (
               <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 {i > 0 && <span style={{ color: "var(--muted)" }}>→</span>}
@@ -1995,20 +1952,13 @@ export default function App() {
           {chainError && <p style={{ margin: "8px 0 0", fontSize: 13, color: "red" }}>{chainError}</p>}
           {historyIndex > 0 && (
             <div style={{ marginTop: 8 }}>
-              <button
-                onClick={saveCurrentAsRecipe}
-                style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}
-              >
-                💾 Enregistrer comme recette
-              </button>
+              <HudButton action="save-recipe" compact onClick={saveCurrentAsRecipe} />
             </div>
           )}
           {recipeNotice && (
             <p style={{ margin: "8px 0 0", fontSize: 13, color: "#3ddc84" }}>
               {recipeNotice}{" "}
-              <a href="#" onClick={(e) => { e.preventDefault(); setRecipeNotice(null); goToSection("batch"); }}>
-                Utiliser en lot →
-              </a>
+              <HudButton action="use-batch" compact onClick={() => { setRecipeNotice(null); goToSection("batch"); }} />
             </p>
           )}
         </div>
@@ -2030,13 +1980,7 @@ export default function App() {
           Teste plusieurs formats réels et recommande le plus léger pour cette image précise.
         </p>
 
-        <button
-          onClick={handleAnalyze}
-          disabled={!file || analyzeLoading}
-          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {analyzeLoading ? "Analyse en cours..." : "Analyser"}
-        </button>
+        <HudButton action="analyse" disabled={!file} busy={analyzeLoading} onClick={handleAnalyze} style={{ marginTop: 16 }} />
 
         {analyzeError && <p style={{ color: "red", marginTop: 16 }}>{analyzeError}</p>}
 
@@ -2094,12 +2038,7 @@ export default function App() {
             </div>
 
             {analyzeResult.recommendation && (
-              <button
-                onClick={applyRecommendation}
-                style={{ marginTop: 14, padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
-              >
-                Utiliser cette recommandation →
-              </button>
+              <HudButton action="use-recommendation" compact onClick={applyRecommendation} style={{ marginTop: 14 }} />
             )}
           </div>
         )}
@@ -2195,13 +2134,7 @@ export default function App() {
           </div>
         )}
 
-        <button
-          onClick={handleConvert}
-          disabled={!file || loading}
-          style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {loading ? "Conversion..." : "Convertir"}
-        </button>
+        <HudButton action="convert" disabled={!file} busy={loading} onClick={handleConvert} style={{ marginTop: 16 }} />
 
         {error && <p style={{ color: "red", marginTop: 16 }}>{error}</p>}
 
@@ -2244,9 +2177,7 @@ export default function App() {
               <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
             )}
             <div style={{ marginTop: 8 }}>
-              <a href={resultUrl} download={`converted.${format}`}>
-                Télécharger le résultat
-              </a>
+              <HudLink action="download-result" compact href={resultUrl} download={`converted.${format}`} />
             {renderContinueButton(resultUrl, "Conversion {fmt}")}
             </div>
           </div>
@@ -2317,13 +2248,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleResize}
-        disabled={!file || resizeLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {resizeLoading ? "Redimensionnement..." : "Redimensionner"}
-      </button>
+      <HudButton action="resize" disabled={!file} busy={resizeLoading} onClick={handleResize} style={{ marginTop: 16 }} />
 
       {resizeError && <p style={{ color: "red", marginTop: 16 }}>{resizeError}</p>}
 
@@ -2354,9 +2279,7 @@ export default function App() {
             <img src={resizeResultUrl} alt="Résultat redimensionné" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={resizeResultUrl} download="resized">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={resizeResultUrl} download="resized" />
             {renderContinueButton(resizeResultUrl, "Redimension")}
           </div>
         </div>
@@ -2449,20 +2372,8 @@ export default function App() {
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 10 }}>
-        <button
-          onClick={resetCrop}
-          disabled={!file}
-          style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
-        >
-          Réinitialiser
-        </button>
-        <button
-          onClick={handleCrop}
-          disabled={!file || cropLoading}
-          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {cropLoading ? "Rognage..." : "Rogner"}
-        </button>
+        <HudButton action="reset-crop" compact disabled={!file} onClick={resetCrop} />
+        <HudButton action="crop" disabled={!file} busy={cropLoading} onClick={handleCrop} style={{ marginTop: 16 }} />
       </div>
 
       {cropError && <p style={{ color: "red", marginTop: 16 }}>{cropError}</p>}
@@ -2475,9 +2386,7 @@ export default function App() {
             <img src={cropResultUrl} alt="Résultat rogné" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={cropResultUrl} download="cropped">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={cropResultUrl} download="cropped" />
             {renderContinueButton(cropResultUrl, "Rognage")}
           </div>
         </div>
@@ -2533,13 +2442,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleRemoveBackground}
-        disabled={!file || bgLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {bgLoading ? "Détourage en cours... (quelques secondes)" : "Supprimer l'arrière-plan"}
-      </button>
+      <HudButton action="remove-background" disabled={!file} busy={bgLoading} busyLabel="Détourage en cours… (quelques secondes)" onClick={handleRemoveBackground} style={{ marginTop: 16 }} />
 
       {bgError && <p style={{ color: "red", marginTop: 16 }}>{bgError}</p>}
 
@@ -2557,9 +2460,7 @@ export default function App() {
       {bgResultUrl && bgStats && (
         <div style={{ marginTop: 10 }}>
           <span style={{ fontSize: 13, color: "#888", marginRight: 12 }}>{formatBytes(bgStats.size)}</span>
-          <a href={bgResultUrl} download={`sans-fond.${bgStats.ext}`}>
-            Télécharger le résultat
-          </a>
+          <HudLink action="download-result" compact href={bgResultUrl} download={`sans-fond.${bgStats.ext}`} />
           {renderContinueButton(bgResultUrl, "Arrière-plan")}
           <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>
             Le fond, le recadrage et le format se changent sans relancer le détourage. Les retouches au
@@ -2584,12 +2485,7 @@ export default function App() {
 
       <div style={{ marginTop: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => adjustAngle(-5)}
-            style={{ padding: "6px 12px", fontSize: 15, cursor: "pointer" }}
-          >
-            − 5°
-          </button>
+          <HudButton action="rotate-minus" compact onClick={() => adjustAngle(-5)} />
           <input
             type="number"
             value={rotateAngle}
@@ -2597,29 +2493,11 @@ export default function App() {
             style={{ width: 70, textAlign: "center", fontSize: 15, padding: "6px 4px" }}
           />
           <span>°</span>
-          <button
-            onClick={() => adjustAngle(5)}
-            style={{ padding: "6px 12px", fontSize: 15, cursor: "pointer" }}
-          >
-            + 5°
-          </button>
+          <HudButton action="rotate-plus" compact onClick={() => adjustAngle(5)} />
         </div>
         <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
           {[0, 90, 180, 270].map((preset) => (
-            <button
-              key={preset}
-              onClick={() => setRotateAngle(preset)}
-              style={{
-                padding: "4px 10px",
-                fontSize: 12,
-                cursor: "pointer",
-                background: rotateAngle === preset ? "#e0e0e0" : "#fff",
-                border: "1px solid #ddd",
-                borderRadius: 4,
-              }}
-            >
-              {preset}°
-            </button>
+            <HudButton key={preset} action={`rotate-${preset}` as HudAction} compact selected={rotateAngle === preset} onClick={() => setRotateAngle(preset)} />
           ))}
         </div>
       </div>
@@ -2643,13 +2521,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleRotate}
-        disabled={!file || rotateLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {rotateLoading ? "Application..." : "Appliquer"}
-      </button>
+      <HudButton action="apply-rotation" disabled={!file} busy={rotateLoading} onClick={handleRotate} style={{ marginTop: 16 }} />
 
       {rotateError && <p style={{ color: "red", marginTop: 16 }}>{rotateError}</p>}
 
@@ -2666,9 +2538,7 @@ export default function App() {
             </div>
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={rotateResultUrl} download="rotated">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={rotateResultUrl} download="rotated" />
             {renderContinueButton(rotateResultUrl, "Rotation")}
           </div>
         </div>
@@ -2820,13 +2690,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleAdjust}
-        disabled={!file || adjustLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {adjustLoading ? "Application..." : "Appliquer"}
-      </button>
+      <HudButton action="apply-filters" disabled={!file} busy={adjustLoading} onClick={handleAdjust} style={{ marginTop: 16 }} />
 
       {adjustError && <p style={{ color: "red", marginTop: 16 }}>{adjustError}</p>}
 
@@ -2838,9 +2702,7 @@ export default function App() {
             <img src={adjustResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={adjustResultUrl} download="adjusted">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={adjustResultUrl} download="adjusted" />
             {renderContinueButton(adjustResultUrl, "Réglages")}
           </div>
         </div>
@@ -2885,13 +2747,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleGenerateResponsive}
-        disabled={!file || responsiveLoading}
-        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {responsiveLoading ? "Génération..." : "Générer les tailles"}
-      </button>
+      <HudButton action="generate-responsive" disabled={!file} busy={responsiveLoading} onClick={handleGenerateResponsive} style={{ marginTop: 16 }} />
 
       {responsiveError && <p style={{ color: "red", marginTop: 16 }}>{responsiveError}</p>}
 
@@ -2917,20 +2773,13 @@ export default function App() {
           >
             {responsiveSrcset}
           </div>
-          <button
-            onClick={copySrcset}
-            style={{ marginTop: 8, padding: "6px 14px", fontSize: 13, cursor: "pointer" }}
-          >
-            {srcsetCopied ? "Copié !" : "Copier le srcset"}
-          </button>
+          <HudButton action="copy-srcset" compact label={srcsetCopied ? "Copié !" : undefined} onClick={copySrcset} style={{ marginTop: 8 }} />
         </div>
       )}
 
       {responsiveResultUrl && (
         <div style={{ marginTop: 16 }}>
-          <a href={responsiveResultUrl} download="responsive-images.zip">
-            Télécharger le pack (responsive-images.zip)
-          </a>
+          <HudLink action="download-responsive" compact href={responsiveResultUrl} download="responsive-images.zip" />
         </div>
       )}
 
@@ -2961,13 +2810,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleExtractPalette}
-        disabled={!file || paletteLoading}
-        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {paletteLoading ? "Extraction..." : "Extraire la palette"}
-      </button>
+      <HudButton action="extract-palette" disabled={!file} busy={paletteLoading} onClick={handleExtractPalette} style={{ marginTop: 16 }} />
 
       {paletteError && <p style={{ color: "red", marginTop: 16 }}>{paletteError}</p>}
 
@@ -3052,21 +2895,9 @@ export default function App() {
       </div>
 
       <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-        <button
-          onClick={handleDetectColors}
-          disabled={!file || detectLoading}
-          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {detectLoading ? "Détection..." : "Détecter les couleurs"}
-        </button>
+        <HudButton action="detect-colors" compact disabled={!file} busy={detectLoading} onClick={handleDetectColors} />
 
-        <button
-          onClick={handleVectorize}
-          disabled={!file || vectorizeLoading}
-          style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {vectorizeLoading ? "Vectorisation... (peut prendre un moment)" : "Vectoriser"}
-        </button>
+        <HudButton action="vectorize" disabled={!file} busy={vectorizeLoading} busyLabel="Vectorisation… (peut prendre un moment)" onClick={handleVectorize} style={{ marginTop: 16 }} />
       </div>
 
       {detectError && <p style={{ color: "red", marginTop: 16 }}>{detectError}</p>}
@@ -3099,12 +2930,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          <button
-            onClick={resetEditedColors}
-            style={{ marginTop: 10, padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
-          >
-            Réinitialiser les couleurs détectées
-          </button>
+          <HudButton action="reset-colors" compact onClick={resetEditedColors} style={{ marginTop: 10 }} />
         </div>
       )}
 
@@ -3144,9 +2970,7 @@ export default function App() {
           </div>
 
           <div style={{ marginTop: 8 }}>
-            <a href="#" onClick={(e) => { e.preventDefault(); downloadVectorizedSvg(); }}>
-              Télécharger le SVG
-            </a>
+            <HudButton action="download-svg" compact onClick={downloadVectorizedSvg} />
           </div>
         </div>
       )}
@@ -3166,21 +2990,13 @@ export default function App() {
         favicon-192x192.png et favicon-512x512.png.
       </p>
 
-      <button
-        onClick={handleGenerateFavicons}
-        disabled={!file || faviconLoading}
-        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {faviconLoading ? "Génération..." : "Générer les favicons"}
-      </button>
+      <HudButton action="generate-favicons" disabled={!file} busy={faviconLoading} onClick={handleGenerateFavicons} style={{ marginTop: 16 }} />
 
       {faviconError && <p style={{ color: "red", marginTop: 16 }}>{faviconError}</p>}
 
       {faviconResultUrl && (
         <div style={{ marginTop: 16 }}>
-          <a href={faviconResultUrl} download="favicon-package.zip">
-            Télécharger le pack (favicon-package.zip)
-          </a>
+          <HudLink action="download-favicons" compact href={faviconResultUrl} download="favicon-package.zip" />
         </div>
       )}
 
@@ -3198,13 +3014,7 @@ export default function App() {
         le format ni visiblement la qualité.
       </p>
 
-      <button
-        onClick={handleStripMetadata}
-        disabled={!file || metaCleanLoading}
-        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {metaCleanLoading ? "Nettoyage..." : "Nettoyer les métadonnées"}
-      </button>
+      <HudButton action="clean-metadata" disabled={!file} busy={metaCleanLoading} onClick={handleStripMetadata} style={{ marginTop: 16 }} />
 
       {metaCleanError && <p style={{ color: "red", marginTop: 16 }}>{metaCleanError}</p>}
 
@@ -3253,9 +3063,7 @@ export default function App() {
 
       {metaCleanResultUrl && (
         <div style={{ marginTop: 16 }}>
-          <a href={metaCleanResultUrl} download="cleaned">
-            Télécharger le fichier nettoyé
-          </a>
+          <HudLink action="download-clean" compact href={metaCleanResultUrl} download="cleaned" />
             {renderContinueButton(metaCleanResultUrl, "Métadonnées")}
         </div>
       )}
@@ -3320,13 +3128,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleDropShadow}
-        disabled={!file || shadowLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {shadowLoading ? "Application..." : "Appliquer"}
-      </button>
+      <HudButton action="apply-shadow" disabled={!file} busy={shadowLoading} onClick={handleDropShadow} style={{ marginTop: 16 }} />
 
       {shadowError && <p style={{ color: "red", marginTop: 16 }}>{shadowError}</p>}
 
@@ -3343,9 +3145,7 @@ export default function App() {
             <img src={shadowResultUrl} alt="Résultat" style={{ maxWidth: "100%", display: "block" }} />
           </div>
           <div style={{ marginTop: 8 }}>
-            <a href={shadowResultUrl} download="drop-shadow.png">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={shadowResultUrl} download="drop-shadow.png" />
             {renderContinueButton(shadowResultUrl, "Ombre")}
           </div>
         </div>
@@ -3377,13 +3177,7 @@ export default function App() {
       </label>
 
       <div>
-        <button
-          onClick={handleGlow}
-          disabled={!file || glowLoading}
-          style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-        >
-          {glowLoading ? "Application..." : "Appliquer"}
-        </button>
+        <HudButton action="apply-glow" disabled={!file} busy={glowLoading} onClick={handleGlow} style={{ marginTop: 16 }} />
       </div>
 
       {glowError && <p style={{ color: "red", marginTop: 16 }}>{glowError}</p>}
@@ -3396,9 +3190,7 @@ export default function App() {
             <img src={glowResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={glowResultUrl} download="glow">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={glowResultUrl} download="glow" />
             {renderContinueButton(glowResultUrl, "Lueur")}
           </div>
         </div>
@@ -3448,13 +3240,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleApplySocialPreset}
-        disabled={!file || socialLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {socialLoading ? "Redimensionnement..." : "Redimensionner à cette taille"}
-      </button>
+      <HudButton action="resize-social" disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
 
       {socialError && <p style={{ color: "red", marginTop: 16 }}>{socialError}</p>}
 
@@ -3485,9 +3271,7 @@ export default function App() {
             <img src={socialResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={socialResultUrl} download="social-image">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={socialResultUrl} download="social-image" />
             {renderContinueButton(socialResultUrl, socialPlatform)}
           </div>
         </div>
@@ -3516,7 +3300,7 @@ export default function App() {
       <div ref={gradientSectionRef} />
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Dégradé</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Crée un dégradé linéaire ou radial (2 à 10 couleurs) et exporte en PNG, SVG, CSS ou JSON.
+        Superpose jusqu'à 8 calques — 11 géométries, répétition, 16 modes de fusion, grain — et exporte en PNG, SVG, CSS ou JSON.
       </p>
       <div style={{ marginTop: 12 }}>
         <GradientTool />
@@ -3618,13 +3402,7 @@ export default function App() {
         </label>
       </div>
 
-      <button
-        onClick={handleWatermark}
-        disabled={!file || watermarkLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {watermarkLoading ? "Application..." : "Appliquer le filigrane"}
-      </button>
+      <HudButton action="apply-watermark" disabled={!file} busy={watermarkLoading} onClick={handleWatermark} style={{ marginTop: 16 }} />
 
       {watermarkError && <p style={{ color: "red", marginTop: 16 }}>{watermarkError}</p>}
 
@@ -3636,9 +3414,7 @@ export default function App() {
             <img src={watermarkResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
-            <a href={watermarkResultUrl} download="watermarked">
-              Télécharger le résultat
-            </a>
+            <HudLink action="download-result" compact href={watermarkResultUrl} download="watermarked" />
             {renderContinueButton(watermarkResultUrl, "Filigrane")}
           </div>
         </div>
@@ -3659,15 +3435,12 @@ export default function App() {
       </p>
 
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <button
-          onClick={() => { startNewProject(); goToSection("analyze"); }}
-          style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer" }}
-        >
-          + Nouveau projet
-        </button>
-        <label style={{ padding: "8px 16px", fontSize: 14, cursor: "pointer", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6 }}>
+        <HudButton action="new-project" compact onClick={() => { startNewProject(); goToSection("analyze"); }} />
+        <HudButton action="import-project" compact onClick={() => projectFileInputRef.current?.click()} />
+        <label style={{ display: "none" }}>
           Ouvrir un fichier .spectra
           <input
+            ref={projectFileInputRef}
             type="file"
             accept=".spectra,application/zip"
             style={{ display: "none" }}
@@ -3727,18 +3500,10 @@ export default function App() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <button onClick={() => handleOpenProject(p.id)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-                  Ouvrir
-                </button>
-                <button onClick={() => handleRenameProject(p.id, p.name)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-                  Renommer
-                </button>
-                <button onClick={() => handleExportProject(p.id)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-                  Exporter .spectra
-                </button>
-                <button onClick={() => handleDeleteProject(p.id, p.name)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-                  Supprimer
-                </button>
+                <HudButton action="open-project" compact onClick={() => handleOpenProject(p.id)} />
+                <HudButton action="rename-project" compact onClick={() => handleRenameProject(p.id, p.name)} />
+                <HudButton action="export-project" compact onClick={() => handleExportProject(p.id)} />
+                <HudButton action="delete-project" compact onClick={() => handleDeleteProject(p.id, p.name)} />
               </div>
             </div>
           ))}
@@ -3772,15 +3537,18 @@ export default function App() {
         }}
       >
         <input
+          ref={batchFileInputRef}
           type="file"
           accept="image/*"
           multiple
+          style={{ display: "none" }}
           onChange={(e) => {
             addBatchFiles(e.target.files);
             e.target.value = "";
           }}
         />
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
+          <HudButton action="choose-files" compact onClick={() => batchFileInputRef.current?.click()} />{" "}
           ou glisse-dépose plusieurs images ici
         </p>
       </div>
@@ -3789,12 +3557,7 @@ export default function App() {
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 6 }}>
             {batchFiles.length} image(s) — {formatBytes(batchFiles.reduce((s, f) => s + f.size, 0))}
-            <button
-              onClick={() => { setBatchFiles([]); setBatchError(null); clearBatchResult(); }}
-              style={{ marginLeft: 12, padding: "2px 10px", fontSize: 12, cursor: "pointer" }}
-            >
-              Tout retirer
-            </button>
+            <HudButton action="remove-all" compact onClick={() => { setBatchFiles([]); setBatchError(null); clearBatchResult(); }} style={{ marginLeft: 12 }} />
           </div>
           <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
             {batchFiles.map((f, i) => (
@@ -3813,13 +3576,7 @@ export default function App() {
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {f.name} <span style={{ color: "#888" }}>({formatBytes(f.size)})</span>
                 </span>
-                <button
-                  onClick={() => setBatchFiles((prev) => prev.filter((_, j) => j !== i))}
-                  title="Retirer"
-                  style={{ padding: "0 8px", fontSize: 13, cursor: "pointer" }}
-                >
-                  ✕
-                </button>
+                <HudButton action="remove-image" iconOnly label={`Retirer ${f.name}`} onClick={() => setBatchFiles((prev) => prev.filter((_, j) => j !== i))} />
               </div>
             ))}
           </div>
@@ -3845,14 +3602,7 @@ export default function App() {
           </select>
         </label>
         {savedRecipes.some((r) => r.id === batchRecipeId) && (
-          <button
-            onClick={() => {
-              if (window.confirm("Supprimer cette recette ?")) deleteRecipe(batchRecipeId);
-            }}
-            style={{ marginLeft: 8, padding: "2px 10px", fontSize: 12, cursor: "pointer" }}
-          >
-            Supprimer
-          </button>
+          <HudButton action="delete-recipe" compact onClick={() => { if (window.confirm("Supprimer cette recette ?")) deleteRecipe(batchRecipeId); }} style={{ marginLeft: 8 }} />
         )}
       </div>
 
@@ -3873,15 +3623,10 @@ export default function App() {
         « 💾 Enregistrer comme recette » dans la barre d'historique.
       </p>
 
-      <button
-        onClick={handleBatch}
-        disabled={batchFiles.length === 0 || batchLoading}
-        style={{ marginTop: 16, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {batchLoading
-          ? `Traitement de ${batchFiles.length} image(s)...`
-          : `Traiter ${batchFiles.length} image(s)`}
-      </button>
+      <HudButton action="process-batch" disabled={batchFiles.length === 0} busy={batchLoading}
+        label={`Traiter ${batchFiles.length} image(s)`}
+        busyLabel={`Traitement de ${batchFiles.length} image(s)…`}
+        onClick={handleBatch} style={{ marginTop: 16 }} />
 
       {batchError && <p style={{ color: "red", marginTop: 16 }}>{batchError}</p>}
 
@@ -3899,9 +3644,7 @@ export default function App() {
             {batchCounts.ok} réussie(s){batchCounts.failed > 0 ? `, ${batchCounts.failed} en échec (détails dans rapport.txt)` : ""}
           </div>
           <div style={{ marginTop: 8 }}>
-            <a href={batchResultUrl} download="noxel-spectra-lot.zip">
-              Télécharger le lot (noxel-spectra-lot.zip)
-            </a>
+            <HudLink action="download-batch" compact href={batchResultUrl} download="noxel-spectra-lot.zip" />
           </div>
         </div>
       )}
@@ -3910,56 +3653,17 @@ export default function App() {
 
       {activeSection === "copyright" && (
       <>
-      {/* ── Copyright ── */}
+      {/* ── Auteur, droits et licence ── */}
       <div ref={copyrightSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Protection copyright</h2>
-      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Intègre une mention d'auteur/copyright dans les métadonnées du fichier — invisible à
-        l'œil, mais présente dans les propriétés du fichier. Fonctionne mieux en JPEG ; le
-        support varie selon le format pour les autres.
-      </p>
-
-      <div className="controls-grid" style={{ marginTop: 12 }}>
-        <label>
-          Auteur :{" "}
-          <input
-            type="text"
-            value={copyrightAuthor}
-            onChange={(e) => setCopyrightAuthor(e.target.value)}
-            placeholder="Ton nom ou celui de NOXEL"
-            style={{ width: 200 }}
-          />
-        </label>
-        <label>
-          Copyright :{" "}
-          <input
-            type="text"
-            value={copyrightText}
-            onChange={(e) => setCopyrightText(e.target.value)}
-            placeholder="© 2026 NOXEL"
-            style={{ width: 200 }}
-          />
-        </label>
-      </div>
-
-      <button
-        onClick={handleCopyright}
-        disabled={!file || copyrightLoading}
-        style={{ marginTop: 20, padding: "10px 20px", fontSize: 16, cursor: "pointer" }}
-      >
-        {copyrightLoading ? "Application..." : "Protéger"}
-      </button>
-
-      {copyrightError && <p style={{ color: "red", marginTop: 16 }}>{copyrightError}</p>}
-
-      {copyrightResultUrl && (
-        <div style={{ marginTop: 16 }}>
-          <a href={copyrightResultUrl} download="protected">
-            Télécharger le fichier protégé
-          </a>
-            {renderContinueButton(copyrightResultUrl, "Copyright")}
-        </div>
-      )}
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Auteur, droits et licence</h2>
+      <RightsTool
+        file={file}
+        apiUrl={apiUrl}
+        renderContinueButton={renderContinueButton}
+        registerRecipePart={(url, rights) => {
+          recipeParts.current[url] = { output: { rights } };
+        }}
+      />
       </>
       )}
         </div>

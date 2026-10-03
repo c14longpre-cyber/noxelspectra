@@ -10,6 +10,7 @@
 
 import sharp from "sharp";
 import { removeBackground } from "./bgremove";
+import { parseRights, hasRights, applyRights, type Rights } from "./rights";
 
 export type OutputFormat = "jpeg" | "png" | "webp" | "avif" | "gif";
 const OUTPUT_FORMATS: OutputFormat[] = ["jpeg", "png", "webp", "avif", "gif"];
@@ -52,6 +53,7 @@ export type RecipeOutput = {
   quality: number;
   targetSizeKB?: number;
   copyright?: { author: string; text: string };
+  rights?: Rights;
 };
 
 export type Recipe = { steps: RecipeStep[]; output: RecipeOutput };
@@ -153,6 +155,10 @@ export function parseRecipe(raw: unknown): Recipe {
       author: String(o.copyright.author || "").slice(0, 200),
       text: String(o.copyright.text || "").slice(0, 300),
     };
+  }
+  if (o.rights) {
+    const rights = parseRights(o.rights);
+    if (hasRights(rights)) output.rights = rights;
   }
   return { steps, output };
 }
@@ -325,18 +331,13 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
 }
 
 // ── Encodage final (une seule fois) ───────────────────────────────────
-function encode(buf: Buffer, format: OutputFormat, quality: number, copyright?: RecipeOutput["copyright"]) {
+function encode(buf: Buffer, format: OutputFormat, quality: number, meta?: Pick<RecipeOutput, "copyright" | "rights">) {
   let p = sharp(buf);
-  if (copyright) {
-    p = p.withMetadata({
-      exif: {
-        IFD0: {
-          ...(copyright.text ? { Copyright: copyright.text } : {}),
-          ...(copyright.author ? { Artist: copyright.author } : {}),
-        },
-      },
-    });
-  }
+  // Droits complets (XMP) ; l'ancien format « copyright » est converti
+  const rights =
+    meta?.rights ??
+    (meta?.copyright ? parseRights({ creator: meta.copyright.author, copyrightNotice: meta.copyright.text }) : undefined);
+  if (rights && hasRights(rights)) p = applyRights(p, rights).pipeline;
   switch (format) {
     case "jpeg":
       return p.flatten({ background: "#ffffff" }).jpeg({ quality, mozjpeg: true }).toBuffer();
@@ -356,7 +357,7 @@ async function encodeToTarget(
   buf: Buffer,
   format: OutputFormat,
   targetBytes: number,
-  copyright?: RecipeOutput["copyright"]
+  copyright?: Pick<RecipeOutput, "copyright" | "rights">
 ): Promise<{ data: Buffer; quality: number; metTarget: boolean }> {
   let low = 1;
   let high = 100;
@@ -408,11 +409,11 @@ export async function runRecipe(input: Buffer, recipe: Recipe): Promise<RecipeRe
 
   let data: Buffer;
   if (recipe.output.targetSizeKB && ["jpeg", "webp", "avif"].includes(format)) {
-    const r = await encodeToTarget(buf, format, recipe.output.targetSizeKB * 1024, recipe.output.copyright);
+    const r = await encodeToTarget(buf, format, recipe.output.targetSizeKB * 1024, recipe.output);
     data = r.data;
     if (!r.metTarget) notes.push(`impossible de descendre sous ${recipe.output.targetSizeKB} Ko`);
   } else {
-    data = await encode(buf, format, recipe.output.quality, recipe.output.copyright);
+    data = await encode(buf, format, recipe.output.quality, recipe.output);
   }
 
   // « Format d'origine » = garder le fichier comme il était : si un format
@@ -426,7 +427,7 @@ export async function runRecipe(input: Buffer, recipe: Recipe): Promise<RecipeRe
   ) {
     for (const q of [80, 70, 60, 50]) {
       if (q >= recipe.output.quality) continue;
-      const candidate = await encode(buf, format, q, recipe.output.copyright);
+      const candidate = await encode(buf, format, q, recipe.output);
       if (candidate.length < data.length) data = candidate;
       if (candidate.length <= input.length) {
         notes.push(`qualité ramenée à ${q} pour ne pas dépasser le poids d'origine`);

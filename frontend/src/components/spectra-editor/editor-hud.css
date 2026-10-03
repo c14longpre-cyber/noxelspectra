@@ -1,0 +1,304 @@
+/* NOXEL Spectra — habillage HUD de l'Éditeur.
+   Se charge APRÈS spectra-overlay-editor.css et ne fait que le surcharger. */
+
+/* Boutons HUD : neutraliser le style générique « .sp-editor button » */
+.sp-editor button.noxel-hud,
+.sp-editor label.noxel-hud {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 6px;
+  color: var(--sp-text);
+}
+.sp-editor button.noxel-hud--compact,
+.sp-editor label.noxel-hud--compact {
+  padding: 3px 10px 3px 3px;
+  border-radius: 10px;
+}
+.sp-editor button.noxel-hud--icon-only {
+  padding: 0;
+}
+.sp-editor button.noxel-hud:hover:not(:disabled),
+.sp-editor label.noxel-hud:hover {
+  background: rgb(61 220 132 / 0.05);
+  border-color: rgb(61 220 132 / 0.22);
+}
+.sp-editor button.noxel-hud[aria-pressed="true"] {
+  background: rgb(168 85 247 / 0.1);
+  border-color: var(--sp-purple);
+}
+.sp-editor label.noxel-hud {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* ── Cadre général ── */
+.sp-editor.sp-editor {
+  border-color: rgb(61 220 132 / 0.18);
+  background:
+    radial-gradient(1200px 400px at 0% 0%, rgb(61 220 132 / 0.05), transparent 60%),
+    radial-gradient(900px 400px at 100% 100%, rgb(168 85 247 / 0.06), transparent 60%),
+    var(--sp-bg);
+}
+
+/* ── Barre d'outils ── */
+.sp-editor .sp-toolbar {
+  position: relative;
+  gap: 4px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, rgb(61 220 132 / 0.05), rgb(11 17 28 / 0.9));
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, var(--sp-green), var(--sp-purple), transparent) 1;
+}
+.sp-editor .sp-toolbar .sp-sep {
+  width: 1px;
+  height: 30px;
+  margin: 0 6px;
+  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.18), transparent);
+}
+.sp-editor .sp-toolbar .sp-export {
+  margin-left: auto;
+}
+
+/* ── Scène : cadre de visée ── */
+.sp-editor .sp-stage {
+  background:
+    radial-gradient(circle at 30% 20%, #49316c45, transparent 45%),
+    linear-gradient(rgb(61 220 132 / 0.04) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, rgb(61 220 132 / 0.04) 1px, transparent 1px) 0 0 / 40px 40px,
+    repeating-conic-gradient(#101722 0 25%, #0b121e 0 50%) 0 0 / 20px 20px;
+}
+.sp-editor .sp-stage::before,
+.sp-editor .sp-stage::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+.sp-editor .sp-stage::before {
+  top: 10px;
+  left: 10px;
+  border-top: 2px solid var(--sp-green);
+  border-left: 2px solid var(--sp-green);
+}
+.sp-editor .sp-stage::after {
+  bottom: 10px;
+  right: 10px;
+  border-bottom: 2px solid var(--sp-purple);
+  border-right: 2px solid var(--sp-purple);
+}
+.sp-editor .sp-stage canvas {
+  border-color: rgb(61 220 132 / 0.35);
+  box-shadow: 0 0 0 1px #000a, 0 20px 70px #0009, 0 0 30px rgb(61 220 132 / 0.08);
+}
+.sp-editor .sp-size {
+  border: 1px solid rgb(61 220 132 / 0.3);
+  color: var(--sp-green);
+  letter-spacing: 0.08em;
+}
+
+/* ── Inspecteur : sections numérotées ── */
+.sp-editor .sp-inspector {
+  counter-reset: sp-sec;
+  background:
+    linear-gradient(180deg, rgb(61 220 132 / 0.04), transparent 30%),
+    linear-gradient(145deg, #121a29, #0b1220);
+}
+.sp-editor .sp-inspector h2 {
+  font: 600 11px/1 ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sp-green);
+}
+.sp-editor .sp-section {
+  position: relative;
+  border: 1px solid rgb(61 220 132 / 0.12);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+  background: rgb(12 17 26 / 0.6);
+  border-image: none;
+}
+.sp-editor .sp-section::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--sp-purple);
+  border-bottom: 2px solid var(--sp-purple);
+  border-bottom-right-radius: 10px;
+}
+.sp-editor .sp-section h3 {
+  counter-increment: sp-sec;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 10px/1 ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #7f93a8;
+}
+.sp-editor .sp-section h3::before {
+  content: "0" counter(sp-sec) " /";
+  color: var(--sp-green);
+}
+.sp-editor .sp-section h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(61 220 132 / 0.35), rgb(168 85 247 / 0.2), transparent);
+}
+
+/* Stickers et formes : tuiles lumineuses */
+.sp-editor .sp-stickers button {
+  background: rgb(255 255 255 / 0.03);
+  border-color: rgb(255 255 255 / 0.07);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.sp-editor .sp-stickers button:hover {
+  border-color: rgb(61 220 132 / 0.55);
+  box-shadow: 0 0 12px rgb(61 220 132 / 0.2);
+  transform: translateY(-1px);
+}
+
+/* Calques façon tableau de bord */
+.sp-editor .sp-layers button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.035);
+}
+.sp-editor .sp-layers button.active {
+  color: var(--sp-text);
+  border-color: rgb(168 85 247 / 0.55);
+  border-left-color: var(--sp-green);
+  background: linear-gradient(90deg, rgb(61 220 132 / 0.1), rgb(168 85 247 / 0.06));
+}
+.sp-editor .sp-layer-type {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgb(61 220 132 / 0.35);
+  color: var(--sp-green);
+  font: 600 9px/1.6 ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: 0.1em;
+}
+.sp-editor .sp-layers button.active .sp-layer-type {
+  border-color: var(--sp-purple);
+  color: #e3ccff;
+}
+.sp-editor .sp-order {
+  gap: 2px;
+}
+
+/* Barre d'état */
+.sp-editor .sp-status {
+  background: rgb(7 9 15 / 0.85);
+  border-top-color: rgb(61 220 132 / 0.18);
+  letter-spacing: 0.04em;
+}
+.sp-editor .sp-status::before {
+  content: "● ";
+  color: var(--sp-green);
+}
+
+/* ── Panneau de dégradé ── */
+.sp-editor .sp-grad-head {
+  margin: 12px 0 6px;
+  font: 600 9px/1 ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sp-purple);
+}
+.sp-editor .sp-grad-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+.sp-editor .sp-grad-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px;
+  font-size: 10px;
+  line-height: 1.2;
+  background: rgb(255 255 255 / 0.03);
+  border-color: rgb(255 255 255 / 0.08);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.sp-editor .sp-grad-tile img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 4px;
+  display: block;
+}
+.sp-editor .sp-grad-tile span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-editor .sp-grad-tile:hover {
+  border-color: rgb(61 220 132 / 0.55);
+  box-shadow: 0 0 12px rgb(61 220 132 / 0.2);
+}
+.sp-editor .sp-grad-stop {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr auto;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.sp-editor .sp-grad-stop input[type="number"] {
+  width: 100%;
+}
+.sp-editor .sp-grad-stop input[type="color"] {
+  width: 34px;
+  height: 28px;
+}
+.sp-editor .sp-grad-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: 6px;
+}
+.sp-editor .sp-grad-pair {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.sp-editor .sp-grad-pair input[type="number"] {
+  width: 56px;
+}
+.sp-editor .sp-grad-cols {
+  display: grid;
+  grid-template-columns: 36px 1fr 1fr 48px;
+  gap: 5px;
+  margin-bottom: 2px;
+  font: 600 8px/1.2 ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: 0.1em;
+  color: #7f93a8;
+}
+.sp-editor .sp-grad-row {
+  align-items: center;
+}
+/* Rangée d'actions des couleurs : boutons un peu plus petits pour tenir sur une ligne */
+.sp-editor .sp-grad-row .noxel-hud--compact {
+  --hud-size: 36px;
+}
+.sp-editor .sp-grad-row .noxel-hud--icon-only {
+  --hud-size: 34px;
+  width: 38px;
+  height: 38px;
+}
+.sp-editor .sp-grad-stop .noxel-hud--icon-only {
+  --hud-size: 32px;
+  width: 36px;
+  height: 36px;
+}

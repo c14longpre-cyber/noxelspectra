@@ -8,6 +8,7 @@
 // navigateur : les changer après coup est instantané.
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { HudButton } from "../hud/HudButton";
 
 type Props = {
   original: File;
@@ -421,26 +422,14 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
 
   const maxBrush = Math.max(20, Math.round(Math.max(dims.w, dims.h) * 0.25));
   const panActive = panMode || spaceDown;
-  const btn = (active: boolean) => ({
-    padding: "6px 12px",
-    fontSize: 13,
-    cursor: "pointer",
-    border: active ? "2px solid #3ddc84" : "1px solid rgba(255,255,255,0.2)",
-  });
 
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <strong style={{ fontSize: 14 }}>Retoucher :</strong>
-        <button onClick={() => { setMode("erase"); setPanMode(false); }} style={btn(mode === "erase" && !panMode)}>
-          🧽 Effacer
-        </button>
-        <button onClick={() => { setMode("restore"); setPanMode(false); }} style={btn(mode === "restore" && !panMode)}>
-          🖌 Restaurer
-        </button>
-        <button onClick={() => setPanMode((v) => !v)} style={btn(panMode)} title="Déplacer l'image zoomée (ou maintiens la barre d'espace)">
-          ✋ Déplacer
-        </button>
+        <HudButton action="erase" compact selected={mode === "erase" && !panMode} onClick={() => { setMode("erase"); setPanMode(false); }} />
+        <HudButton action="restore" compact selected={mode === "restore" && !panMode} onClick={() => { setMode("restore"); setPanMode(false); }} />
+        <HudButton action="move" compact selected={panMode} onClick={() => setPanMode((v) => !v)} title="Déplacer l'image zoomée (ou maintiens la barre d'espace)" />
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
           Taille {brush}px
           <input type="range" min={1} max={maxBrush} value={brush} onChange={(e) => setBrush(Number(e.target.value))} />
@@ -449,19 +438,13 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
           Douceur {softness === 0 ? "nette" : `${softness}%`}
           <input type="range" min={0} max={100} step={5} value={softness} onChange={(e) => setSoftness(Number(e.target.value))} />
         </label>
-        <button onClick={undo} disabled={undoCount === 0} style={{ padding: "6px 12px", fontSize: 13, cursor: "pointer" }}>
-          ↶ Annuler
-        </button>
-        <button onClick={resetMask} disabled={!ready} style={{ padding: "6px 12px", fontSize: 13, cursor: "pointer" }}>
-          Réinitialiser
-        </button>
+        <HudButton action="undo-mask" compact disabled={undoCount === 0} onClick={undo} />
+        <HudButton action="reset-mask" compact disabled={!ready} onClick={resetMask} />
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
         <strong style={{ fontSize: 14 }}>Zoom :</strong>
-        <button onClick={() => zoomTo(zoomRef.current / 1.5)} disabled={zoom <= MIN_ZOOM} style={{ padding: "4px 12px", fontSize: 14, cursor: "pointer" }}>
-          −
-        </button>
+        <HudButton action="zoom-out" iconOnly disabled={zoom <= MIN_ZOOM} onClick={() => zoomTo(zoomRef.current / 1.5)} />
         <input
           type="range"
           min={MIN_ZOOM}
@@ -471,13 +454,9 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
           onChange={(e) => zoomTo(Number(e.target.value))}
           aria-label="Niveau de zoom"
         />
-        <button onClick={() => zoomTo(zoomRef.current * 1.5)} disabled={zoom >= MAX_ZOOM} style={{ padding: "4px 12px", fontSize: 14, cursor: "pointer" }}>
-          +
-        </button>
+        <HudButton action="zoom-in" iconOnly disabled={zoom >= MAX_ZOOM} onClick={() => zoomTo(zoomRef.current * 1.5)} />
         <span style={{ fontSize: 13, minWidth: 44 }}>{zoom.toFixed(zoom < 10 ? 1 : 0)}×</span>
-        <button onClick={() => zoomTo(1)} disabled={zoom === 1} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-          Ajuster
-        </button>
+        <HudButton action="fit" compact disabled={zoom === 1} onClick={() => zoomTo(1)} />
       </div>
 
       <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>

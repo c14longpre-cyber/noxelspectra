@@ -13,6 +13,7 @@ import toIco from "to-ico";
 import { Potrace } from "potrace";
 import { parseRecipe, runRecipe, mapWithLimit } from "./ops";
 import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
+import { parseRights, hasRights, readRights, missingAfterExport, applyRights } from "./rights";
 
 dotenv.config();
 
@@ -1742,10 +1743,28 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
 //   format          optional, default keeps the original format
 //   quality         optional 1-100, default 90 (ignored for png/gif)
 // Most reliable on JPEG — other formats' EXIF support varies by viewer.
+// POST /api/copyright — intègre auteur, droits et licence (XMP IPTC/PLUS + EXIF de secours)
+//   file     requis
+//   rights   JSON des champs (voir rights.ts) — ou, ancien format : author + copyrightText
+//   format   optionnel (jpeg, png, webp, avif, gif) — défaut : format d'origine
+// Seuls les champs remplis sont écrits ; GPS, appareil et autres données de
+// l'original ne sont PAS recopiés. Le fichier exporté est relu pour vérifier
+// chaque champ (en-têtes X-Rights-*).
 app.post("/api/copyright", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+    let rights;
+    try {
+      rights = req.body.rights
+        ? parseRights(req.body.rights)
+        : parseRights({ creator: req.body.author, copyrightNotice: req.body.copyrightText });
+    } catch (err) {
+      return res.status(400).json({ ok: false, error: err instanceof Error ? err.message : "Données invalides" });
+    }
+    if (!hasRights(rights)) {
+      return res.status(400).json({ ok: false, error: "Renseigne au moins un champ (auteur, titulaire, mention…)" });
     }
 
     const meta = await sharp(req.file.buffer).metadata();
@@ -1755,25 +1774,14 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
       const sourceFormat = detectFormat(meta, "png");
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
-    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
-    const author = (req.body.author || "").slice(0, 200);
-    const copyrightText = (req.body.copyrightText || "").slice(0, 300);
+    const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 92));
 
-    let pipeline = sharp(req.file.buffer).withMetadata({
-      exif: {
-        IFD0: {
-          ...(copyrightText ? { Copyright: copyrightText } : {}),
-          ...(author ? { Artist: author } : {}),
-        },
-      },
-    });
-
+    // rotate() : applique l'orientation EXIF, puisque l'EXIF d'origine n'est pas recopié
+    const applied = applyRights(sharp(req.file.buffer).rotate(), rights);
+    let pipeline = applied.pipeline;
     switch (format) {
       case "jpeg":
-        pipeline = pipeline.jpeg({ quality });
-        break;
-      case "png":
-        pipeline = pipeline.png({ compressionLevel: 9 });
+        pipeline = pipeline.jpeg({ quality, mozjpeg: true });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1784,26 +1792,48 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
       case "gif":
         pipeline = pipeline.gif();
         break;
+      default:
+        pipeline = pipeline.png({ compressionLevel: 9 });
     }
-
     const outputBuffer = await pipeline.toBuffer();
-    const mimeType = format === "jpeg" ? "image/jpeg" : "image/" + format;
 
-    res.setHeader("Content-Type", mimeType);
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="protected.' + format + '"'
-    );
+    // Vérification : on relit le fichier produit
+    const outMeta = await sharp(outputBuffer).metadata();
+    const readBack = readRights(outMeta.xmp ? outMeta.xmp.toString("utf8") : undefined);
+    const missing = missingAfterExport(rights, readBack);
+    const asked = Object.keys(rights).filter((k) => !(k === "status" && rights.status === "unknown"));
+
+    res.setHeader("Content-Type", format === "jpeg" ? "image/jpeg" : "image/" + format);
+    res.setHeader("Content-Disposition", 'attachment; filename="image-droits.' + (format === "jpeg" ? "jpg" : format) + '"');
     res.setHeader("X-Original-Size", String(req.file.size));
     res.setHeader("X-Output-Size", String(outputBuffer.length));
+    res.setHeader("X-Format", format);
+    res.setHeader("X-Rights-Xmp", String(applied.xmp && format !== "gif"));
+    res.setHeader("X-Rights-Embedded", String(asked.length - missing.length));
+    res.setHeader("X-Rights-Missing", missing.join(","));
     res.setHeader(
       "Access-Control-Expose-Headers",
-      "X-Original-Size, X-Output-Size"
+      "X-Original-Size, X-Output-Size, X-Format, X-Rights-Xmp, X-Rights-Embedded, X-Rights-Missing"
     );
     return res.send(outputBuffer);
   } catch (err) {
-    console.error("Copyright metadata error:", err);
-    return res.status(500).json({ ok: false, error: "Copyright metadata embed failed" });
+    console.error("Rights metadata error:", err);
+    return res.status(500).json({ ok: false, error: "Intégration des droits échouée" });
+  }
+});
+
+// POST /api/read-rights — lit les droits déjà présents (XMP) pour préremplir le formulaire
+app.post("/api/read-rights", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No file uploaded" });
+    }
+    const meta = await sharp(req.file.buffer).metadata();
+    const rights = readRights(meta.xmp ? meta.xmp.toString("utf8") : undefined);
+    return res.json({ ok: true, rights, count: Object.keys(rights).length });
+  } catch (err) {
+    console.error("Read rights error:", err);
+    return res.status(500).json({ ok: false, error: "Lecture des droits échouée" });
   }
 });
 // POST /api/remove-background — multipart form:
