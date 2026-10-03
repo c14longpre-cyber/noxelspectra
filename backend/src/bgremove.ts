@@ -115,8 +115,10 @@ export function removeBackground(input: Buffer, opts: BgOptions = {}): Promise<B
     const range = mx - mn || 1;
     const mask = Buffer.alloc(plane);
     for (let i = 0; i < plane; i++) mask[i] = Math.round(((values[i] - mn) / range) * 255);
+    // fit « fill » obligatoire : le défaut (« cover ») rogne et décale le masque
+    // sur toute image non carrée — c'était la cause des halos sur les portraits.
     const alpha = await sharp(mask, { raw: { width: SIZE, height: SIZE, channels: 1 } })
-      .resize(W, H)
+      .resize(W, H, { fit: "fill" })
       .extractChannel(0) // le redimensionnement peut produire 3 canaux
       .raw()
       .toBuffer();

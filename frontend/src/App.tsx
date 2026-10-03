@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 import { GradientTool } from "./components/spectra-gradient/GradientTool";
+import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import {
   deleteProject,
   exportProject,
@@ -642,7 +643,8 @@ export default function App() {
   const [bgLoading, setBgLoading] = useState(false);
   const [bgError, setBgError] = useState<string | null>(null);
   const [bgResultUrl, setBgResultUrl] = useState<string | null>(null);
-  const [bgStats, setBgStats] = useState<{ width: number; height: number; size: number } | null>(null);
+  const [bgStats, setBgStats] = useState<{ size: number; ext: string } | null>(null);
+  const [bgCutout, setBgCutout] = useState<Blob | null>(null); // détourage transparent brut (serveur)
 
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
   const targetSizeAvailable = TARGET_SIZE_FORMATS.includes(format);
@@ -936,6 +938,7 @@ export default function App() {
     setBgResultUrl(null);
     setBgError(null);
     setBgStats(null);
+    setBgCutout(null);
   }
 
   function resetStackingParams() {
@@ -1715,15 +1718,15 @@ export default function App() {
     if (!file) return;
     setBgLoading(true);
     setBgError(null);
-    setBgResultUrl(null);
+    setBgCutout(null);
+    setBgResultUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setBgStats(null);
 
-    const background = bgMode === "white" ? "#ffffff" : bgMode === "color" ? bgColor : "";
     const formData = new FormData();
     formData.append("file", file);
-    if (background) formData.append("background", background);
-    formData.append("trim", String(bgTrim));
-    formData.append("format", bgFormat);
 
     try {
       const res = await fetch(`${apiUrl}/api/remove-background`, { method: "POST", body: formData });
@@ -1731,22 +1734,28 @@ export default function App() {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Erreur ${res.status}`);
       }
-      const width = Number(res.headers.get("X-Output-Width") || 0);
-      const height = Number(res.headers.get("X-Output-Height") || 0);
-      const blob = await res.blob();
-      const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = {
-        steps: [{ op: "removeBg", background: background || undefined, trim: bgTrim }],
-        // Sans fond, la recette doit sortir dans un format qui garde la transparence
-        output: background ? undefined : { format: bgFormat },
-      };
-      setBgResultUrl(outUrl);
-      setBgStats({ width, height, size: blob.size });
+      setBgCutout(await res.blob());
     } catch (err) {
       setBgError(err instanceof Error ? err.message : "Suppression d'arrière-plan échouée");
     } finally {
       setBgLoading(false);
     }
+  }
+
+  // Appelé par le pinceau à chaque retouche ou changement d'option
+  function handleBgRefined(blob: Blob) {
+    const background = bgMode === "white" ? "#ffffff" : bgMode === "color" ? bgColor : "";
+    const outUrl = URL.createObjectURL(blob);
+    recipeParts.current[outUrl] = {
+      steps: [{ op: "removeBg", background: background || undefined, trim: bgTrim }],
+      // Sans fond, la recette doit sortir dans un format qui garde la transparence
+      output: background ? undefined : { format: bgFormat },
+    };
+    setBgResultUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return outUrl;
+    });
+    setBgStats({ size: blob.size, ext: blob.type === "image/webp" ? "webp" : "png" });
   }
 
   function handleCropImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
@@ -2534,34 +2543,29 @@ export default function App() {
 
       {bgError && <p style={{ color: "red", marginTop: 16 }}>{bgError}</p>}
 
-      {bgStats && (
-        <div style={{ marginTop: 16, fontSize: 13, color: "#888" }}>
-          {bgStats.width}×{bgStats.height}px — {formatBytes(bgStats.size)}
-        </div>
+      {bgCutout && file && (
+        <BgRefiner
+          original={file}
+          cutout={bgCutout}
+          background={bgMode === "white" ? "#ffffff" : bgMode === "color" ? bgColor : null}
+          trim={bgTrim}
+          format={bgFormat}
+          onResult={handleBgRefined}
+        />
       )}
 
-      {bgResultUrl && (
-        <div style={{ marginTop: 12 }}>
-          {originalPreviewUrl && !bgTrim ? (
-            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={bgResultUrl} checkered />
-          ) : (
-            <div
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 12,
-                background: "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
-              }}
-            >
-              <img src={bgResultUrl} alt="Résultat sans arrière-plan" style={{ maxWidth: "100%", display: "block", margin: "0 auto" }} />
-            </div>
-          )}
-          <div style={{ marginTop: 8 }}>
-            <a href={bgResultUrl} download={`sans-fond.${bgFormat}`}>
-              Télécharger le résultat
-            </a>
-            {renderContinueButton(bgResultUrl, "Arrière-plan")}
-          </div>
+      {bgResultUrl && bgStats && (
+        <div style={{ marginTop: 10 }}>
+          <span style={{ fontSize: 13, color: "#888", marginRight: 12 }}>{formatBytes(bgStats.size)}</span>
+          <a href={bgResultUrl} download={`sans-fond.${bgStats.ext}`}>
+            Télécharger le résultat
+          </a>
+          {renderContinueButton(bgResultUrl, "Arrière-plan")}
+          <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>
+            Le fond, le recadrage et le format se changent sans relancer le détourage. Les retouches au
+            pinceau s'appliquent à cette image seulement : dans une recette, l'étape refait le détourage
+            automatique.
+          </p>
         </div>
       )}
       </>
