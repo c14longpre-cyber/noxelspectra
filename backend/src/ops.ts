@@ -348,7 +348,7 @@ function encode(buf: Buffer, format: OutputFormat, quality: number, copyright?: 
       return p.gif().toBuffer();
     case "png":
     default:
-      return p.png({ compressionLevel: 9, effort: 10 }).toBuffer();
+      return p.png({ compressionLevel: 9 }).toBuffer(); // sans perte : effort/quality activeraient une palette
   }
 }
 

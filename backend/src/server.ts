@@ -80,7 +80,7 @@ function encodeAtQuality(
       pipeline = pipeline.avif({ quality });
       break;
     case "png":
-      pipeline = pipeline.png({ quality });
+      pipeline = pipeline.png({ compressionLevel: 9 });
       break;
     case "gif":
       pipeline = pipeline.gif();
@@ -329,7 +329,7 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -931,7 +931,7 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
           pipeline = pipeline.jpeg({ quality });
           break;
         case "png":
-          pipeline = pipeline.png({ quality });
+          pipeline = pipeline.png({ compressionLevel: 9 });
           break;
         case "webp":
           pipeline = pipeline.webp({ quality });
@@ -1019,7 +1019,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
       case "png":
         // Max out compression effort — a naive re-encode of a photographic
         // PNG can otherwise end up larger than a well-optimized source file.
-        pipeline = pipeline.png({ compressionLevel: 9, effort: 10 });
+        pipeline = pipeline.png({ compressionLevel: 9 }); // PNG vraiment sans perte (effort/quality = palette)
         break;
       case "webp":
         pipeline = pipeline.webp({ quality: 92 });
@@ -1119,7 +1119,7 @@ app.post("/api/rotate", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1262,7 +1262,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
         pipeline = pipeline.png(
           quantizeColors > 0
             ? { quality, palette: true, colours: quantizeColors }
-            : { quality }
+            : { compressionLevel: 9 }
         );
         break;
       case "webp":
@@ -1354,7 +1354,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1536,7 +1536,7 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1707,7 +1707,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1773,7 +1773,7 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
         pipeline = pipeline.jpeg({ quality });
         break;
       case "png":
-        pipeline = pipeline.png({ quality });
+        pipeline = pipeline.png({ compressionLevel: 9 });
         break;
       case "webp":
         pipeline = pipeline.webp({ quality });
@@ -1827,7 +1827,7 @@ app.post("/api/remove-background", upload.single("file"), async (req, res) => {
     const outputBuffer =
       format === "webp"
         ? await sharp(png).webp({ quality: 90, alphaQuality: 100 }).toBuffer()
-        : await sharp(png).png({ compressionLevel: 9, effort: 10 }).toBuffer();
+        : await sharp(png).png({ compressionLevel: 9 }).toBuffer();
     const meta = await sharp(outputBuffer).metadata();
 
     res.setHeader("Content-Type", format === "webp" ? "image/webp" : "image/png");

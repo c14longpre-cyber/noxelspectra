@@ -7,7 +7,7 @@
 // Le fond, le recadrage au sujet et le format sont appliqués ici, dans le
 // navigateur : les changer après coup est instantané.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Props = {
   original: File;
@@ -19,6 +19,8 @@ type Props = {
 };
 
 const MAX_UNDO_BYTES = 200 * 1024 * 1024; // mémoire max pour l'historique d'annulation
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 20;
 
 async function loadImage(blob: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(blob);
@@ -41,6 +43,10 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   const painting = useRef(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
   const frame = useRef<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const zoomRef = useRef(1);
+  const zoomAnchor = useRef<{ fx: number; fy: number; vx: number; vy: number } | null>(null);
+  const panStart = useRef<{ x: number; y: number; sl: number; st: number } | null>(null);
 
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -50,6 +56,11 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   const [cursor, setCursor] = useState<{ x: number; y: number; d: number } | null>(null);
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const [webpFallback, setWebpFallback] = useState(false);
+  const [softness, setSoftness] = useState(30); // 0 = bord net (pixel par pixel), 100 = très fondu
+  const [zoom, setZoom] = useState(1); // 1 = image entière à la largeur de l'écran
+  const [panMode, setPanMode] = useState(false);
+  const [spaceDown, setSpaceDown] = useState(false);
+  const [panning, setPanning] = useState(false);
 
   // ── Chargement : image d'origine + masque initial (transparence du détourage) ──
   useEffect(() => {
@@ -187,6 +198,88 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, background, trim, format]);
 
+  // ── Zoom et déplacement ──
+  function clampZoom(z: number) {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100));
+  }
+
+  // Change le zoom en gardant fixe le point de l'image situé sous (clientX, clientY)
+  // — par défaut le centre de la zone visible.
+  function zoomTo(next: number, clientX?: number, clientY?: number) {
+    const wrap = scrollRef.current;
+    const view = viewRef.current;
+    const z = clampZoom(next);
+    if (!wrap || !view || z === zoomRef.current) return;
+    const rect = view.getBoundingClientRect();
+    const wrect = wrap.getBoundingClientRect();
+    const cx = clientX ?? wrect.left + wrap.clientWidth / 2;
+    const cy = clientY ?? wrect.top + wrap.clientHeight / 2;
+    zoomAnchor.current = {
+      fx: (cx - rect.left) / rect.width,
+      fy: (cy - rect.top) / rect.height,
+      vx: cx - wrect.left,
+      vy: cy - wrect.top,
+    };
+    zoomRef.current = z;
+    setZoom(z);
+  }
+
+  // Après le changement de taille, on replace le défilement sur le point d'ancrage
+  useLayoutEffect(() => {
+    const a = zoomAnchor.current;
+    const wrap = scrollRef.current;
+    const view = viewRef.current;
+    if (!a || !wrap || !view) return;
+    wrap.scrollLeft = a.fx * view.offsetWidth - a.vx;
+    wrap.scrollTop = a.fy * view.offsetHeight - a.vy;
+    zoomAnchor.current = null;
+  }, [zoom]);
+
+  // Ctrl + molette (et pincement du trackpad) : zoom centré sur la souris.
+  // Écouteur natif non passif, sinon impossible d'empêcher le zoom de la page.
+  useEffect(() => {
+    const wrap = scrollRef.current;
+    if (!wrap) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return; // molette seule : défilement normal
+      e.preventDefault();
+      zoomTo(zoomRef.current * (e.deltaY < 0 ? 1.25 : 0.8), e.clientX, e.clientY);
+    };
+    wrap.addEventListener("wheel", onWheel, { passive: false });
+    return () => wrap.removeEventListener("wheel", onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  // Barre d'espace maintenue : déplacement temporaire (comme dans Photoshop)
+  useEffect(() => {
+    // Seuls les vrais champs de texte gardent la barre d'espace (un curseur ou un
+    // bouton qui a le focus ne doit pas bloquer le déplacement)
+    const NON_TEXT = ["range", "checkbox", "radio", "color", "button", "submit", "reset", "file"];
+    const isTyping = (t: EventTarget | null) =>
+      t instanceof HTMLTextAreaElement ||
+      (t instanceof HTMLInputElement && !NON_TEXT.includes(t.type)) ||
+      (t instanceof HTMLElement && t.isContentEditable);
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !isTyping(e.target)) {
+        e.preventDefault();
+        setSpaceDown(true);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        // Empêche aussi le « clic » d'un bouton qui aurait le focus
+        if (!isTyping(e.target)) e.preventDefault();
+        setSpaceDown(false);
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
   // ── Pinceau ──
   function toImagePoint(e: React.PointerEvent<HTMLCanvasElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -202,15 +295,27 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   function dab(x: number, y: number) {
     const ctx = maskCanvas.current!.getContext("2d")!;
     const r = brush / 2;
-    // Bord légèrement adouci : 70 % du rayon plein, puis fondu
-    const g = ctx.createRadialGradient(x, y, r * 0.7, x, y, r);
-    g.addColorStop(0, "rgba(0,0,0,1)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
     ctx.globalCompositeOperation = mode === "erase" ? "destination-out" : "source-over";
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    if (softness === 0 || r < 1.5) {
+      // Bord net : travail pixel par pixel
+      ctx.fillStyle = "rgba(0,0,0,1)";
+      if (r < 1) {
+        ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      // Bord fondu : la zone pleine rétrécit quand la douceur augmente
+      const g = ctx.createRadialGradient(x, y, r * (1 - softness / 100), x, y, r);
+      g.addColorStop(0, "rgba(0,0,0,1)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.globalCompositeOperation = "source-over";
   }
 
@@ -221,7 +326,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
     } else {
       // Points intermédiaires pour un trait continu même si la souris va vite
       const dist = Math.hypot(x - last.x, y - last.y);
-      const step = Math.max(1, brush / 6);
+      const step = Math.max(0.5, brush / 6);
       for (let d = step; d <= dist; d += step) {
         dab(last.x + ((x - last.x) * d) / dist, last.y + ((y - last.y) * d) / dist);
       }
@@ -243,6 +348,16 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!ready) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Déplacement : bouton ✋, barre d'espace ou bouton du milieu de la souris
+    if (panMode || spaceDown || e.button === 1) {
+      e.preventDefault();
+      const wrap = scrollRef.current;
+      if (wrap) panStart.current = { x: e.clientX, y: e.clientY, sl: wrap.scrollLeft, st: wrap.scrollTop };
+      setPanning(true);
+      setCursor(null);
+      return;
+    }
+    if (e.button !== 0) return;
     pushUndo();
     painting.current = true;
     lastPoint.current = null;
@@ -252,12 +367,29 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
 
   function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!ready) return;
+    if (panStart.current) {
+      const wrap = scrollRef.current;
+      if (wrap) {
+        wrap.scrollLeft = panStart.current.sl - (e.clientX - panStart.current.x);
+        wrap.scrollTop = panStart.current.st - (e.clientY - panStart.current.y);
+      }
+      return;
+    }
+    if (panMode || spaceDown) {
+      setCursor(null);
+      return;
+    }
     const p = toImagePoint(e);
     setCursor({ x: p.cx, y: p.cy, d: brush * p.scale });
     if (painting.current) strokeTo(p.x, p.y);
   }
 
   function endStroke() {
+    if (panStart.current) {
+      panStart.current = null;
+      setPanning(false);
+      return;
+    }
     if (!painting.current) return;
     painting.current = false;
     lastPoint.current = null;
@@ -288,42 +420,34 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   if (loadError) return <p style={{ color: "red", marginTop: 12 }}>{loadError}</p>;
 
   const maxBrush = Math.max(20, Math.round(Math.max(dims.w, dims.h) * 0.25));
+  const panActive = panMode || spaceDown;
+  const btn = (active: boolean) => ({
+    padding: "6px 12px",
+    fontSize: 13,
+    cursor: "pointer",
+    border: active ? "2px solid #3ddc84" : "1px solid rgba(255,255,255,0.2)",
+  });
 
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <strong style={{ fontSize: 14 }}>Retoucher :</strong>
-        <button
-          onClick={() => setMode("erase")}
-          style={{
-            padding: "6px 12px",
-            fontSize: 13,
-            cursor: "pointer",
-            border: mode === "erase" ? "2px solid #3ddc84" : "1px solid rgba(255,255,255,0.2)",
-          }}
-        >
+        <button onClick={() => { setMode("erase"); setPanMode(false); }} style={btn(mode === "erase" && !panMode)}>
           🧽 Effacer
         </button>
-        <button
-          onClick={() => setMode("restore")}
-          style={{
-            padding: "6px 12px",
-            fontSize: 13,
-            cursor: "pointer",
-            border: mode === "restore" ? "2px solid #3ddc84" : "1px solid rgba(255,255,255,0.2)",
-          }}
-        >
+        <button onClick={() => { setMode("restore"); setPanMode(false); }} style={btn(mode === "restore" && !panMode)}>
           🖌 Restaurer
         </button>
+        <button onClick={() => setPanMode((v) => !v)} style={btn(panMode)} title="Déplacer l'image zoomée (ou maintiens la barre d'espace)">
+          ✋ Déplacer
+        </button>
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-          Taille
-          <input
-            type="range"
-            min={4}
-            max={maxBrush}
-            value={brush}
-            onChange={(e) => setBrush(Number(e.target.value))}
-          />
+          Taille {brush}px
+          <input type="range" min={1} max={maxBrush} value={brush} onChange={(e) => setBrush(Number(e.target.value))} />
+        </label>
+        <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+          Douceur {softness === 0 ? "nette" : `${softness}%`}
+          <input type="range" min={0} max={100} step={5} value={softness} onChange={(e) => setSoftness(Number(e.target.value))} />
         </label>
         <button onClick={undo} disabled={undoCount === 0} style={{ padding: "6px 12px", fontSize: 13, cursor: "pointer" }}>
           ↶ Annuler
@@ -332,56 +456,89 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
           Réinitialiser
         </button>
       </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
+        <strong style={{ fontSize: 14 }}>Zoom :</strong>
+        <button onClick={() => zoomTo(zoomRef.current / 1.5)} disabled={zoom <= MIN_ZOOM} style={{ padding: "4px 12px", fontSize: 14, cursor: "pointer" }}>
+          −
+        </button>
+        <input
+          type="range"
+          min={MIN_ZOOM}
+          max={MAX_ZOOM}
+          step={0.5}
+          value={zoom}
+          onChange={(e) => zoomTo(Number(e.target.value))}
+          aria-label="Niveau de zoom"
+        />
+        <button onClick={() => zoomTo(zoomRef.current * 1.5)} disabled={zoom >= MAX_ZOOM} style={{ padding: "4px 12px", fontSize: 14, cursor: "pointer" }}>
+          +
+        </button>
+        <span style={{ fontSize: 13, minWidth: 44 }}>{zoom.toFixed(zoom < 10 ? 1 : 0)}×</span>
+        <button onClick={() => zoomTo(1)} disabled={zoom === 1} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
+          Ajuster
+        </button>
+      </div>
+
       <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>
-        Peins sur l'image : <strong>Effacer</strong> retire ce qui reste du fond, <strong>Restaurer</strong> fait
-        revenir une partie du sujet coupée par erreur.
+        <strong>Effacer</strong> retire ce qui reste du fond, <strong>Restaurer</strong> fait revenir une partie du
+        sujet. Zoom : <strong>Ctrl + molette</strong> (centré sur la souris). Déplacement : maintiens la{" "}
+        <strong>barre d'espace</strong> en glissant, ou utilise ✋. Pour le travail au pixel près : douceur nette et
+        taille 1 à 3 px.
       </p>
 
       <div
+        ref={scrollRef}
         style={{
           position: "relative",
           marginTop: 10,
           borderRadius: 8,
-          overflow: "hidden",
           border: "1px solid #ddd",
+          overflow: "auto",
+          maxHeight: "75vh",
           background: background || "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
           lineHeight: 0,
         }}
       >
         {!ready && <p style={{ padding: 20, lineHeight: 1.4, color: "#888" }}>Préparation de la retouche...</p>}
-        <canvas
-          ref={viewRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={endStroke}
-          onPointerCancel={endStroke}
-          onPointerLeave={() => {
-            setCursor(null);
-            endStroke();
-          }}
-          style={{
-            display: ready ? "block" : "none",
-            width: "100%",
-            height: "auto",
-            cursor: "none",
-            touchAction: "none",
-          }}
-        />
-        {cursor && ready && (
-          <div
+        <div style={{ position: "relative", width: `${zoom * 100}%` }}>
+          <canvas
+            ref={viewRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endStroke}
+            onPointerCancel={endStroke}
+            onPointerLeave={() => {
+              setCursor(null);
+              endStroke();
+            }}
+            onContextMenu={(e) => e.preventDefault()}
             style={{
-              position: "absolute",
-              left: cursor.x - cursor.d / 2,
-              top: cursor.y - cursor.d / 2,
-              width: cursor.d,
-              height: cursor.d,
-              borderRadius: "50%",
-              border: `2px solid ${mode === "erase" ? "#ff5a5a" : "#3ddc84"}`,
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.6)",
-              pointerEvents: "none",
+              display: ready ? "block" : "none",
+              width: "100%",
+              height: "auto",
+              cursor: panActive ? (panning ? "grabbing" : "grab") : "none",
+              touchAction: "none",
+              // Au-delà de 3×, pixels nets plutôt que flous : on voit exactement où l'on peint
+              imageRendering: zoom >= 3 ? "pixelated" : "auto",
             }}
           />
-        )}
+          {cursor && ready && !panActive && (
+            <div
+              style={{
+                position: "absolute",
+                left: cursor.x - Math.max(cursor.d, 4) / 2,
+                top: cursor.y - Math.max(cursor.d, 4) / 2,
+                width: Math.max(cursor.d, 4),
+                height: Math.max(cursor.d, 4),
+                borderRadius: brush <= 2 ? 0 : "50%",
+                border: `${cursor.d < 12 ? 1 : 2}px solid ${mode === "erase" ? "#ff5a5a" : "#3ddc84"}`,
+                boxShadow: "0 0 0 1px rgba(0,0,0,0.6)",
+                pointerEvents: "none",
+              }}
+            />
+          )}
+        </div>
       </div>
       {webpFallback && (
         <p style={{ fontSize: 12, color: "#c89b3c", margin: "6px 0 0" }}>
