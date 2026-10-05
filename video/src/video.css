@@ -130,3 +130,4 @@ a { color: var(--g); }
 .vx-fields input[type="text"] { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 10px; font: inherit; }
 .vx-code-title { display: flex; align-items: center; gap: 10px; margin: 16px 0 6px; font: 600 11px ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #7f93a8; }
 .vx-code { margin: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(61, 220, 132, 0.2); background: rgba(0, 0, 0, 0.35); color: #cfe9da; font: 12px/1.5 ui-monospace, "SF Mono", Consolas, monospace; white-space: pre-wrap; overflow-x: auto; }
+.vx-rot { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
