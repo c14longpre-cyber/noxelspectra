@@ -7,6 +7,7 @@ import { analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./l
 import type { VideoInfo } from "./lib/probe";
 import { cutVideo } from "./lib/cut";
 import { CompressPanel } from "./components/CompressPanel";
+import { ReframePanel } from "./components/ReframePanel";
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
@@ -18,7 +19,7 @@ const TOOLS: Tool[] = [
   { id: "convert", label: "Convertir", icon: "↔", ready: false, plan: "MP4, WebM, MOV ; format conseillé selon la destination." },
   { id: "compress", label: "Compresser", icon: "⇲", ready: true, plan: "Qualité manuelle ou taille cible en Mo, avec estimation du poids final." },
   { id: "cut", label: "Couper & assembler", icon: "✂", ready: true, plan: "Prochainement : retirer un passage, réunir et réordonner plusieurs clips." },
-  { id: "crop", label: "Recadrer & redimensionner", icon: "⊡", ready: false, plan: "9:16, 1:1, 4:5, 16:9 ; déplacer le cadrage ; bandes ou fond flouté." },
+  { id: "crop", label: "Recadrer & redimensionner", icon: "⊡", ready: true, plan: "9:16, 1:1, 4:5, 16:9 ; déplacer le cadrage ; bandes ou fond flouté." },
   { id: "rotate", label: "Pivoter & retourner", icon: "↻", ready: false, plan: "90°, angle libre, miroir horizontal ou vertical." },
   { id: "speed", label: "Vitesse", icon: "»", ready: false, plan: "Ralenti, accélération, lecture inversée." },
   { id: "audio", label: "Audio", icon: "♪", ready: false, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
@@ -109,7 +110,7 @@ export default function App() {
 
   // Compresser a besoin de l'analyse (résolution, débit, images/s) : lancée automatiquement
   useEffect(() => {
-    if ((tool === "compress" || tool === "under25") && file && !info && !busy) runAnalyze();
+    if ((tool === "compress" || tool === "under25" || tool === "crop") && file && !info && !busy) runAnalyze();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, file, info]);
 
@@ -181,7 +182,13 @@ export default function App() {
 
         <section className="vx-panel">
           <h3 className="vx-head"><b>02</b> / {current.label}</h3>
-          {tool === "compress" || tool === "under25" ? (
+          {tool === "crop" ? (
+            file && info ? (
+              <ReframePanel file={file} info={info} range={range} video={videoEl} onContinue={continueWith} />
+            ) : (
+              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+            )
+          ) : tool === "compress" || tool === "under25" ? (
             file && info ? (
               <CompressPanel file={file} info={info} range={range} initialTargetMb={tool === "under25" ? 25 : null}
                 onContinue={(blob, ext) => continueWith(blob, ext, "compresse")} />

@@ -39,7 +39,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
   const [progress, setProgress] = useState<number | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number } | null>(null);
+  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; dims: string } | null>(null);
   const cancel = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -87,7 +87,28 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
         setProgress(0);
         r = await compressVideo(file, src, opts, setProgress, (c) => (cancel.current = c));
       }
-      setResult({ url: URL.createObjectURL(r.blob), blob: r.blob, ext: r.ext, size: r.blob.size });
+      // Budget sous-utilisé (contenu facile : écran, plans fixes) et résolution réduite :
+      // on retente plus net, et on garde le meilleur résultat qui respecte la cible.
+      if (mode === "target" && opts.shortSide && r.blob.size < targetMb * MB * 0.6) {
+        const boost = Math.min(3, ((targetMb * MB) / r.blob.size) * 0.9);
+        const richer = planForTarget(src, targetMb * MB * boost, duration, fps30, removeAudio);
+        const higher: CompressOptions = {
+          ...opts,
+          shortSide: richer.shortSide,
+          videoBitrate: Math.min(Math.round(opts.videoBitrate * boost), Math.round(src.videoBitrate * 0.95)),
+        };
+        if (higher.shortSide !== opts.shortSide) {
+          setStatus(`Il reste du budget : nouvel essai en ${higher.shortSide ? `${higher.shortSide}p` : "résolution originale"} pour une image plus nette…`);
+          setProgress(0);
+          const r2 = await compressVideo(file, src, higher, setProgress, (c) => (cancel.current = c));
+          if (r2.blob.size <= targetMb * MB) {
+            r = r2;
+            opts = higher;
+          }
+        }
+      }
+      const outRes = outputSize(src, opts.shortSide);
+      setResult({ url: URL.createObjectURL(r.blob), blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${outRes.width} × ${outRes.height}` });
       setStatus(null);
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Compression impossible : ${e.message}` : "Compression impossible.");
@@ -169,7 +190,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       {result && (
         <div className="vx-result">
           <span>
-            ✓ {fmtBytes(result.size)} · −{Math.max(0, Math.round((1 - result.size / sourceBytes) * 100))} %
+            ✓ {fmtBytes(result.size)} · {result.dims} · −{Math.max(0, Math.round((1 - result.size / sourceBytes) * 100))} %
             {underTarget !== null && (underTarget ? ` · sous les ${targetMb} Mo` : ` · au-dessus des ${targetMb} Mo`)}
           </span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-compresse.${result.ext}`} />
