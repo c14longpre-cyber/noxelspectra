@@ -32,7 +32,7 @@ export type VideoInfo = {
 };
 
 // Débits de référence pour une vidéo web de bonne qualité (H.264), selon la hauteur
-function referenceBitrate(width: number, height: number, fps: number): number {
+export function referenceBitrate(width: number, height: number, fps: number): number {
   const lines = Math.min(width, height); // vertical ou horizontal : on prend le petit côté
   const base = lines >= 2160 ? 16e6 : lines >= 1440 ? 9e6 : lines >= 1080 ? 5e6 : lines >= 720 ? 2.8e6 : lines >= 480 ? 1.4e6 : 0.8e6;
   return fps > 40 ? base * 1.5 : base;

@@ -86,3 +86,14 @@ a { color: var(--g); }
 .vx-modes { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 12px; font-size: 13px; color: var(--muted); }
 .vx-modes label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
 .vx-modes b { color: var(--text); }
+.vx-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 20px; margin-bottom: 12px; font-size: 13px; }
+.vx-fields > label { display: flex; flex-direction: column; gap: 5px; color: #cad5e4; }
+.vx-fields select, .vx-fields input[type="number"] { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 10px; font: inherit; }
+.vx-fields option { background: var(--bg2); }
+.vx-check { flex-direction: row !important; align-items: center; gap: 8px !important; }
+.vx-check input { accent-color: var(--g); }
+.vx-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.vx-chip { padding: 2px 9px; border-radius: 999px; border: 1px solid rgba(61, 220, 132, 0.28); background: rgba(61, 220, 132, 0.06); color: #cfe9da; font: 11px/1.6 ui-monospace, "SF Mono", Consolas, monospace; cursor: pointer; }
+.vx-chip.is-on { border-color: var(--p); background: rgba(168, 85, 247, 0.14); color: #e3ccff; }
+.vx-estimate { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; margin-bottom: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); font-size: 13px; }
+.vx-estimate b { color: var(--g); }
