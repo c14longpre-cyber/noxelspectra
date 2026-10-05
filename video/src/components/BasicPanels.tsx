@@ -126,6 +126,7 @@ export function RotatePanel({ file, info, range, onContinue }: Common) {
 const SPEEDS = [0.25, 0.5, 0.75, 1.25, 1.5, 2, 4];
 export function SpeedPanel({ file, info, range, onContinue }: Common) {
   const [speed, setSpeed] = useState(2);
+  const [keepAudio, setKeepAudio] = useState(true);
   const [target, setTarget] = useState<ContainerId>("mp4");
   const job = useJob();
   const dur = range[1] - range[0];
@@ -141,12 +142,15 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
       <div className="vx-fields"><ContainerSelect value={target} onChange={setTarget} /></div>
       <div className="vx-estimate">
         <span>Durée : {fmtTime(dur)} → <b>{fmtTime(dur / speed)}</b></span>
-        {info.audio && <span className="vx-muted">Le son est retiré dans cette version : un son accéléré ou ralenti sans déformation arrivera avec l'outil Audio.</span>}
+        {info.audio && (
+          <label className="vx-check"><input type="checkbox" checked={keepAudio} onChange={(e) => setKeepAudio(e.target.checked)} />
+            Garder le son — {speed > 1 ? "la voix devient plus aiguë" : "la voix devient plus grave"} (comme un disque joué {speed > 1 ? "plus vite" : "plus lentement"})</label>
+        )}
         {speed < 1 && <span className="vx-muted">Ralenti : chaque image est affichée plus longtemps (pour un ralenti très fluide, filme en 60 ou 120 images/s).</span>}
       </div>
       <JobFooter job={job} file={file} suffix={`x${String(speed).replace(".", ",")}`} onContinue={onContinue}
         button={<HudButton action="speed-video" label={`Appliquer ×${String(speed).replace(".", ",")}`} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Traitement")}
-          onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, info.video?.bitrate || 2e6, p, r))} />} />
+          onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, info.video?.bitrate || 2e6, keepAudio && !!info.audio, p, r))} />} />
     </div>
   );
 }

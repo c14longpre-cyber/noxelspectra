@@ -12,6 +12,7 @@ import { SocialPanel } from "./components/SocialPanel";
 import { ThumbPanel } from "./components/ThumbPanel";
 import { WebReadyPanel } from "./components/WebReadyPanel";
 import { ConvertPanel, RotatePanel, SpeedPanel } from "./components/BasicPanels";
+import { AudioPanel } from "./components/AudioPanel";
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
@@ -26,7 +27,7 @@ const TOOLS: Tool[] = [
   { id: "crop", label: "Recadrer & redimensionner", icon: "⊡", ready: true, plan: "9:16, 1:1, 4:5, 16:9 ; déplacer le cadrage ; bandes ou fond flouté." },
   { id: "rotate", label: "Pivoter & retourner", icon: "↻", ready: true, plan: "90°, angle libre, miroir horizontal ou vertical." },
   { id: "speed", label: "Vitesse", icon: "»", ready: true, plan: "Ralenti, accélération, lecture inversée." },
-  { id: "audio", label: "Audio", icon: "♪", ready: false, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
+  { id: "audio", label: "Audio", icon: "♪", ready: true, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
   { id: "text", label: "Texte & logo", icon: "T", ready: false, plan: "Titres, filigrane, position, opacité, apparition/disparition." },
   { id: "thumb", label: "Miniature", icon: "▢", ready: true, plan: "Choisir une image de la vidéo, ajouter du texte, exporter une couverture." },
   { id: "export", label: "Exporter", icon: "⇩", ready: false, plan: "Résolution, FPS, qualité, format et préréglages selon l'usage." },
@@ -114,7 +115,7 @@ export default function App() {
 
   // Compresser a besoin de l'analyse (résolution, débit, images/s) : lancée automatiquement
   useEffect(() => {
-    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed") && file && !info && !busy) runAnalyze();
+    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed" || tool === "audio") && file && !info && !busy) runAnalyze();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, file, info]);
 
@@ -186,7 +187,13 @@ export default function App() {
 
         <section className="vx-panel">
           <h3 className="vx-head"><b>02</b> / {current.label}</h3>
-          {(tool === "convert" || tool === "rotate" || tool === "speed") ? (
+          {tool === "audio" ? (
+            file && info ? (
+              <AudioPanel file={file} info={info} range={range} video={videoEl} onContinue={continueWith} />
+            ) : (
+              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+            )
+          ) : (tool === "convert" || tool === "rotate" || tool === "speed") ? (
             file && info ? (
               tool === "convert" ? <ConvertPanel file={file} info={info} range={range} onContinue={continueWith} />
               : tool === "rotate" ? <RotatePanel file={file} info={info} range={range} onContinue={continueWith} />

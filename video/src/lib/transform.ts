@@ -1,6 +1,7 @@
 // NOXEL Spectra Vidéo — Convertir, Pivoter & retourner, Vitesse
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, MovOutputFormat, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
-import type { ConversionOptions, VideoSample } from "mediabunny";
+import type { AudioSample, ConversionOptions, VideoSample } from "mediabunny";
+import { resampleForSpeed } from "./audio";
 
 export type ContainerId = "mp4" | "webm" | "mov";
 export const CONTAINERS: { id: ContainerId; label: string; video: string[]; audio: string[]; mime: string }[] = [
@@ -93,7 +94,7 @@ export async function rotateVideo(file: File, range: [number, number], id: Conta
   return { blob, ext: id, remuxed: metadataOnly };
 }
 
-export async function speedVideo(file: File, range: [number, number], id: ContainerId, speed: number, fps: number, sourceBitrate: number, onProgress: Progress, register?: Register): Promise<Result> {
+export async function speedVideo(file: File, range: [number, number], id: ContainerId, speed: number, fps: number, sourceBitrate: number, keepAudio: boolean, onProgress: Progress, register?: Register): Promise<Result> {
   const outFps = Math.min(30, Math.max(1, Math.round(fps)));
   const frame = 1 / outFps;
   let lastSlot = -1;
@@ -114,9 +115,11 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
         return sample;
       },
     },
-    // Version 1 : le son est retiré quand la vitesse change (un son accéléré sans déformation
-    // demande un étirement temporel dédié, prévu avec l'outil Audio)
-    audio: { discard: true },
+    // Son gardé : rééchantillonné à la nouvelle vitesse (la hauteur change, comme un disque
+    // joué plus vite). Garder la hauteur naturelle demande un étirement temporel, prévu plus tard.
+    audio: keepAudio
+      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: (s: AudioSample) => resampleForSpeed(s, speed, range[0]) }
+      : { discard: true },
   }), onProgress, register);
   return { blob, ext: id, remuxed: false };
 }
