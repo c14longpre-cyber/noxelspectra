@@ -1,8 +1,8 @@
 // NOXEL Spectra Vidéo — panneau Recadrer & redimensionner (aperçu en direct, cadre déplaçable)
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { ASPECTS, cropRect, reframeVideo, targetDims } from "../lib/reframe";
+import { AspectIcon, FramePreview } from "./FramePreview";
 import type { Aspect, ReframeMode } from "../lib/reframe";
 import { formatSupport } from "../lib/compress";
 import type { CompressFormat } from "../lib/compress";
@@ -17,8 +17,6 @@ type Props = {
   onContinue: (blob: Blob, ext: string, suffix: string) => void;
 };
 
-const PREVIEW_W = 360;
-
 export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const src = { width: info.video?.width || 0, height: info.video?.height || 0, fps: info.video?.fps || 30 };
   const [aspect, setAspect] = useState<Aspect>("9:16");
@@ -31,9 +29,6 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; dims: string } | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const small = useRef<HTMLCanvasElement | null>(null);
-  const dragging = useRef(false);
   const cancel = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
@@ -48,83 +43,6 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const rect = cropRect(src, aspect, focus.x, focus.y);
   // L'image entière tient déjà dans le format ? Le cadrage n'a alors rien à couper.
   const nothingToCrop = rect.width >= src.width - 2 && rect.height >= src.height - 2;
-
-  // ── Aperçu : image courante de la vidéo, cadre ou composition finale ──
-  const draw = useCallback(() => {
-    const c = canvasRef.current;
-    if (!c || !video || !video.videoWidth) return;
-    const ctx = c.getContext("2d")!;
-    if (mode === "crop") {
-      const s = PREVIEW_W / src.width;
-      c.width = PREVIEW_W;
-      c.height = Math.round(src.height * s);
-      ctx.drawImage(video, 0, 0, c.width, c.height);
-      ctx.fillStyle = "rgba(0, 0, 0, 0.62)";
-      const x = rect.left * s, y = rect.top * s, w = rect.width * s, h = rect.height * s;
-      ctx.fillRect(0, 0, c.width, y);
-      ctx.fillRect(0, y + h, c.width, c.height - y - h);
-      ctx.fillRect(0, y, x, h);
-      ctx.fillRect(x + w, y, c.width - x - w, h);
-      ctx.strokeStyle = "#3ddc84";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 1;
-      for (let i = 1; i < 3; i++) {
-        ctx.beginPath(); ctx.moveTo(x + (w * i) / 3, y); ctx.lineTo(x + (w * i) / 3, y + h); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x, y + (h * i) / 3); ctx.lineTo(x + w, y + (h * i) / 3); ctx.stroke();
-      }
-    } else {
-      const ratio = out.width / out.height;
-      c.width = ratio >= 1 ? PREVIEW_W : Math.round(PREVIEW_W * 0.75 * ratio * 1.6);
-      c.height = Math.round(c.width / ratio);
-      if (mode === "blur") {
-        const sm = small.current || (small.current = document.createElement("canvas"));
-        sm.width = Math.max(8, Math.round(c.width / 24));
-        sm.height = Math.max(8, Math.round(c.height / 24));
-        const sc = sm.getContext("2d")!;
-        const cover = Math.max(sm.width / src.width, sm.height / src.height);
-        sc.drawImage(video, (sm.width - src.width * cover) / 2, (sm.height - src.height * cover) / 2, src.width * cover, src.height * cover);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(sm, 0, 0, c.width, c.height);
-        ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
-        ctx.fillRect(0, 0, c.width, c.height);
-      } else {
-        ctx.fillStyle = "#000";
-        ctx.fillRect(0, 0, c.width, c.height);
-      }
-      const fit = Math.min(c.width / src.width, c.height / src.height);
-      ctx.drawImage(video, (c.width - src.width * fit) / 2, (c.height - src.height * fit) / 2, src.width * fit, src.height * fit);
-    }
-  }, [video, mode, rect.left, rect.top, rect.width, rect.height, src.width, src.height, out.width, out.height]);
-
-  useEffect(() => {
-    draw();
-    if (!video) return;
-    let raf = 0;
-    const loop = () => { draw(); if (!video.paused) raf = requestAnimationFrame(loop); };
-    const onPlay = () => { raf = requestAnimationFrame(loop); };
-    video.addEventListener("seeked", draw);
-    video.addEventListener("loadeddata", draw);
-    video.addEventListener("play", onPlay);
-    return () => {
-      cancelAnimationFrame(raf);
-      video.removeEventListener("seeked", draw);
-      video.removeEventListener("loadeddata", draw);
-      video.removeEventListener("play", onPlay);
-    };
-  }, [draw, video]);
-
-  // Glisser le cadre dans l'aperçu
-  function moveTo(e: ReactPointerEvent<HTMLCanvasElement>) {
-    const r = e.currentTarget.getBoundingClientRect();
-    const px = ((e.clientX - r.left) / r.width) * src.width;
-    const py = ((e.clientY - r.top) / r.height) * src.height;
-    const fx = src.width > rect.width ? (px - rect.width / 2) / (src.width - rect.width) : 0.5;
-    const fy = src.height > rect.height ? (py - rect.height / 2) / (src.height - rect.height) : 0.5;
-    setFocus({ x: Math.min(1, Math.max(0, fx)), y: Math.min(1, Math.max(0, fy)) });
-  }
 
   const fps = fps30 ? Math.min(30, src.fps) : src.fps;
   const videoBitrate = Math.round(referenceBitrate(out.width, out.height, fps) * 0.7);
@@ -156,7 +74,7 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
       <div className="vx-aspects">
         {ASPECTS.map((a) => (
           <button key={a.id} type="button" className={`vx-aspect${a.id === aspect ? " is-on" : ""}`} onClick={() => setAspect(a.id)} aria-pressed={a.id === aspect}>
-            <i style={{ aspectRatio: a.id.replace(":", " / ") }} />
+            <AspectIcon aspect={a.id} />
             <b>{a.label}</b>
             <span>{a.use}</span>
           </button>
@@ -165,14 +83,7 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
 
       <div className="vx-reframe-body">
         <div>
-          <canvas
-            ref={canvasRef}
-            className="vx-reframe-preview"
-            style={{ cursor: mode === "crop" && !nothingToCrop ? "move" : "default" }}
-            onPointerDown={(e) => { if (mode !== "crop") return; e.currentTarget.setPointerCapture(e.pointerId); dragging.current = true; moveTo(e); }}
-            onPointerMove={(e) => { if (dragging.current) moveTo(e); }}
-            onPointerUp={() => (dragging.current = false)}
-          />
+          <FramePreview video={video} src={src} aspect={aspect} mode={mode} focus={focus} onFocus={setFocus} />
           <p className="vx-hint">{mode === "crop" ? (nothingToCrop ? "L'image entière tient déjà dans ce format." : "Glisse le cadre vert pour choisir la zone gardée.") : "Aperçu du résultat final."} Image affichée : position actuelle de la vidéo.</p>
         </div>
         <div className="vx-fields" style={{ alignContent: "start" }}>

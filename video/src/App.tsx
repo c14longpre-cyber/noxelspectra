@@ -8,14 +8,17 @@ import type { VideoInfo } from "./lib/probe";
 import { cutVideo } from "./lib/cut";
 import { CompressPanel } from "./components/CompressPanel";
 import { ReframePanel } from "./components/ReframePanel";
+import { SocialPanel } from "./components/SocialPanel";
+import { ThumbPanel } from "./components/ThumbPanel";
+import { WebReadyPanel } from "./components/WebReadyPanel";
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
 const TOOLS: Tool[] = [
   { id: "analyze", label: "Analyser", icon: "⌁", ready: true, plan: "" },
   { id: "under25", label: "Moins de 25 Mo", icon: "◎", ready: true, plan: "Compression automatique vers une taille cible, avec aperçu du compromis de qualité." },
-  { id: "web", label: "Prêt pour mon site", icon: "▣", ready: false, plan: "Vidéo légère, miniature, dimensions et code d'intégration." },
-  { id: "social", label: "Décliner pour les réseaux", icon: "⚑", ready: false, plan: "Versions verticale, carrée et horizontale depuis le même clip, avec cadrage ajustable." },
+  { id: "web", label: "Prêt pour mon site", icon: "▣", ready: true, plan: "Vidéo légère, miniature, dimensions et code d'intégration." },
+  { id: "social", label: "Décliner pour les réseaux", icon: "⚑", ready: true, plan: "Versions verticale, carrée et horizontale depuis le même clip, avec cadrage ajustable." },
   { id: "convert", label: "Convertir", icon: "↔", ready: false, plan: "MP4, WebM, MOV ; format conseillé selon la destination." },
   { id: "compress", label: "Compresser", icon: "⇲", ready: true, plan: "Qualité manuelle ou taille cible en Mo, avec estimation du poids final." },
   { id: "cut", label: "Couper & assembler", icon: "✂", ready: true, plan: "Prochainement : retirer un passage, réunir et réordonner plusieurs clips." },
@@ -24,7 +27,7 @@ const TOOLS: Tool[] = [
   { id: "speed", label: "Vitesse", icon: "»", ready: false, plan: "Ralenti, accélération, lecture inversée." },
   { id: "audio", label: "Audio", icon: "♪", ready: false, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
   { id: "text", label: "Texte & logo", icon: "T", ready: false, plan: "Titres, filigrane, position, opacité, apparition/disparition." },
-  { id: "thumb", label: "Miniature", icon: "▢", ready: false, plan: "Choisir une image de la vidéo, ajouter du texte, exporter une couverture." },
+  { id: "thumb", label: "Miniature", icon: "▢", ready: true, plan: "Choisir une image de la vidéo, ajouter du texte, exporter une couverture." },
   { id: "export", label: "Exporter", icon: "⇩", ready: false, plan: "Résolution, FPS, qualité, format et préréglages selon l'usage." },
 ];
 
@@ -110,7 +113,7 @@ export default function App() {
 
   // Compresser a besoin de l'analyse (résolution, débit, images/s) : lancée automatiquement
   useEffect(() => {
-    if ((tool === "compress" || tool === "under25" || tool === "crop") && file && !info && !busy) runAnalyze();
+    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web") && file && !info && !busy) runAnalyze();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, file, info]);
 
@@ -182,7 +185,21 @@ export default function App() {
 
         <section className="vx-panel">
           <h3 className="vx-head"><b>02</b> / {current.label}</h3>
-          {tool === "crop" ? (
+          {tool === "thumb" ? (
+            file && url ? <ThumbPanel file={file} url={url} range={range} video={videoEl} /> : <p className="vx-muted">Choisis d'abord une vidéo.</p>
+          ) : tool === "web" ? (
+            file && info ? (
+              <WebReadyPanel file={file} info={info} range={range} video={videoEl} />
+            ) : (
+              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+            )
+          ) : tool === "social" ? (
+            file && info ? (
+              <SocialPanel file={file} info={info} range={range} video={videoEl} />
+            ) : (
+              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+            )
+          ) : tool === "crop" ? (
             file && info ? (
               <ReframePanel file={file} info={info} range={range} video={videoEl} onContinue={continueWith} />
             ) : (
