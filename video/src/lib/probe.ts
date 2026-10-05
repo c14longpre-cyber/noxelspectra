@@ -1,6 +1,6 @@
 // NOXEL Spectra Vidéo — analyse d'une vidéo, entièrement dans le navigateur.
-// Mediabunny lit seulement les parties du fichier nécessaires : même une grosse
-// vidéo s'analyse en une fraction de seconde, sans téléversement.
+// Mediabunny lit seulement les en-têtes des paquets (pas les images) : même une
+// grosse vidéo s'analyse vite, sans téléversement. Le débit est mesuré sur toute la durée.
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 
 export type VideoInfo = {
@@ -48,7 +48,7 @@ export async function analyzeVideo(file: File): Promise<VideoInfo> {
 
     let video: VideoInfo["video"] = null;
     if (vt) {
-      const stats = await vt.computePacketStats(300);
+      const stats = await vt.computePacketStats();
       video = {
         codec: (await vt.getCodec()) || "inconnu",
         width: await vt.getDisplayWidth(),
@@ -62,7 +62,7 @@ export async function analyzeVideo(file: File): Promise<VideoInfo> {
     }
     let audio: VideoInfo["audio"] = null;
     if (at) {
-      const stats = await at.computePacketStats(300);
+      const stats = await at.computePacketStats();
       audio = {
         codec: (await at.getCodec()) || "inconnu",
         channels: await at.getNumberOfChannels(),

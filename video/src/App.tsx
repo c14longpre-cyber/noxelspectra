@@ -1,10 +1,11 @@
 // NOXEL Spectra Vidéo — version de test (video.noxelspectra.com)
 // Tout le traitement se fait dans le navigateur (WebCodecs) : aucune vidéo n'est téléversée.
 import { useEffect, useRef, useState } from "react";
-import { HudButton } from "@hud/HudButton";
+import { HudButton, HudLink } from "@hud/HudButton";
 import { Timeline } from "./components/Timeline";
 import { analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
 import type { VideoInfo } from "./lib/probe";
+import { cutVideo } from "./lib/cut";
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
@@ -15,7 +16,7 @@ const TOOLS: Tool[] = [
   { id: "social", label: "Décliner pour les réseaux", icon: "⚑", ready: false, plan: "Versions verticale, carrée et horizontale depuis le même clip, avec cadrage ajustable." },
   { id: "convert", label: "Convertir", icon: "↔", ready: false, plan: "MP4, WebM, MOV ; format conseillé selon la destination." },
   { id: "compress", label: "Compresser", icon: "⇲", ready: false, plan: "Qualité manuelle ou taille cible en Mo, avec estimation du poids final." },
-  { id: "cut", label: "Couper & assembler", icon: "✂", ready: false, plan: "Garder un extrait, retirer un passage, réunir et réordonner plusieurs clips." },
+  { id: "cut", label: "Couper & assembler", icon: "✂", ready: true, plan: "Prochainement : retirer un passage, réunir et réordonner plusieurs clips." },
   { id: "crop", label: "Recadrer & redimensionner", icon: "⊡", ready: false, plan: "9:16, 1:1, 4:5, 16:9 ; déplacer le cadrage ; bandes ou fond flouté." },
   { id: "rotate", label: "Pivoter & retourner", icon: "↻", ready: false, plan: "90°, angle libre, miroir horizontal ou vertical." },
   { id: "speed", label: "Vitesse", icon: "»", ready: false, plan: "Ralenti, accélération, lecture inversée." },
@@ -39,6 +40,10 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const [cutProgress, setCutProgress] = useState<number | null>(null);
+  const [cutResult, setCutResult] = useState<{ url: string; size: number; ext: string; duration: number; requested: number; blob: Blob } | null>(null);
+  const cancelCut = useRef<(() => Promise<void>) | null>(null);
+  const [cutMode, setCutMode] = useState<"precise" | "fast">("precise");
 
   useEffect(() => {
     encoderSupport().then(setSupport);
@@ -52,6 +57,10 @@ export default function App() {
     }
     setError(null);
     setInfo(null);
+    setCutResult((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
     setFile(f);
     setUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -72,7 +81,33 @@ export default function App() {
     }
   }
 
+  async function runCut() {
+    if (!file) return;
+    setError(null);
+    setCutProgress(0);
+    try {
+      const r = await cutVideo(file, range[0], range[1], cutMode, (p) => setCutProgress(p), (c) => (cancelCut.current = c));
+      setCutResult((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { url: URL.createObjectURL(r.blob), size: r.blob.size, ext: r.ext, duration: r.duration, requested: range[1] - range[0], blob: r.blob };
+      });
+    } catch (e) {
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Découpe impossible : ${e.message}` : "Découpe impossible.");
+    } finally {
+      setCutProgress(null);
+      cancelCut.current = null;
+    }
+  }
+
+  // « Continuer avec ce résultat » : le résultat devient la vidéo de travail
+  function continueWithCut() {
+    if (!cutResult || !file) return;
+    const base = file.name.replace(/\.[^.]+$/, "");
+    openFile(new File([cutResult.blob], `${base}-extrait.${cutResult.ext}`, { type: cutResult.blob.type }));
+  }
+
   const current = TOOLS.find((t) => t.id === tool)!;
+  const baseName = file ? file.name.replace(/\.[^.]+$/, "") : "video";
 
   return (
     <div className="vx-shell">
@@ -133,7 +168,41 @@ export default function App() {
 
         <section className="vx-panel">
           <h3 className="vx-head"><b>02</b> / {current.label}</h3>
-          {current.ready ? (
+          {tool === "cut" ? (
+            <>
+              <p className="vx-muted">
+                Choisis le passage à garder sur la timeline (glisse les poignées, ou I / O pendant la lecture).
+                La découpe est précise à l'image près ; la vidéo n'est réencodée qu'aux points de coupe quand c'est possible.
+              </p>
+              <p className="vx-muted">Extrait : <b style={{ color: "#3ddc84" }}>{fmtTime(range[0])} → {fmtTime(range[1])}</b> ({fmtTime(range[1] - range[0])})</p>
+              <div className="vx-modes" role="radiogroup" aria-label="Mode de coupe">
+                <label><input type="radio" name="cutmode" checked={cutMode === "precise"} onChange={() => setCutMode("precise")} />
+                  <b>Précise</b> — à l'image près</label>
+                <label><input type="radio" name="cutmode" checked={cutMode === "fast"} onChange={() => setCutMode("fast")} />
+                  <b>Rapide, sans perte</b> — démarre à l'image clé la plus proche, aucune image réencodée</label>
+              </div>
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <HudButton action="cut-video" disabled={!file || duration <= 0} busy={cutProgress !== null}
+                  busyLabel={cutProgress !== null ? `Découpe… ${Math.round(cutProgress * 100)} %` : undefined} onClick={runCut} />
+                {cutProgress !== null && (
+                  <button type="button" className="vx-btn" onClick={() => cancelCut.current?.()}>Annuler</button>
+                )}
+              </div>
+              {cutResult && (
+                <div className="vx-result">
+                  <span>✓ Extrait de {fmtTime(cutResult.duration)} · {fmtBytes(cutResult.size)} · {cutResult.ext.toUpperCase()}</span>
+                  <HudLink action="download-result" compact href={cutResult.url} download={`${baseName}-extrait.${cutResult.ext}`} />
+                  <HudButton action="continue" compact onClick={continueWithCut} />
+                  {cutResult.duration - cutResult.requested > 0.5 && (
+                    <p className="vx-alert" style={{ flexBasis: "100%", margin: 0 }}>
+                      Cette vidéo n'a pas d'image clé près du début choisi : l'extrait dure {fmtTime(cutResult.duration)} au lieu de {fmtTime(cutResult.requested)}.
+                      Utilise le mode Précise pour couper exactement.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          ) : current.ready ? (
             <>
               <p className="vx-muted">Format, codecs, durée, résolution, images/s, débit, audio et potentiel de compression — calculés localement.</p>
               <HudButton action="analyse" disabled={!file} busy={busy} onClick={runAnalyze} />
