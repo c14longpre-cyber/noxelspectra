@@ -31,7 +31,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   const [support, setSupport] = useState<Record<AudioFormat, boolean> | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; kind: "video" | "audio"; reencoded: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; kind: "video" | "audio"; label: string; note: string; name: string } | null>(null);
   const [intact, setIntact] = useState<boolean | null>(null); // la vidéo sera-t-elle recopiée sans réencodage ?
   const cancel = useRef<(() => Promise<void>) | null>(null);
   const musicInput = useRef<HTMLInputElement | null>(null);
@@ -58,6 +58,13 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
 
   const dur = range[1] - range[0];
   const hasAudio = !!info.audio;
+  const maxOffset = Math.max(0, dur - 0.5);
+  const offset = Math.min(musicOffset, maxOffset); // reste dans la sélection si elle a été raccourcie
+  const replacing = !!music && musicMode === "replace";
+  const channels = info.audio?.channels ?? 2;
+  // Le son traité est réencodé en Opus (WebM) ou en AAC (MP4) : le navigateur doit savoir le faire
+  const outCodec = info.video && ["vp8", "vp9"].includes(info.video.codec) ? "Opus" : "AAC";
+  const canEncode = !support || (outCodec === "Opus" ? support.ogg : support.m4a);
 
   async function pickMusic(f: File | null) {
     if (!f || !info.audio) return;
@@ -77,16 +84,21 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
     setResult(null); // pas d'ancien résultat affiché à côté d'une erreur
     setProgress(0);
     try {
-      const r = kind === "audio"
-        ? { ...(await extractAudio(file, range[0], range[1], fmt, setProgress, (c) => (cancel.current = c))), reencoded: false }
-        : await editAudio(file, {
-            start: range[0], end: range[1], volume: volume / 100, fadeIn, fadeOut,
-            music: music ? { pcm: music, mode: musicMode, volume: musicVolume / 100, offset: musicOffset, loop, fadeIn: musicFade, fadeOut: musicFade } : null,
-          }, mute, info.video?.bitrate || 2e6, setProgress, (c) => (cancel.current = c));
+      let r: { blob: Blob; ext: string; label: string; note: string; name: string };
+      if (kind === "audio") {
+        const x = await extractAudio(file, range[0], range[1], fmt, info.audio?.bitrate || 0, setProgress, (c) => (cancel.current = c));
+        r = { ...x, label: "Son extrait", note: x.copied ? "recopié sans réencodage" : "", name: "son" };
+      } else {
+        const x = await editAudio(file, {
+          start: range[0], end: range[1], volume: volume / 100, fadeIn, fadeOut,
+          music: music ? { pcm: music, mode: musicMode, volume: musicVolume / 100, offset, loop, fadeIn: musicFade, fadeOut: musicFade } : null,
+        }, mute, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, setProgress, (c) => (cancel.current = c));
+        r = { ...x, label: mute ? "Vidéo sans le son" : "Vidéo avec le nouveau son", note: x.reencoded ? "vidéo réencodée" : "", name: mute ? "sans-son" : "audio" };
+      }
       if (!alive.current) return;
       const url = URL.createObjectURL(r.blob);
       urls.current.push(url);
-      setResult({ url, blob: r.blob, ext: r.ext, kind, reencoded: r.reencoded });
+      setResult({ url, blob: r.blob, ext: r.ext, kind, label: r.label, note: r.note, name: r.name });
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Traitement impossible : ${e.message}` : "Traitement impossible.");
     } finally {
@@ -109,10 +121,10 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   return (
     <div className="vx-audio">
       <div className="vx-rot">
-        <button type="button" className={`vx-chip${tab === "edit" ? " is-on" : ""}`} onClick={() => setTab("edit")}>Modifier le son de la vidéo</button>
-        <button type="button" className={`vx-chip${tab === "extract" ? " is-on" : ""}`} onClick={() => setTab("extract")}>Extraire le son seul</button>
+        <button type="button" aria-pressed={tab === "edit"} className={`vx-chip${tab === "edit" ? " is-on" : ""}`} onClick={() => setTab("edit")}>Modifier le son de la vidéo</button>
+        <button type="button" aria-pressed={tab === "extract"} className={`vx-chip${tab === "extract" ? " is-on" : ""}`} onClick={() => setTab("extract")}>Extraire le son seul</button>
       </div>
-      <p className="vx-muted">Son actuel : {info.audio!.codec.toUpperCase()} · {info.audio!.channels === 1 ? "mono" : "stéréo"} · {info.audio!.sampleRate / 1000} kHz. Seule la sélection de la timeline ({fmtTime(dur)}) est traitée.</p>
+      <p className="vx-muted">Son actuel : {info.audio!.codec.toUpperCase()} · {channels === 1 ? "mono" : channels === 2 ? "stéréo" : `${channels} canaux`} · {info.audio!.sampleRate / 1000} kHz. Seule la sélection de la timeline ({fmtTime(dur)}) est traitée.</p>
 
       {tab === "edit" ? (
         <>
@@ -123,16 +135,17 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
             <>
               <div className="vx-fields">
                 <label>Volume : {volume} %
-                  <input type="range" min={0} max={200} step={5} value={volume} onChange={(e) => setVolume(Number(e.target.value))} />
+                  <input type="range" min={0} max={200} step={5} value={volume} disabled={replacing} onChange={(e) => setVolume(Number(e.target.value))} />
                 </label>
                 <label>Fondu d'ouverture : {fadeIn} s
-                  <input type="range" min={0} max={5} step={0.5} value={fadeIn} onChange={(e) => setFadeIn(Number(e.target.value))} />
+                  <input type="range" min={0} max={5} step={0.5} value={fadeIn} disabled={replacing} onChange={(e) => setFadeIn(Number(e.target.value))} />
                 </label>
                 <label>Fondu de fermeture : {fadeOut} s
                   <input type="range" min={0} max={5} step={0.5} value={fadeOut} onChange={(e) => setFadeOut(Number(e.target.value))} />
                 </label>
               </div>
-              {volume > 100 && <p className="vx-muted">Au-dessus de 100 %, les passages forts peuvent saturer : écoute le résultat.</p>}
+              {replacing && <p className="vx-muted">Mode Remplacer : le son d'origine est retiré, donc son volume et son fondu d'ouverture ne s'appliquent pas. Règle ceux de la musique plus bas ; le fondu de fermeture s'applique à la musique.</p>}
+              {volume > 100 && !replacing && <p className="vx-muted">Au-dessus de 100 %, les passages forts peuvent saturer : écoute le résultat.</p>}
 
               <h4 className="vx-code-title">Musique</h4>
               <input ref={musicInput} type="file" accept="audio/*" style={{ display: "none" }} onChange={(e) => { pickMusic(e.target.files?.[0] || null); e.target.value = ""; }} />
@@ -152,17 +165,17 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
                   <label>Volume de la musique : {musicVolume} %
                     <input type="range" min={0} max={100} step={5} value={musicVolume} onChange={(e) => setMusicVolume(Number(e.target.value))} />
                   </label>
-                  <label>Début de la musique : {fmtTime(musicOffset)}
-                    <input type="range" min={0} max={Math.max(0, dur - 0.5)} step={0.1} value={musicOffset} onChange={(e) => setMusicOffset(Number(e.target.value))} />
-                    <button type="button" className="vx-btn" style={{ alignSelf: "start" }}
-                      onClick={() => video && setMusicOffset(Math.min(Math.max(0, video.currentTime - range[0]), Math.max(0, dur - 0.5)))}>
-                      Placer à la tête de lecture
-                    </button>
+                  <label>Début de la musique : {fmtTime(offset)}
+                    <input type="range" min={0} max={maxOffset} step={0.1} value={offset} onChange={(e) => setMusicOffset(Number(e.target.value))} />
                   </label>
+                  <button type="button" className="vx-btn" style={{ alignSelf: "start" }} disabled={!video}
+                    onClick={() => video && setMusicOffset(Math.min(Math.max(0, video.currentTime - range[0]), maxOffset))}>
+                    Placer la musique à la tête de lecture
+                  </button>
                   <label>Fondus de la musique : {musicFade} s
                     <input type="range" min={0} max={5} step={0.5} value={musicFade} onChange={(e) => setMusicFade(Number(e.target.value))} />
                   </label>
-                  {music.duration < dur - musicOffset && (
+                  {music.duration < dur - offset && (
                     <label className="vx-check"><input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} /> Répéter la musique (elle est plus courte que la vidéo)</label>
                   )}
                 </div>
@@ -173,9 +186,10 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
             ? "Vérification de la vidéo…"
             : intact
               ? "La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image."
-              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, au plus au débit de la source). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
+              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, et le poids du fichier peut changer). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
+          {!mute && !canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : il ne peut pas modifier le son de cette vidéo. Tu peux quand même le retirer complètement, ou essayer avec un autre navigateur.</p>}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <HudButton action="apply-audio" label={mute ? "Retirer le son" : "Appliquer au son"} busy={progress !== null} busyLabel={busy("Traitement du son")} onClick={() => run("video")} />
+            <HudButton action="apply-audio" label={mute ? "Retirer le son" : "Appliquer au son"} disabled={!mute && !canEncode} busy={progress !== null} busyLabel={busy("Traitement du son")} onClick={() => run("video")} />
             {progress !== null && <button type="button" className="vx-btn" onClick={() => cancel.current?.()}>Annuler</button>}
           </div>
         </>
@@ -184,7 +198,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
           <div className="vx-fields">
             <label>Format
               <select value={fmt} onChange={(e) => setFmt(e.target.value as AudioFormat)}>
-                {AUDIO_FORMATS.map((f) => <option key={f.id} value={f.id} disabled={support ? !support[f.id] : false}>{f.label}</option>)}
+                {AUDIO_FORMATS.map((f) => <option key={f.id} value={f.id} disabled={support ? !support[f.id] : false}>{f.label}{support && !support[f.id] ? " (non disponible dans ce navigateur)" : ""}</option>)}
               </select>
             </label>
           </div>
@@ -193,11 +207,11 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
       )}
 
       {error && <p className="vx-alert">{error}</p>}
-      {result && (
+      {result && (result.kind === "audio") === (tab === "extract") && (
         <div className="vx-result">
-          <span>✓ {result.kind === "audio" ? "Son extrait" : "Vidéo avec le nouveau son"} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}{result.reencoded ? " · vidéo réencodée" : ""}</span>
-          <HudLink action="download-result" compact href={result.url} download={`${base}-${result.kind === "audio" ? "son" : "audio"}.${result.ext}`} />
-          {result.kind === "video" && <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, "audio")} />}
+          <span>✓ {result.label} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}{result.note ? ` · ${result.note}` : ""}</span>
+          <HudLink action="download-result" compact href={result.url} download={`${base}-${result.name}.${result.ext}`} />
+          {result.kind === "video" && <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, result.name)} />}
         </div>
       )}
     </div>

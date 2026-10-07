@@ -111,8 +111,9 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
         const slot = Math.floor(t / frame + 1e-6);
         if (speed > 1 && slot === lastSlot) return null; // accéléré : on garde une image par créneau
         lastSlot = slot;
-        sample.setTimestamp(Math.max(0, t));
-        sample.setDuration((sample.duration || frame) / speed);
+        // Accéléré : image calée sur son créneau (cadence régulière) ; ralenti : simplement étirée
+        sample.setTimestamp(speed > 1 ? slot * frame : Math.max(0, t));
+        sample.setDuration(speed > 1 ? frame : (sample.duration || frame) / speed);
         return sample;
       },
     },

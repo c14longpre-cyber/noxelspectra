@@ -1,10 +1,10 @@
 // NOXEL Spectra Vidéo — traitement du son.
 // Seul l'audio est réencodé : la vidéo est recopiée telle quelle (rapide, aucune perte d'image).
 import {
-  ALL_FORMATS, AudioSample, BlobSource, BufferTarget, Conversion, EncodedPacketSink, Input, Mp4OutputFormat, OggOutputFormat, Output, WavOutputFormat,
+  ALL_FORMATS, AudioSample, BlobSource, BufferSource, BufferTarget, Conversion, EncodedPacketSink, Input, Mp4OutputFormat, OggOutputFormat, Output, WavOutputFormat,
   WebMOutputFormat, canEncodeAudio,
 } from "mediabunny";
-import type { InputVideoTrack } from "mediabunny";
+import type { InputAudioTrack, InputVideoTrack } from "mediabunny";
 
 type Progress = (p: number) => void;
 type Register = (cancel: () => Promise<void>) => void;
@@ -153,7 +153,44 @@ export async function videoStaysIntact(file: File, start: number): Promise<boole
   }
 }
 
-export async function editAudio(file: File, e: AudioEdit, mute: boolean, sourceBitrate: number, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string; reencoded: boolean }> {
+const BITRATES = [32000, 48000, 64000, 96000, 128000, 160000, 192000];
+
+/** Débit audio à demander : au plus celui de la source (0 = inconnu) quand l'encodeur l'accepte.
+ *  Certains encodeurs AAC n'acceptent que quelques débits fixes (96, 128, 160, 192 kb/s) : on prend
+ *  alors le débit accepté le plus proche, quitte à dépasser une source à faible débit (plancher de
+ *  l'encodeur : une source à 24 kb/s sort à 96 kb/s sous Chrome/Windows). */
+async function pickBitrate(codec: "aac" | "opus", target: number, source: number, track: InputAudioTrack): Promise<number> {
+  const cap = source > 0 ? Math.min(target, Math.round(source)) : target;
+  const near = BITRATES.filter((b) => b <= cap * 1.1 && b <= target).reverse(); // 124 kb/s mesurés = 128 nominal
+  const above = BITRATES.filter((b) => b > cap * 1.1);
+  const [numberOfChannels, sampleRate] = await Promise.all([track.getNumberOfChannels(), track.getSampleRate()]);
+  for (const bitrate of [cap, ...near, ...above]) {
+    if (await canEncodeAudio(codec, { bitrate, numberOfChannels, sampleRate }).catch(() => false)) return bitrate;
+  }
+  return cap; // aucun débit accepté : l'erreur de l'encodeur sera affichée
+}
+
+const EMPTY_AUDIO = "le fichier produit ne contient aucun son (la sélection dépasse peut-être la fin de la piste audio)";
+
+/** Relit le fichier produit : une piste attendue absente ou vide = erreur (jamais de faux succès). */
+async function checkOutput(buffer: ArrayBuffer, want: { video: boolean; audio: boolean }) {
+  const input = new Input({ source: new BufferSource(buffer), formats: ALL_FORMATS });
+  try {
+    // Un fichier illisible (réduit à son en-tête) compte comme une piste absente
+    if (want.video) {
+      const d = await input.getPrimaryVideoTrack().then((t) => (t ? t.computeDuration() : 0)).catch(() => 0);
+      if (!(d > 0)) throw new Error("le fichier produit ne contient aucune image");
+    }
+    if (want.audio) {
+      const d = await input.getPrimaryAudioTrack().then((t) => (t ? t.computeDuration() : 0)).catch(() => 0);
+      if (!(d > 0)) throw new Error(EMPTY_AUDIO);
+    }
+  } finally {
+    input.dispose();
+  }
+}
+
+export async function editAudio(file: File, e: AudioEdit, mute: boolean, source: { video: number; audio: number }, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string; reencoded: boolean }> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const vt = await input.getPrimaryVideoTrack();
@@ -161,24 +198,31 @@ export async function editAudio(file: File, e: AudioEdit, mute: boolean, sourceB
     const webm = webmFamily(codec);
     const reencoded = !!vt && webm && !(await startsOnKeyFrame(vt, e.start));
     const output = new Output({ format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
+    const at = mute ? null : await input.getPrimaryAudioTrack();
+    const audioCodec = webm ? "opus" : "aac";
+    const audioBitrate = at ? await pickBitrate(audioCodec, 160000, source.audio, at) : 160000;
     const conversion = await Conversion.init({
       input,
       output,
       trim: { start: e.start, end: e.end },
       // La vidéo est recopiée sans réencodage, sauf en WebM hors image clé : même codec,
       // jamais au-dessus du débit de la source
-      ...(reencoded ? { video: { codec: codec!, bitrate: Math.round(sourceBitrate) } } : {}),
+      ...(reencoded ? { video: { codec: codec!, bitrate: Math.round(source.video) } } : {}),
       audio: mute
         ? { discard: true }
-        : { codec: webm ? "opus" : "aac", bitrate: 160000, forceTranscode: true, process: (s: AudioSample) => processAudio(s, e) },
+        : { codec: audioCodec, bitrate: audioBitrate, forceTranscode: true, process: (s: AudioSample) => processAudio(s, e) },
     });
     const lost = conversion.discardedTracks.filter((d) => d.track.type === "video" || (d.track.type === "audio" && d.reason !== "discarded_by_user"));
-    if (!conversion.isValid || lost.length) throw new Error(`format non pris en charge par ce navigateur (${lost.map((d) => `${d.track.type} : ${d.reason}`).join(", ")})`);
+    if (!conversion.isValid || lost.length) {
+      const why = (lost.length ? lost : conversion.discardedTracks).map((d) => `${d.track.type} : ${d.reason}`).join(", ");
+      throw new Error(`format non pris en charge par ce navigateur${why ? ` (${why})` : ""}`);
+    }
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
     if (!buffer) throw new Error("aucune donnée produite");
+    await checkOutput(buffer, { video: !!vt, audio: !mute });
     return { blob: new Blob([buffer], { type: webm ? "video/webm" : "video/mp4" }), ext: webm ? "webm" : "mp4", reencoded };
   } finally {
     input.dispose();
@@ -189,7 +233,7 @@ export type AudioFormat = "m4a" | "ogg" | "wav";
 export const AUDIO_FORMATS: { id: AudioFormat; label: string }[] = [
   { id: "m4a", label: "M4A (AAC) — léger, lu partout" },
   { id: "ogg", label: "OGG (Opus) — très léger, pour le web" },
-  { id: "wav", label: "WAV — sans perte, pour le montage" },
+  { id: "wav", label: "WAV — non compressé, pour le montage" },
 ];
 
 export async function audioFormatSupport(): Promise<Record<AudioFormat, boolean>> {
@@ -198,26 +242,51 @@ export async function audioFormatSupport(): Promise<Record<AudioFormat, boolean>
 }
 
 /** Extraire la piste son seule. */
-export async function extractAudio(file: File, start: number, end: number, fmt: AudioFormat, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string }> {
+export async function extractAudio(file: File, start: number, end: number, fmt: AudioFormat, sourceBitrate: number, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string; copied: boolean }> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
-    const format = fmt === "wav" ? new WavOutputFormat() : fmt === "ogg" ? new OggOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" });
-    const output = new Output({ format, target: new BufferTarget() });
-    const conversion = await Conversion.init({
-      input,
-      output,
-      trim: { start, end },
-      video: { discard: true },
-      audio: fmt === "wav" ? { codec: "pcm-s16" } : { codec: fmt === "ogg" ? "opus" : "aac", bitrate: fmt === "ogg" ? 128000 : 192000 },
+    const at = await input.getPrimaryAudioTrack();
+    if (!at) throw new Error("cette vidéo n'a aucune piste audio");
+    const makeOutput = () => new Output({
+      format: fmt === "wav" ? new WavOutputFormat() : fmt === "ogg" ? new OggOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" }),
+      target: new BufferTarget(),
     });
-    if (!conversion.isValid) throw new Error("aucune piste audio exploitable dans cette vidéo");
+    const base = { input, trim: { start, end }, video: { discard: true as const } };
+    // Son déjà dans le codec du format (AAC → M4A, Opus → OGG) : recopié tel quel, sans réencodage.
+    // La copie se fait par paquets entiers : le début peut être décalé de quelques centièmes de seconde.
+    let copied = (await at.getCodec()) === (fmt === "m4a" ? "aac" : fmt === "ogg" ? "opus" : null);
+    let output = makeOutput();
+    let conversion = copied ? await Conversion.init({ ...base, output, copy: { mode: "forced", shiftTolerance: Infinity } }) : null;
+    if (conversion && (!conversion.isValid || conversion.discardedTracks.some((d) => d.reason === "cannot_copy"))) {
+      conversion = null;
+      copied = false;
+      output = makeOutput();
+    }
+    // Sinon réencodage, au plus au débit de la source quand l'encodeur l'accepte
+    conversion ??= await Conversion.init({
+      ...base,
+      output,
+      audio: fmt === "wav"
+        ? { codec: "pcm-s16" }
+        : fmt === "ogg"
+          ? { codec: "opus", bitrate: await pickBitrate("opus", 128000, sourceBitrate, at) }
+          : { codec: "aac", bitrate: await pickBitrate("aac", 192000, sourceBitrate, at) },
+    });
+    if (!conversion.isValid) {
+      const why = conversion.discardedTracks.filter((d) => d.track.type === "audio").map((d) => d.reason).join(", ");
+      throw new Error(`ce navigateur ne peut pas produire ce format à partir de cette piste audio${why ? ` (${why})` : ""}`);
+    }
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
-    await conversion.execute();
+    await conversion.execute().catch((err) => {
+      // WAV refuse de se finaliser sans aucun échantillon : même cas qu'un fichier sans son
+      throw err instanceof Error && /empty|no packets/i.test(err.message) ? new Error(EMPTY_AUDIO) : err;
+    });
     const buffer = output.target.buffer;
     if (!buffer) throw new Error("aucune donnée produite");
+    await checkOutput(buffer, { video: false, audio: true });
     const mime = fmt === "wav" ? "audio/wav" : fmt === "ogg" ? "audio/ogg" : "audio/mp4";
-    return { blob: new Blob([buffer], { type: mime }), ext: fmt };
+    return { blob: new Blob([buffer], { type: mime }), ext: fmt, copied };
   } finally {
     input.dispose();
   }

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { CONTAINERS, canRemux, convertVideo, rotateVideo, speedVideo } from "../lib/transform";
 import type { ContainerId, Result, RotateOptions } from "../lib/transform";
+import { audioFormatSupport } from "../lib/audio";
 import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 
@@ -114,7 +115,7 @@ export function RotatePanel({ file, info, range, onContinue }: Common) {
     <div>
       <div className="vx-rot">
         {([0, 90, 180, 270] as const).map((r) => (
-          <button key={r} type="button" className={`vx-chip${o.rotation === r ? " is-on" : ""}`} onClick={() => setO({ ...o, rotation: r })}>
+          <button key={r} type="button" aria-pressed={o.rotation === r} className={`vx-chip${o.rotation === r ? " is-on" : ""}`} onClick={() => setO({ ...o, rotation: r })}>
             {r === 0 ? "Aucune rotation" : `↻ ${r}°`}
           </button>
         ))}
@@ -144,12 +145,17 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
   const [keepAudio, setKeepAudio] = useState(true);
   const [target, setTarget] = useState<ContainerId>("mp4");
   const job = useJob();
+  const [support, setSupport] = useState<{ m4a: boolean; ogg: boolean } | null>(null);
+  useEffect(() => { audioFormatSupport().then(setSupport); }, []);
   const dur = range[1] - range[0];
+  // Le son gardé est réencodé en Opus (WebM) ou en AAC (MP4, MOV) : le navigateur doit savoir le faire
+  const outCodec = target === "webm" ? "Opus" : "AAC";
+  const noAudioEncoder = keepAudio && !!info.audio && !!support && !(target === "webm" ? support.ogg : support.m4a);
   return (
     <div>
       <div className="vx-rot">
         {SPEEDS.map((s) => (
-          <button key={s} type="button" className={`vx-chip${speed === s ? " is-on" : ""}`} onClick={() => setSpeed(s)}>
+          <button key={s} type="button" aria-pressed={speed === s} className={`vx-chip${speed === s ? " is-on" : ""}`} onClick={() => setSpeed(s)}>
             ×{String(s).replace(".", ",")} {s < 1 ? "ralenti" : "accéléré"}
           </button>
         ))}
@@ -163,8 +169,9 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
         )}
         {speed < 1 && <span className="vx-muted">Ralenti : chaque image est affichée plus longtemps (pour un ralenti très fluide, filme en 60 ou 120 images/s).</span>}
       </div>
+      {noAudioEncoder && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : décoche « Garder le son » ou choisis un autre format de sortie.</p>}
       <JobFooter job={job} file={file} suffix={`x${String(speed).replace(".", ",")}`} onContinue={onContinue}
-        button={<HudButton action="speed-video" label={`Appliquer ×${String(speed).replace(".", ",")}`} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Traitement")}
+        button={<HudButton action="speed-video" label={`Appliquer ×${String(speed).replace(".", ",")}`} disabled={noAudioEncoder} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Traitement")}
           onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, info.video?.bitrate || 2e6, keepAudio && !!info.audio, p, r))} />} />
     </div>
   );
