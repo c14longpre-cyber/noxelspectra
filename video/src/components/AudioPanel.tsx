@@ -38,7 +38,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   const urls = useRef<string[]>([]);
   const alive = useRef(true);
   const stopped = useRef(false); // annulation demandée, même avant que le traitement soit annulable
-  const stop = () => { stopped.current = true; cancel.current?.().catch(() => {}); };
+  const stop = () => { if (stopped.current) return; stopped.current = true; cancel.current?.().catch(() => {}); };
   const register = (c: () => Promise<void>) => { cancel.current = c; if (stopped.current) c().catch(() => {}); };
 
   useEffect(() => { audioFormatSupport().then((s) => { setSupport(s); if (!s.m4a) setFmt(s.ogg ? "ogg" : "wav"); }); }, []);
@@ -227,7 +227,10 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
           </div>
           {planNotes}
           {!planOk && <p className="vx-alert">Ce navigateur ne sait pas encoder ce son en {plan!.codec === "opus" ? "Opus" : "AAC"} : choisis un autre format.</p>}
-          <HudButton action="extract-audio" disabled={!planOk} busy={progress !== null} busyLabel={busy("Extraction")} onClick={() => run("audio")} />
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <HudButton action="extract-audio" disabled={!planOk} busy={progress !== null} busyLabel={busy("Extraction")} onClick={() => run("audio")} />
+            {progress !== null && <HudButton action="cancel" compact onClick={stop} />}
+          </div>
         </>
       )}
 

@@ -118,7 +118,7 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
         <HudButton action="crop" label={`Créer la version ${aspect}`} busy={progress !== null}
           busyLabel={progress !== null ? `Recadrage… ${Math.round(progress * 100)} %` : undefined}
           disabled={!support || (!support.mp4 && !support.webm)} onClick={run} />
-        {progress !== null && <button type="button" className="vx-btn" onClick={() => cancel.current?.()}>Annuler</button>}
+        {progress !== null && <HudButton action="cancel" compact onClick={() => cancel.current?.()} />}
       </div>
       {error && <p className="vx-alert">{error}</p>}
       {result && (

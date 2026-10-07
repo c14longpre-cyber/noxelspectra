@@ -89,6 +89,14 @@ export default function App() {
     }
   }
 
+  function stopCut() {
+    if (cutStopped.current) return;
+    cutStopped.current = true;
+    cancelCut.current?.().catch(() => {});
+  }
+  // Comme les autres outils : quitter Couper annule la découpe en cours
+  useEffect(() => { if (tool !== "cut") stopCut(); }, [tool]);
+
   async function runCut() {
     if (!file) return;
     cutStopped.current = false;
@@ -255,7 +263,7 @@ export default function App() {
                 <HudButton action="cut-video" disabled={!file || duration <= 0} busy={cutProgress !== null}
                   busyLabel={cutProgress !== null ? `Découpe… ${Math.round(cutProgress * 100)} %` : undefined} onClick={runCut} />
                 {cutProgress !== null && (
-                  <HudButton action="cancel" compact onClick={() => { cutStopped.current = true; cancelCut.current?.().catch(() => {}); }} />
+                  <HudButton action="cancel" compact onClick={stopCut} />
                 )}
               </div>
               {cutResult && (

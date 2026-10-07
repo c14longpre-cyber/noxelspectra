@@ -148,7 +148,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
         <HudButton action="resize-social" label={`Créer ${selected.length} version(s)`} disabled={!selected.length || !support || (!support.mp4 && !support.webm)}
           busy={running !== null} busyLabel={running ? `Version ${running.index}/${running.total} (${running.aspect}) — ${Math.round(running.progress * 100)} %` : undefined}
           onClick={runAll} />
-        {running && <button type="button" className="vx-btn" onClick={() => { stopped.current = true; cancel.current?.(); }}>Annuler</button>}
+        {running && <HudButton action="cancel" compact onClick={() => { stopped.current = true; cancel.current?.().catch(() => {}); }} />}
       </div>
       {error && <p className="vx-alert">{error}</p>}
 

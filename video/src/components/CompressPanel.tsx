@@ -182,7 +182,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
         <HudButton action="compress-video" label={mode === "target" ? `Compresser sous ${targetMb} Mo` : "Compresser"}
           busy={progress !== null} busyLabel={progress !== null ? `Compression… ${Math.round(progress * 100)} %` : undefined}
           disabled={!support || (!support.mp4 && !support.webm)} onClick={run} />
-        {progress !== null && <button type="button" className="vx-btn" onClick={() => cancel.current?.()}>Annuler</button>}
+        {progress !== null && <HudButton action="cancel" compact onClick={() => cancel.current?.()} />}
       </div>
       {status && <p className="vx-muted">{status}</p>}
       {error && <p className="vx-alert">{error}</p>}

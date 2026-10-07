@@ -30,6 +30,7 @@ function useJob() {
     };
   }, []);
   function stop() {
+    if (stopped.current) return;
     stopped.current = true;
     cancel.current?.().catch(() => {});
   }
