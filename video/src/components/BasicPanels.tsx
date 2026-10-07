@@ -15,13 +15,28 @@ function useJob() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<(Result & { url: string }) | null>(null);
   const cancel = useRef<(() => Promise<void>) | null>(null);
-  useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
+  const urls = useRef<string[]>([]);
+  const alive = useRef(true);
+  // En quittant l'outil seulement : annuler le traitement en cours et libérer les URL des résultats
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      cancel.current?.().catch(() => {});
+      urls.current.forEach((u) => URL.revokeObjectURL(u));
+      urls.current = [];
+    };
+  }, []);
   async function start(job: (onP: (p: number) => void, reg: (c: () => Promise<void>) => void) => Promise<Result>) {
     setError(null);
+    setResult(null); // pas d'ancien résultat affiché à côté d'une erreur
     setProgress(0);
     try {
       const r = await job(setProgress, (c) => (cancel.current = c));
-      setResult({ ...r, url: URL.createObjectURL(r.blob) });
+      if (!alive.current) return;
+      const url = URL.createObjectURL(r.blob);
+      urls.current.push(url);
+      setResult({ ...r, url });
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? e.message : "Traitement impossible.");
     } finally {

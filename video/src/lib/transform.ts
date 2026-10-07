@@ -106,7 +106,7 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
       bitrate: Math.max(300000, Math.round(sourceBitrate * Math.min(2, Math.max(1, speed)))),
       forceTranscode: true,
       process: (sample: VideoSample) => {
-        const t = (sample.timestamp - range[0]) / speed;
+        const t = sample.timestamp / speed; // horodatage déjà relatif au début de la sélection
         const slot = Math.floor(t / frame + 1e-6);
         if (speed > 1 && slot === lastSlot) return null; // accéléré : on garde une image par créneau
         lastSlot = slot;
@@ -118,7 +118,7 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
     // Son gardé : rééchantillonné à la nouvelle vitesse (la hauteur change, comme un disque
     // joué plus vite). Garder la hauteur naturelle demande un étirement temporel, prévu plus tard.
     audio: keepAudio
-      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: (s: AudioSample) => resampleForSpeed(s, speed, range[0]) }
+      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: (s: AudioSample) => resampleForSpeed(s, speed) }
       : { discard: true },
   }), onProgress, register);
   return { blob, ext: id, remuxed: false };

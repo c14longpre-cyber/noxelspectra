@@ -1,7 +1,7 @@
 // NOXEL Spectra Vidéo — Audio : volume, fondus, musique, retrait, extraction
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
-import { AUDIO_FORMATS, audioFormatSupport, decodeMusic, editAudio, extractAudio } from "../lib/audio";
+import { AUDIO_FORMATS, audioFormatSupport, decodeMusic, editAudio, extractAudio, videoStaysIntact } from "../lib/audio";
 import type { AudioFormat, Music } from "../lib/audio";
 import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
@@ -31,12 +31,30 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   const [support, setSupport] = useState<Record<AudioFormat, boolean> | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; kind: "video" | "audio" } | null>(null);
+  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; kind: "video" | "audio"; reencoded: boolean } | null>(null);
+  const [intact, setIntact] = useState<boolean | null>(null); // la vidéo sera-t-elle recopiée sans réencodage ?
   const cancel = useRef<(() => Promise<void>) | null>(null);
   const musicInput = useRef<HTMLInputElement | null>(null);
+  const urls = useRef<string[]>([]);
+  const alive = useRef(true);
 
   useEffect(() => { audioFormatSupport().then((s) => { setSupport(s); if (!s.m4a) setFmt(s.ogg ? "ogg" : "wav"); }); }, []);
-  useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
+  // En quittant l'outil seulement : annuler le traitement en cours et libérer les URL des résultats
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      cancel.current?.().catch(() => {});
+      urls.current.forEach((u) => URL.revokeObjectURL(u));
+      urls.current = [];
+    };
+  }, []);
+  useEffect(() => {
+    let current = true;
+    setIntact(null);
+    videoStaysIntact(file, range[0]).then((ok) => { if (current) setIntact(ok); }).catch(() => { if (current) setIntact(false); });
+    return () => { current = false; };
+  }, [file, range[0]]);
 
   const dur = range[1] - range[0];
   const hasAudio = !!info.audio;
@@ -56,15 +74,19 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
 
   async function run(kind: "video" | "audio") {
     setError(null);
+    setResult(null); // pas d'ancien résultat affiché à côté d'une erreur
     setProgress(0);
     try {
       const r = kind === "audio"
-        ? await extractAudio(file, range[0], range[1], fmt, setProgress, (c) => (cancel.current = c))
+        ? { ...(await extractAudio(file, range[0], range[1], fmt, setProgress, (c) => (cancel.current = c))), reencoded: false }
         : await editAudio(file, {
             start: range[0], end: range[1], volume: volume / 100, fadeIn, fadeOut,
             music: music ? { pcm: music, mode: musicMode, volume: musicVolume / 100, offset: musicOffset, loop, fadeIn: musicFade, fadeOut: musicFade } : null,
-          }, mute, setProgress, (c) => (cancel.current = c));
-      setResult({ url: URL.createObjectURL(r.blob), blob: r.blob, ext: r.ext, kind });
+          }, mute, info.video?.bitrate || 2e6, setProgress, (c) => (cancel.current = c));
+      if (!alive.current) return;
+      const url = URL.createObjectURL(r.blob);
+      urls.current.push(url);
+      setResult({ url, blob: r.blob, ext: r.ext, kind, reencoded: r.reencoded });
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Traitement impossible : ${e.message}` : "Traitement impossible.");
     } finally {
@@ -147,7 +169,11 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
               )}
             </>
           )}
-          <p className="vx-muted">La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image.</p>
+          <p className="vx-muted">{intact === null
+            ? "Vérification de la vidéo…"
+            : intact
+              ? "La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image."
+              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, au débit de la source). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <HudButton action="apply-audio" label={mute ? "Retirer le son" : "Appliquer au son"} busy={progress !== null} busyLabel={busy("Traitement du son")} onClick={() => run("video")} />
             {progress !== null && <button type="button" className="vx-btn" onClick={() => cancel.current?.()}>Annuler</button>}
@@ -169,7 +195,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
       {error && <p className="vx-alert">{error}</p>}
       {result && (
         <div className="vx-result">
-          <span>✓ {result.kind === "audio" ? "Son extrait" : "Vidéo avec le nouveau son"} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}</span>
+          <span>✓ {result.kind === "audio" ? "Son extrait" : "Vidéo avec le nouveau son"} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}{result.reencoded ? " · vidéo réencodée" : ""}</span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-${result.kind === "audio" ? "son" : "audio"}.${result.ext}`} />
           {result.kind === "video" && <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, "audio")} />}
         </div>

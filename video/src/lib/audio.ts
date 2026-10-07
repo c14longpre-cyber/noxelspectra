@@ -1,9 +1,10 @@
 // NOXEL Spectra Vidéo — traitement du son.
 // Seul l'audio est réencodé : la vidéo est recopiée telle quelle (rapide, aucune perte d'image).
 import {
-  ALL_FORMATS, AudioSample, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, OggOutputFormat, Output, WavOutputFormat,
+  ALL_FORMATS, AudioSample, BlobSource, BufferTarget, Conversion, EncodedPacketSink, Input, Mp4OutputFormat, OggOutputFormat, Output, WavOutputFormat,
   WebMOutputFormat, canEncodeAudio,
 } from "mediabunny";
+import type { InputVideoTrack } from "mediabunny";
 
 type Progress = (p: number) => void;
 type Register = (cancel: () => Promise<void>) => void;
@@ -65,7 +66,7 @@ export function processAudio(sample: AudioSample, e: AudioEdit): AudioSample {
   const planes = readPlanar(sample);
   const sr = sample.sampleRate;
   const total = e.end - e.start;
-  const t0 = sample.timestamp - e.start; // temps local dans la sélection
+  const t0 = sample.timestamp; // temps local dans la sélection (Mediabunny a déjà retiré le début)
   const m = e.music;
   const own = m && m.mode === "replace" ? 0 : e.volume;
   for (let i = 0; i < sample.numberOfFrames; i++) {
@@ -91,7 +92,7 @@ export function processAudio(sample: AudioSample, e: AudioEdit): AudioSample {
 }
 
 /** Vitesse : rééchantillonnage simple (la hauteur du son change avec la vitesse). */
-export function resampleForSpeed(sample: AudioSample, speed: number, start: number): AudioSample {
+export function resampleForSpeed(sample: AudioSample, speed: number): AudioSample {
   const planes = readPlanar(sample);
   const n = Math.max(1, Math.floor(sample.numberOfFrames / speed));
   const out = planes.map((p) => {
@@ -104,22 +105,45 @@ export function resampleForSpeed(sample: AudioSample, speed: number, start: numb
     }
     return o;
   });
-  return makeSample(out, sample.sampleRate, Math.max(0, (sample.timestamp - start) / speed));
+  // L'horodatage reçu est déjà relatif au début de la sélection
+  return makeSample(out, sample.sampleRate, Math.max(0, sample.timestamp / speed));
 }
 
 const webmFamily = (codec: string | null) => codec === "vp8" || codec === "vp9";
 
-export async function editAudio(file: File, e: AudioEdit, mute: boolean, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string }> {
+/** WebM ne peut recopier la vidéo que si la sélection commence sur une image clé. */
+async function startsOnKeyFrame(track: InputVideoTrack, start: number): Promise<boolean> {
+  const key = await new EncodedPacketSink(track).getKeyPacket(start, { verifyKeyPackets: true });
+  return !key || key.timestamp >= start;
+}
+
+/** La vidéo sera-t-elle recopiée telle quelle par editAudio ? (faux = réencodage imposé, WebM seulement) */
+export async function videoStaysIntact(file: File, start: number): Promise<boolean> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const vt = await input.getPrimaryVideoTrack();
-    const webm = webmFamily(vt ? await vt.getCodec() : null);
+    if (!vt || !webmFamily(await vt.getCodec())) return true;
+    return await startsOnKeyFrame(vt, start);
+  } finally {
+    input.dispose();
+  }
+}
+
+export async function editAudio(file: File, e: AudioEdit, mute: boolean, sourceBitrate: number, onProgress: Progress, register?: Register): Promise<{ blob: Blob; ext: string; reencoded: boolean }> {
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const vt = await input.getPrimaryVideoTrack();
+    const codec = vt ? await vt.getCodec() : null;
+    const webm = webmFamily(codec);
+    const reencoded = !!vt && webm && !(await startsOnKeyFrame(vt, e.start));
     const output = new Output({ format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
     const conversion = await Conversion.init({
       input,
       output,
       trim: { start: e.start, end: e.end },
-      // La vidéo n'est pas touchée : recopiée sans réencodage
+      // La vidéo est recopiée sans réencodage, sauf en WebM hors image clé : même codec,
+      // jamais au-dessus du débit de la source
+      ...(reencoded ? { video: { codec: codec!, bitrate: Math.round(sourceBitrate) } } : {}),
       audio: mute
         ? { discard: true }
         : { codec: webm ? "opus" : "aac", bitrate: 160000, forceTranscode: true, process: (s: AudioSample) => processAudio(s, e) },
@@ -131,7 +155,7 @@ export async function editAudio(file: File, e: AudioEdit, mute: boolean, onProgr
     await conversion.execute();
     const buffer = output.target.buffer;
     if (!buffer) throw new Error("aucune donnée produite");
-    return { blob: new Blob([buffer], { type: webm ? "video/webm" : "video/mp4" }), ext: webm ? "webm" : "mp4" };
+    return { blob: new Blob([buffer], { type: webm ? "video/webm" : "video/mp4" }), ext: webm ? "webm" : "mp4", reencoded };
   } finally {
     input.dispose();
   }
