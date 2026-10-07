@@ -173,7 +173,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
             ? "Vérification de la vidéo…"
             : intact
               ? "La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image."
-              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, au débit de la source). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
+              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, au plus au débit de la source). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <HudButton action="apply-audio" label={mute ? "Retirer le son" : "Appliquer au son"} busy={progress !== null} busyLabel={busy("Traitement du son")} onClick={() => run("video")} />
             {progress !== null && <button type="button" className="vx-btn" onClick={() => cancel.current?.()}>Annuler</button>}

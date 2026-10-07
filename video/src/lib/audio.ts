@@ -91,22 +91,46 @@ export function processAudio(sample: AudioSample, e: AudioEdit): AudioSample {
   return makeSample(planes, sr, sample.timestamp);
 }
 
-/** Vitesse : rééchantillonnage simple (la hauteur du son change avec la vitesse). */
-export function resampleForSpeed(sample: AudioSample, speed: number): AudioSample {
-  const planes = readPlanar(sample);
-  const n = Math.max(1, Math.floor(sample.numberOfFrames / speed));
-  const out = planes.map((p) => {
-    const o = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      const x = i * speed;
-      const j = Math.floor(x);
-      const f = x - j;
-      o[i] = (p[j] || 0) * (1 - f) + (p[Math.min(j + 1, p.length - 1)] || 0) * f;
+/** Vitesse : rééchantillonnage simple (la hauteur du son change avec la vitesse).
+ *  La position de lecture et le dernier échantillon sont gardés d'un bloc au suivant :
+ *  traités séparément, les blocs perdent chacun une fraction d'échantillon et le son clique. */
+export function createSpeedResampler(speed: number): (sample: AudioSample) => AudioSample | null {
+  let phase = 0; // position de lecture dans le bloc courant (−1 = dernier échantillon du bloc précédent)
+  let prev: number[] = [];
+  let origin = 0; // horodatage de sortie du premier échantillon écrit
+  let written = -1; // échantillons écrits depuis origin (−1 = rien encore)
+  return (sample) => {
+    const n = sample.numberOfFrames;
+    if (!n) return null;
+    const planes = readPlanar(sample);
+    const sr = sample.sampleRate;
+    // L'horodatage reçu est déjà relatif au début de la sélection
+    const expected = Math.max(0, sample.timestamp / speed);
+    // Premier bloc, ou trou dans la piste source : on repart de l'horodatage réel
+    if (written < 0 || prev.length !== planes.length || Math.abs(origin + written / sr - expected) > 0.02) {
+      origin = expected;
+      written = 0;
+      phase = 0;
+      prev = planes.map((p) => p[0]);
     }
-    return o;
-  });
-  // L'horodatage reçu est déjà relatif au début de la sélection
-  return makeSample(out, sample.sampleRate, Math.max(0, sample.timestamp / speed));
+    const count = phase > n - 1 ? 0 : Math.floor((n - 1 - phase) / speed) + 1;
+    const out = planes.map((p, c) => {
+      const o = new Float32Array(count);
+      for (let i = 0; i < count; i++) {
+        const x = phase + i * speed;
+        const j = Math.floor(x);
+        const f = x - j;
+        const a = j < 0 ? prev[c] : p[j];
+        o[i] = a * (1 - f) + (p[j + 1] ?? a) * f;
+      }
+      return o;
+    });
+    const timestamp = origin + written / sr;
+    phase += count * speed - n;
+    prev = planes.map((p) => p[n - 1]);
+    written += count;
+    return count ? makeSample(out, sr, timestamp) : null;
+  };
 }
 
 const webmFamily = (codec: string | null) => codec === "vp8" || codec === "vp9";

@@ -1,7 +1,7 @@
 // NOXEL Spectra Vidéo — Convertir, Pivoter & retourner, Vitesse
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, MovOutputFormat, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
-import type { AudioSample, ConversionOptions, VideoSample } from "mediabunny";
-import { resampleForSpeed } from "./audio";
+import type { ConversionOptions, VideoSample } from "mediabunny";
+import { createSpeedResampler } from "./audio";
 
 export type ContainerId = "mp4" | "webm" | "mov";
 export const CONTAINERS: { id: ContainerId; label: string; video: string[]; audio: string[]; mime: string }[] = [
@@ -98,6 +98,7 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
   const outFps = Math.min(30, Math.max(1, Math.round(fps)));
   const frame = 1 / outFps;
   let lastSlot = -1;
+  const resample = createSpeedResampler(speed);
   const blob = await run(file, id, async () => ({
     trim: { start: range[0], end: range[1] },
     video: {
@@ -118,7 +119,7 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
     // Son gardé : rééchantillonné à la nouvelle vitesse (la hauteur change, comme un disque
     // joué plus vite). Garder la hauteur naturelle demande un étirement temporel, prévu plus tard.
     audio: keepAudio
-      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: (s: AudioSample) => resampleForSpeed(s, speed) }
+      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: resample }
       : { discard: true },
   }), onProgress, register);
   return { blob, ext: id, remuxed: false };
