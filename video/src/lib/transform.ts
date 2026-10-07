@@ -1,7 +1,7 @@
 // NOXEL Spectra Vidéo — Convertir, Pivoter & retourner, Vitesse
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, MovOutputFormat, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
-import type { ConversionOptions, VideoSample } from "mediabunny";
-import { createSpeedResampler } from "./audio";
+import type { AudioSample, ConversionOptions, VideoSample } from "mediabunny";
+import { audioEncoding, audioOptions, createSpeedResampler } from "./audio";
 
 export type ContainerId = "mp4" | "webm" | "mov";
 export const CONTAINERS: { id: ContainerId; label: string; video: string[]; audio: string[]; mime: string }[] = [
@@ -58,14 +58,21 @@ export async function canRemux(file: File, id: ContainerId): Promise<boolean> {
 const defaultVideoCodec = (id: ContainerId) => (id === "webm" ? ("vp9" as const) : ("avc" as const));
 const defaultAudioCodec = (id: ContainerId) => (id === "webm" ? ("opus" as const) : ("aac" as const));
 
-export async function convertVideo(file: File, range: [number, number], id: ContainerId, sourceBitrate: number, onProgress: Progress, register?: Register): Promise<Result> {
+/** Son réencodé : codec du format, au plus au débit de la source, stéréo au plus. */
+async function audioFor(input: Input, id: ContainerId, sourceBitrate: number, process?: (s: AudioSample) => AudioSample | null) {
+  const at = await input.getPrimaryAudioTrack();
+  if (!at) return { codec: defaultAudioCodec(id), bitrate: 128000 };
+  return audioOptions(await audioEncoding(defaultAudioCodec(id), 128000, sourceBitrate, at), process);
+}
+
+export async function convertVideo(file: File, range: [number, number], id: ContainerId, source: { video: number; audio: number }, onProgress: Progress, register?: Register): Promise<Result> {
   const remuxed = await canRemux(file, id);
-  const blob = await run(file, id, async () => ({
+  const blob = await run(file, id, async (input) => ({
     trim: { start: range[0], end: range[1] },
     // Sans réencodage si possible ; sinon codec standard du format, au débit de la source
     ...(remuxed ? {} : {
-      video: { codec: defaultVideoCodec(id), bitrate: Math.max(300000, Math.round(sourceBitrate)) },
-      audio: { codec: defaultAudioCodec(id), bitrate: 128000 },
+      video: { codec: defaultVideoCodec(id), bitrate: Math.max(300000, Math.round(source.video)) },
+      audio: await audioFor(input, id, source.audio),
     }),
   }), onProgress, register);
   return { blob, ext: id, remuxed };
@@ -94,17 +101,17 @@ export async function rotateVideo(file: File, range: [number, number], id: Conta
   return { blob, ext: id, remuxed: metadataOnly };
 }
 
-export async function speedVideo(file: File, range: [number, number], id: ContainerId, speed: number, fps: number, sourceBitrate: number, keepAudio: boolean, onProgress: Progress, register?: Register): Promise<Result> {
+export async function speedVideo(file: File, range: [number, number], id: ContainerId, speed: number, fps: number, source: { video: number; audio: number }, keepAudio: boolean, onProgress: Progress, register?: Register): Promise<Result> {
   const outFps = Math.min(30, Math.max(1, Math.round(fps)));
   const frame = 1 / outFps;
   let lastSlot = -1;
   const resample = createSpeedResampler(speed);
-  const blob = await run(file, id, async () => ({
+  const blob = await run(file, id, async (input) => ({
     trim: { start: range[0], end: range[1] },
     video: {
       codec: defaultVideoCodec(id),
       // Accéléré : le même nombre d'images/s contient plus d'action → un peu plus de débit
-      bitrate: Math.max(300000, Math.round(sourceBitrate * Math.min(2, Math.max(1, speed)))),
+      bitrate: Math.max(300000, Math.round(source.video * Math.min(2, Math.max(1, speed)))),
       forceTranscode: true,
       process: (sample: VideoSample) => {
         const t = sample.timestamp / speed; // horodatage déjà relatif au début de la sélection
@@ -120,7 +127,7 @@ export async function speedVideo(file: File, range: [number, number], id: Contai
     // Son gardé : rééchantillonné à la nouvelle vitesse (la hauteur change, comme un disque
     // joué plus vite). Garder la hauteur naturelle demande un étirement temporel, prévu plus tard.
     audio: keepAudio
-      ? { codec: defaultAudioCodec(id), bitrate: 128000, forceTranscode: true, process: resample }
+      ? await audioFor(input, id, source.audio, resample)
       : { discard: true },
   }), onProgress, register);
   return { blob, ext: id, remuxed: false };

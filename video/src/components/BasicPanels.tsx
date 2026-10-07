@@ -16,6 +16,7 @@ function useJob() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<(Result & { url: string }) | null>(null);
   const cancel = useRef<(() => Promise<void>) | null>(null);
+  const stopped = useRef(false); // annulation demandée, même avant que le traitement soit annulable
   const urls = useRef<string[]>([]);
   const alive = useRef(true);
   // En quittant l'outil seulement : annuler le traitement en cours et libérer les URL des résultats
@@ -23,17 +24,22 @@ function useJob() {
     alive.current = true;
     return () => {
       alive.current = false;
-      cancel.current?.().catch(() => {});
+      stop();
       urls.current.forEach((u) => URL.revokeObjectURL(u));
       urls.current = [];
     };
   }, []);
+  function stop() {
+    stopped.current = true;
+    cancel.current?.().catch(() => {});
+  }
   async function start(job: (onP: (p: number) => void, reg: (c: () => Promise<void>) => void) => Promise<Result>) {
+    stopped.current = false;
     setError(null);
     setResult(null); // pas d'ancien résultat affiché à côté d'une erreur
     setProgress(0);
     try {
-      const r = await job(setProgress, (c) => (cancel.current = c));
+      const r = await job(setProgress, (c) => { cancel.current = c; if (stopped.current) c().catch(() => {}); });
       if (!alive.current) return;
       const url = URL.createObjectURL(r.blob);
       urls.current.push(url);
@@ -45,7 +51,7 @@ function useJob() {
       cancel.current = null;
     }
   }
-  return { progress, error, result, start, cancel };
+  return { progress, error, result, start, stop };
 }
 
 function JobFooter({ job, button, file, suffix, note, onContinue }: {
@@ -57,7 +63,7 @@ function JobFooter({ job, button, file, suffix, note, onContinue }: {
     <>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         {button}
-        {job.progress !== null && <button type="button" className="vx-btn" onClick={() => job.cancel.current?.()}>Annuler</button>}
+        {job.progress !== null && <HudButton action="cancel" compact onClick={job.stop} />}
       </div>
       {job.error && <p className="vx-alert">Traitement impossible : {job.error}</p>}
       {job.result && (
@@ -88,6 +94,7 @@ export function ConvertPanel({ file, info, range, onContinue }: Common) {
   const [remux, setRemux] = useState<boolean | null>(null);
   const job = useJob();
   useEffect(() => { setRemux(null); canRemux(file, target).then(setRemux).catch(() => setRemux(false)); }, [file, target]);
+  const surround = (info.audio?.channels ?? 0) > 2;
   const codecs = `${info.video?.codec.toUpperCase() || "—"}${info.audio ? ` + ${info.audio.codec.toUpperCase()}` : ""}`;
   return (
     <div>
@@ -96,11 +103,11 @@ export function ConvertPanel({ file, info, range, onContinue }: Common) {
       <div className="vx-estimate">
         {remux === null ? <span>Vérification…</span> : remux
           ? <span><b>Conversion instantanée, sans perte</b> : les codecs actuels sont acceptés par ce format, les images sont simplement recopiées.</span>
-          : <span>Réencodage nécessaire vers {target === "webm" ? "VP9 + Opus" : "H.264 + AAC"}, au débit de la source.</span>}
+          : <span>Réencodage nécessaire vers {target === "webm" ? "VP9 + Opus" : "H.264 + AAC"}, au débit vidéo de la source.{surround ? ` Le son ${info.audio!.channels} canaux sera converti en stéréo.` : ""}</span>}
       </div>
       <JobFooter job={job} file={file} suffix="converti" onContinue={onContinue}
         button={<HudButton action="convert" label={`Convertir en ${target.toUpperCase()}`} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Conversion")}
-          onClick={() => job.start((p, r) => convertVideo(file, range, target, info.video?.bitrate || 2e6, p, r))} />} />
+          onClick={() => job.start((p, r) => convertVideo(file, range, target, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, p, r))} />} />
     </div>
   );
 }
@@ -167,12 +174,13 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
           <label className="vx-check"><input type="checkbox" checked={keepAudio} onChange={(e) => setKeepAudio(e.target.checked)} />
             Garder le son — {speed > 1 ? "la voix devient plus aiguë" : "la voix devient plus grave"} (comme un disque joué {speed > 1 ? "plus vite" : "plus lentement"})</label>
         )}
+        {keepAudio && (info.audio?.channels ?? 0) > 2 && <span className="vx-muted">Le son {info.audio!.channels} canaux sera converti en stéréo.</span>}
         {speed < 1 && <span className="vx-muted">Ralenti : chaque image est affichée plus longtemps (pour un ralenti très fluide, filme en 60 ou 120 images/s).</span>}
       </div>
       {noAudioEncoder && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : décoche « Garder le son » ou choisis un autre format de sortie.</p>}
       <JobFooter job={job} file={file} suffix={`x${String(speed).replace(".", ",")}`} onContinue={onContinue}
         button={<HudButton action="speed-video" label={`Appliquer ×${String(speed).replace(".", ",")}`} disabled={noAudioEncoder} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Traitement")}
-          onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, info.video?.bitrate || 2e6, keepAudio && !!info.audio, p, r))} />} />
+          onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, keepAudio && !!info.audio, p, r))} />} />
     </div>
   );
 }

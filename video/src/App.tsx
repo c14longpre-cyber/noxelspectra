@@ -50,6 +50,7 @@ export default function App() {
   const [cutProgress, setCutProgress] = useState<number | null>(null);
   const [cutResult, setCutResult] = useState<{ url: string; size: number; ext: string; duration: number; requested: number; blob: Blob } | null>(null);
   const cancelCut = useRef<(() => Promise<void>) | null>(null);
+  const cutStopped = useRef(false); // annulation demandée, même avant que la découpe soit annulable
   const [cutMode, setCutMode] = useState<"precise" | "fast">("precise");
 
   useEffect(() => {
@@ -90,10 +91,19 @@ export default function App() {
 
   async function runCut() {
     if (!file) return;
+    cutStopped.current = false;
     setError(null);
+    // Pas d'ancien extrait affiché pendant ou après une nouvelle découpe (échouée ou annulée)
+    setCutResult((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
     setCutProgress(0);
     try {
-      const r = await cutVideo(file, range[0], range[1], cutMode, (p) => setCutProgress(p), (c) => (cancelCut.current = c));
+      const r = await cutVideo(file, range[0], range[1], cutMode, (p) => setCutProgress(p), (c) => {
+        cancelCut.current = c;
+        if (cutStopped.current) c().catch(() => {});
+      });
       setCutResult((prev) => {
         if (prev) URL.revokeObjectURL(prev.url);
         return { url: URL.createObjectURL(r.blob), size: r.blob.size, ext: r.ext, duration: r.duration, requested: range[1] - range[0], blob: r.blob };
@@ -245,7 +255,7 @@ export default function App() {
                 <HudButton action="cut-video" disabled={!file || duration <= 0} busy={cutProgress !== null}
                   busyLabel={cutProgress !== null ? `Découpe… ${Math.round(cutProgress * 100)} %` : undefined} onClick={runCut} />
                 {cutProgress !== null && (
-                  <button type="button" className="vx-btn" onClick={() => cancelCut.current?.()}>Annuler</button>
+                  <HudButton action="cancel" compact onClick={() => { cutStopped.current = true; cancelCut.current?.().catch(() => {}); }} />
                 )}
               </div>
               {cutResult && (

@@ -65,7 +65,8 @@ export function Timeline({ video, duration, inPoint, outPoint, onChange }: Props
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
-      if (e.code === "Space") { e.preventDefault(); toggle(); }
+      // Espace sur un bouton ou un lien active ce bouton, pas la lecture
+      if (e.code === "Space") { if (t && (t.tagName === "BUTTON" || t.tagName === "A")) return; e.preventDefault(); toggle(); }
       else if (e.key === "i" || e.key === "I") setIn();
       else if (e.key === "o" || e.key === "O") setOut();
       else if (e.key === "ArrowLeft") { e.preventDefault(); seek(time - (e.shiftKey ? 0.1 : 1)); }

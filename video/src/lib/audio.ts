@@ -159,15 +159,82 @@ const BITRATES = [32000, 48000, 64000, 96000, 128000, 160000, 192000];
  *  Certains encodeurs AAC n'acceptent que quelques débits fixes (96, 128, 160, 192 kb/s) : on prend
  *  alors le débit accepté le plus proche, quitte à dépasser une source à faible débit (plancher de
  *  l'encodeur : une source à 24 kb/s sort à 96 kb/s sous Chrome/Windows). */
-async function pickBitrate(codec: "aac" | "opus", target: number, source: number, track: InputAudioTrack): Promise<number> {
-  const cap = source > 0 ? Math.min(target, Math.round(source)) : target;
+const capBitrate = (target: number, source: number) => (source > 0 ? Math.min(target, Math.round(source)) : target);
+
+async function pickBitrate(codec: "aac" | "opus", target: number, source: number, numberOfChannels: number, sampleRate: number): Promise<number | null> {
+  const cap = capBitrate(target, source);
   const near = BITRATES.filter((b) => b <= cap * 1.1 && b <= target).reverse(); // 124 kb/s mesurés = 128 nominal
   const above = BITRATES.filter((b) => b > cap * 1.1);
-  const [numberOfChannels, sampleRate] = await Promise.all([track.getNumberOfChannels(), track.getSampleRate()]);
   for (const bitrate of [cap, ...near, ...above]) {
     if (await canEncodeAudio(codec, { bitrate, numberOfChannels, sampleRate }).catch(() => false)) return bitrate;
   }
-  return cap; // aucun débit accepté : l'erreur de l'encodeur sera affichée
+  return null;
+}
+
+export type AudioEncoding = {
+  options: { codec: "aac" | "opus"; bitrate: number; numberOfChannels?: number; sampleRate?: number };
+  downmix: boolean; // plus de 2 canaux ramenés à la stéréo
+  gain: number; // à appliquer après le mixage vers la stéréo pour ne pas saturer
+  ok: boolean; // faux : l'encodeur du navigateur refuse ce son, quel que soit le réglage
+};
+
+/** Réglages d'encodage du son, partagés par Audio, Convertir et Vitesse : un débit que l'encodeur
+ *  accepte, et stéréo au plus (en 5.1, l'AAC de Chrome sort 960 kb/s pour 160 demandés). Si
+ *  l'encodeur refuse le taux d'échantillonnage de la source (22,05 ou 32 kHz en AAC), on passe à
+ *  48 kHz, puis à 48 kHz stéréo. */
+export async function audioEncoding(codec: "aac" | "opus", target: number, source: number, track: InputAudioTrack): Promise<AudioEncoding> {
+  const [channels, sampleRate] = await Promise.all([track.getNumberOfChannels(), track.getSampleRate()]);
+  const out = Math.min(channels, 2);
+  // Le mixage 5.1 → stéréo de Mediabunny additionne L + 0,707 × (C + Ls) sans atténuer
+  const gain = channels === 6 ? 1 / (1 + Math.SQRT2) : 1;
+  for (const [ch, sr] of [[out, sampleRate], [out, 48000], [2, 48000]]) {
+    const bitrate = await pickBitrate(codec, target, source, ch, sr);
+    if (bitrate === null) continue;
+    const options = { codec, bitrate, ...(ch !== channels ? { numberOfChannels: ch } : {}), ...(sr !== sampleRate ? { sampleRate: sr } : {}) };
+    return { options, downmix: channels > 2, gain, ok: true };
+  }
+  return { options: { codec, bitrate: capBitrate(target, source) }, downmix: false, gain: 1, ok: false }; // l'erreur de l'encodeur sera affichée
+}
+
+/** Options audio complètes d'une conversion : encodage, puis traitement éventuel (le gain du
+ *  mixage vers la stéréo passe en premier). */
+export function audioOptions(enc: AudioEncoding, process?: (s: AudioSample) => AudioSample | null) {
+  const chain = enc.gain === 1 ? process : (s: AudioSample) => {
+    const planes = readPlanar(s);
+    for (const p of planes) for (let i = 0; i < p.length; i++) p[i] *= enc.gain;
+    const quiet = makeSample(planes, s.sampleRate, s.timestamp);
+    if (!process) return quiet;
+    const out = process(quiet);
+    if (out !== quiet) quiet.close(); // échantillon intermédiaire
+    return out;
+  };
+  return { ...enc.options, ...(chain ? { forceTranscode: true, process: chain } : {}) };
+}
+
+const TARGET_BITRATE = { edit: 160000, m4a: 192000, ogg: 128000 };
+
+export type AudioPlan = { copy: boolean; codec: "aac" | "opus"; bitrate: number; downmix: boolean; ok: boolean };
+
+/** Ce que l'outil fera du son, pour le dire avant d'agir. `mode` : "edit" (Appliquer au son) ou un
+ *  format d'extraction. null = rien à annoncer (pas de son, ou WAV). */
+export async function planAudio(file: File, mode: "edit" | AudioFormat, sourceBitrate: number): Promise<AudioPlan | null> {
+  if (mode === "wav") return null;
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const at = await input.getPrimaryAudioTrack();
+    if (!at) return null;
+    let codec: "aac" | "opus" = mode === "ogg" ? "opus" : "aac";
+    if (mode === "edit") {
+      const vt = await input.getPrimaryVideoTrack();
+      codec = webmFamily(vt ? await vt.getCodec() : null) ? "opus" : "aac";
+    } else if ((await at.getCodec()) === codec) {
+      return { copy: true, codec, bitrate: 0, downmix: false, ok: true };
+    }
+    const enc = await audioEncoding(codec, TARGET_BITRATE[mode], sourceBitrate, at);
+    return { copy: false, codec, bitrate: enc.options.bitrate, downmix: enc.downmix, ok: enc.ok };
+  } finally {
+    input.dispose();
+  }
 }
 
 const EMPTY_AUDIO = "le fichier produit ne contient aucun son (la sélection dépasse peut-être la fin de la piste audio)";
@@ -199,8 +266,7 @@ export async function editAudio(file: File, e: AudioEdit, mute: boolean, source:
     const reencoded = !!vt && webm && !(await startsOnKeyFrame(vt, e.start));
     const output = new Output({ format: webm ? new WebMOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() });
     const at = mute ? null : await input.getPrimaryAudioTrack();
-    const audioCodec = webm ? "opus" : "aac";
-    const audioBitrate = at ? await pickBitrate(audioCodec, 160000, source.audio, at) : 160000;
+    const enc = at ? await audioEncoding(webm ? "opus" : "aac", TARGET_BITRATE.edit, source.audio, at) : null;
     const conversion = await Conversion.init({
       input,
       output,
@@ -208,9 +274,9 @@ export async function editAudio(file: File, e: AudioEdit, mute: boolean, source:
       // La vidéo est recopiée sans réencodage, sauf en WebM hors image clé : même codec,
       // jamais au-dessus du débit de la source
       ...(reencoded ? { video: { codec: codec!, bitrate: Math.round(source.video) } } : {}),
-      audio: mute
+      audio: !enc
         ? { discard: true }
-        : { codec: audioCodec, bitrate: audioBitrate, forceTranscode: true, process: (s: AudioSample) => processAudio(s, e) },
+        : audioOptions(enc, (s) => processAudio(s, e)),
     });
     const lost = conversion.discardedTracks.filter((d) => d.track.type === "video" || (d.track.type === "audio" && d.reason !== "discarded_by_user"));
     if (!conversion.isValid || lost.length) {
@@ -268,9 +334,7 @@ export async function extractAudio(file: File, start: number, end: number, fmt: 
       output,
       audio: fmt === "wav"
         ? { codec: "pcm-s16" }
-        : fmt === "ogg"
-          ? { codec: "opus", bitrate: await pickBitrate("opus", 128000, sourceBitrate, at) }
-          : { codec: "aac", bitrate: await pickBitrate("aac", 192000, sourceBitrate, at) },
+        : audioOptions(await audioEncoding(fmt === "ogg" ? "opus" : "aac", TARGET_BITRATE[fmt], sourceBitrate, at)),
     });
     if (!conversion.isValid) {
       const why = conversion.discardedTracks.filter((d) => d.track.type === "audio").map((d) => d.reason).join(", ");
