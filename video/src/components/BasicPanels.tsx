@@ -7,6 +7,7 @@ import type { ContainerId, Result, RotateOptions } from "../lib/transform";
 import { audioFormatSupport } from "../lib/audio";
 import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
+import { LeadNote } from "./LeadNote";
 
 type Common = { file: File; info: VideoInfo; range: [number, number]; onContinue: (blob: Blob, ext: string, suffix: string) => void };
 
@@ -106,6 +107,7 @@ export function ConvertPanel({ file, info, range, onContinue }: Common) {
           ? <span><b>Conversion instantanée, sans perte</b> : les codecs actuels sont acceptés par ce format, les images sont simplement recopiées.</span>
           : <span>Réencodage nécessaire vers {target === "webm" ? "VP9 + Opus" : "H.264 + AAC"}, au débit vidéo de la source.{surround ? ` Le son ${info.audio!.channels} canaux sera converti en stéréo.` : ""}</span>}
       </div>
+      {remux && target !== "webm" && <LeadNote start={range[0]} />}
       <JobFooter job={job} file={file} suffix="converti" onContinue={onContinue}
         button={<HudButton action="convert" label={`Convertir en ${target.toUpperCase()}`} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Conversion")}
           onClick={() => job.start((p, r) => convertVideo(file, range, target, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, p, r))} />} />
@@ -139,6 +141,7 @@ export function RotatePanel({ file, info, range, onContinue }: Common) {
         : target === "webm"
           ? "Le format WebM ne permet pas d'inscrire la rotation dans le fichier : les images seront réencodées (choisis MP4 pour une rotation instantanée et sans perte)."
           : "La rotation est inscrite dans le fichier : instantané et sans perte, respecté par les navigateurs, téléphones et réseaux."}</p>
+      {!o.bake && target !== "webm" && !nothing && <LeadNote start={range[0]} />}
       <JobFooter job={job} file={file} suffix="pivote" onContinue={onContinue}
         button={<HudButton action="apply-rotation" disabled={nothing} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Rotation")}
           onClick={() => job.start((p, r) => rotateVideo(file, range, target, o, info.video?.bitrate || 2e6, p, r))} />} />

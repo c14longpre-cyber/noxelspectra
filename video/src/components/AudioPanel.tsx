@@ -5,6 +5,7 @@ import { AUDIO_FORMATS, audioFormatSupport, decodeMusic, editAudio, extractAudio
 import type { AudioFormat, AudioPlan, Music } from "../lib/audio";
 import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
+import { LeadNote } from "./LeadNote";
 
 type Props = {
   file: File;
@@ -209,6 +210,8 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
             : intact
               ? "La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image."
               : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, et le poids du fichier peut changer). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
+          {/* MP4 : l'image est recopiée depuis l'image clé précédente (en WebM, hors image clé, elle est réencodée) */}
+          {outCodec === "AAC" && <LeadNote start={range[0]} />}
           {planNotes}
           {!mute && !canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : il ne peut pas modifier le son de cette vidéo. Tu peux quand même le retirer complètement, ou essayer avec un autre navigateur.</p>}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
