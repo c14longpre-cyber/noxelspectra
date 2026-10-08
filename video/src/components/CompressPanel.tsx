@@ -300,7 +300,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       {result && (
         <div className="vx-result">
           <span>
-            {underTarget === false ? "Cible non atteinte ·" : "✓"} {fmtBytes(result.size)} · {result.dims} · {result.delta > 0 ? "+" : "−"}{Math.abs(result.delta)} %
+            {underTarget === false ? "Cible non atteinte ·" : "✓"} {fmtBytes(result.size)} · {result.dims} · {result.delta > 0 ? "+" : result.delta < 0 ? "−" : ""}{Math.abs(result.delta)} %
             {underTarget !== null && (underTarget ? ` · sous les ${result.target} Mo` : ` · au-dessus des ${result.target} Mo`)}
           </span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-compresse.${result.ext}`} />

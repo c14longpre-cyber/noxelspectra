@@ -10,9 +10,12 @@
   .vx-panel.vx-panel--pin .vx-player video { max-height: 30vh; }
   .vx-panel.vx-panel--pin .vx-hint { display: none; }
   /* Au plus trois pistes visibles : au-delà, elles défilent dans le panneau épinglé, qui garde une hauteur bornée */
-  .vx-panel.vx-panel--pin .vx-otracks { max-height: 86px; overflow-y: auto; }
-  /* Un champ atteint au clavier est amené sous le panneau épinglé, pas derrière */
-  html:has(.vx-panel--pin) { scroll-padding-top: calc(30vh + 300px); }
+  /* Barre de défilement masquée : affichée, elle rétrécit les pistes, qui ne sont alors plus alignées sur la timeline */
+  .vx-panel.vx-panel--pin .vx-otracks { max-height: 86px; overflow-y: auto; scrollbar-width: none; }
+  .vx-panel.vx-panel--pin .vx-otracks::-webkit-scrollbar { display: none; }
+  /* Un réglage atteint au clavier est amené sous le panneau épinglé, pas derrière. La marge porte sur les
+     réglages eux-mêmes : posée sur la page, elle ferait aussi remonter la page au focus d'une piste. */
+  html:has(.vx-panel--pin) .vx-textlogo :is(button, a, input, select, textarea) { scroll-margin-top: calc(30vh + 300px); }
 }
 
 .vx-otracks { position: relative; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; user-select: none; }
