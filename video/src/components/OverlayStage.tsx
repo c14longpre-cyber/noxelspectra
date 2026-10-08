@@ -11,14 +11,15 @@ type Props = {
   video: HTMLVideoElement;
   items: OverlayItem[];
   selectedId: string | null;
-  onSelect: (id: string | null) => void;
-  onChange: (id: string, patch: Partial<OverlayItem>) => void;
+  onSelect?: (id: string | null) => void;
+  onChange?: (id: string, patch: Partial<OverlayItem>) => void;
+  readOnly?: boolean; // aperçu seul (filigrane de la section Copyright) : rien à choisir ni à déplacer
 };
 
 const HANDLE = 9; // demi-côté de la poignée, en pixels d'écran
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
-export function OverlayStage({ video, items, selectedId, onSelect, onChange }: Props) {
+export function OverlayStage({ video, items, selectedId, onSelect = () => {}, onChange = () => {}, readOnly = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   // Dernières valeurs lues par la boucle de dessin, sans la relancer à chaque modification
   const live = useRef({ items, selectedId });
@@ -127,6 +128,7 @@ export function OverlayStage({ video, items, selectedId, onSelect, onChange }: P
     }
   }
 
+  if (readOnly) return <canvas ref={canvasRef} className="vx-stage" style={{ pointerEvents: "none" }} aria-hidden="true" />;
   return (
     <canvas
       ref={canvasRef}

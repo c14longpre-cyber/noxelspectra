@@ -14,6 +14,7 @@ import { WebReadyPanel } from "./components/WebReadyPanel";
 import { ConvertPanel, RotatePanel, SpeedPanel } from "./components/BasicPanels";
 import { AudioPanel } from "./components/AudioPanel";
 import { TextLogoPanel } from "./components/TextLogoPanel";
+import { RightsPanel } from "./components/RightsPanel";
 import { OverlayStage } from "./components/OverlayStage";
 import { OverlayTracks } from "./components/OverlayTracks";
 import type { OverlayItem } from "./lib/overlay";
@@ -33,6 +34,7 @@ const TOOLS: Tool[] = [
   { id: "speed", label: "Vitesse", icon: "»", ready: true, plan: "Ralenti, accélération, lecture inversée." },
   { id: "audio", label: "Audio", icon: "♪", ready: true, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
   { id: "text", label: "Texte & logo", icon: "T", ready: true, plan: "Titres, filigrane, position, opacité, apparition/disparition." },
+  { id: "rights", label: "Copyright", icon: "©", ready: true, plan: "Droits inscrits dans le fichier, filigrane visible, vérification du fichier produit." },
   { id: "thumb", label: "Miniature", icon: "▢", ready: true, plan: "Choisir une image de la vidéo, ajouter du texte, exporter une couverture." },
   { id: "export", label: "Exporter", icon: "⇩", ready: false, plan: "Résolution, FPS, qualité, format et préréglages selon l'usage." },
 ];
@@ -59,6 +61,8 @@ export default function App() {
   // Texte & logo : les éléments vivent ici, car l'aperçu, les pistes et le panneau les partagent
   const [overlays, setOverlays] = useState<OverlayItem[]>([]);
   const [overlaySel, setOverlaySel] = useState<string | null>(null);
+  // Copyright : filigrane à montrer sur l'aperçu (calculé par le panneau)
+  const [markPreview, setMarkPreview] = useState<OverlayItem[]>([]);
   const patchOverlay = (id: string, patch: Partial<OverlayItem>) =>
     setOverlays((list) => list.map((i) => (i.id === id ? ({ ...i, ...patch } as OverlayItem) : i)));
   // Choisir un élément amène la tête de lecture dessus s'il n'est pas à l'écran
@@ -156,7 +160,7 @@ export default function App() {
 
   // Compresser a besoin de l'analyse (résolution, débit, images/s) : lancée automatiquement
   useEffect(() => {
-    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed" || tool === "audio" || tool === "text") && file && !info && !busy) runAnalyze();
+    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed" || tool === "audio" || tool === "text" || tool === "rights") && file && !info && !busy) runAnalyze();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, file, info]);
 
@@ -219,6 +223,9 @@ export default function App() {
                   setRange([0, d]);
                 }}
               />
+              {tool === "rights" && videoEl && markPreview.length > 0 && (
+                <OverlayStage video={videoEl} items={markPreview} selectedId={null} readOnly />
+              )}
               {tool === "text" && videoEl && (
                 <OverlayStage video={videoEl} items={overlays} selectedId={overlaySel} onSelect={setOverlaySel} onChange={patchOverlay} />
               )}
@@ -234,7 +241,13 @@ export default function App() {
 
         <section className="vx-panel">
           <h3 className="vx-head"><b>02</b> / {current.label}</h3>
-          {tool === "text" ? (
+          {tool === "rights" ? (
+            file && info ? (
+              <RightsPanel file={file} info={info} range={range} duration={duration} onPreview={setMarkPreview} onContinue={continueWith} />
+            ) : (
+              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+            )
+          ) : tool === "text" ? (
             file && info ? (
               <TextLogoPanel file={file} info={info} range={range} duration={duration} video={videoEl} items={overlays} setItems={setOverlays}
                 selectedId={overlaySel} onSelect={selectOverlay} onContinue={continueWith} />

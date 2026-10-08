@@ -2,7 +2,7 @@
 // Chaque image est redessinée avec les éléments par-dessus, donc la vidéo est réencodée
 // (même famille de codec, au débit de la source). Le son est recopié tel quel.
 import { ALL_FORMATS, BlobSource, BufferSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
-import type { VideoSample } from "mediabunny";
+import type { ConversionOptions, VideoSample } from "mediabunny";
 import { drawOverlays } from "./overlay";
 import type { OverlayItem } from "./overlay";
 import { assertNoLostTrack } from "./tracks";
@@ -18,7 +18,8 @@ export async function burnOverlays(
   end: number,
   sourceBitrate: number,
   onProgress: (p: number) => void,
-  register?: (cancel: () => Promise<void>) => void
+  register?: (cancel: () => Promise<void>) => void,
+  tags?: ConversionOptions["tags"] // métadonnées à inscrire (section Copyright) ; par défaut, celles de la source
 ): Promise<BurnResult> {
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
@@ -40,6 +41,7 @@ export async function burnOverlays(
       input,
       output,
       trim: { start, end },
+      ...(tags ? { tags } : {}),
       video: {
         codec: webm ? "vp9" : "avc",
         // Jamais au-dessus du débit de la source

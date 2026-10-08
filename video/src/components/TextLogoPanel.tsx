@@ -27,6 +27,7 @@ type Props = {
 
 const COLORS: [string, string][] = [["#ffffff", "blanc"], ["#07090f", "noir"], ["#3ddc84", "vert NOXEL"], ["#a855f7", "mauve NOXEL"], ["#ffd23f", "jaune"], ["#ff4d6d", "rose"]];
 const SHORT = 4; // durée par défaut d'un texte ajouté à la tête de lecture (s)
+const LEAD = 0.5; // avance sur la tête de lecture : la durée d'animation par défaut (s)
 const pc = (v: number) => Math.round(v * 100);
 
 /** Champ de temps : on tape librement, la valeur est appliquée en quittant le champ ou avec Entrée. */
@@ -72,7 +73,9 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
   const span = (whole: boolean): [number, number] => {
     if (whole) return [range[0], range[1]];
     const t = video ? video.currentTime : range[0];
-    const start = t >= range[0] && t < range[1] - 0.2 ? t : range[0];
+    // Démarre un peu avant la tête de lecture : l'animation d'apparition est déjà finie à cet instant,
+    // donc l'élément est visible tout de suite et la tête de lecture n'a pas à avancer à chaque ajout
+    const start = t >= range[0] && t < range[1] - 0.2 ? Math.max(range[0], t - LEAD) : range[0];
     return [start, Math.min(start + SHORT, range[1])];
   };
 

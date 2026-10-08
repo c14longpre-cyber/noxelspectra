@@ -44,3 +44,10 @@
 .vx-grad.is-on { border-color: var(--p); box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.4); }
 .vx-editor input[type="color"] { width: 34px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
 .vx-item-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* Copyright : listes « champ → valeur » (droits trouvés, prévus, relus) */
+.vx-rights-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.vx-rights-list > div { padding: 7px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); min-width: 0; }
+.vx-rights-list dt { font: 600 10px/1.4 ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #7f93a8; }
+.vx-rights-list dt small { text-transform: none; letter-spacing: 0; font: 400 11px/1.4 ui-monospace, "SF Mono", Consolas, monospace; color: #9fb0c4; }
+.vx-rights-list dd { margin: 2px 0 0; font-size: 13px; overflow-wrap: anywhere; }
