@@ -48,7 +48,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
   const [status, setStatus] = useState<string | null>(null);
   const [trying, setTrying] = useState(false); // essai de l'encodeur en cours
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; dims: string; saved: number; target: number | null; note: string } | null>(null);
+  const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; dims: string; delta: number; source: number; target: number | null; note: string } | null>(null);
   const job = useCancel();
   const urls = useRef<string[]>([]);
   const [audioReal, setAudioReal] = useState<number | null>(null); // débit audio que l'encodeur utilisera vraiment
@@ -205,9 +205,9 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       if (job.stopped.current) return;
       const url = URL.createObjectURL(r.blob);
       urls.current.push(url);
-      // Gain calculé sur la sélection traitée, pas sur celle affichée plus tard
-      const saved = Math.max(0, Math.round((1 - r.blob.size / sourceBytes) * 100));
-      setResult({ url, blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${outRes.width} × ${outRes.height}`, saved, target: mode === "target" ? targetMb : null, note });
+      // Écart de poids calculé sur la sélection traitée, pas sur celle affichée plus tard
+      const delta = Math.round((r.blob.size / sourceBytes - 1) * 100);
+      setResult({ url, blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${outRes.width} × ${outRes.height}`, delta, source: sourceBytes, target: mode === "target" ? targetMb : null, note });
       setStatus(null);
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Compression impossible : ${e.message}` : "Compression impossible.");
@@ -290,6 +290,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       {error && <p className="vx-alert">{error}</p>}
 
       {result && result.note && <p className="vx-muted">{result.note}</p>}
+      {result && result.size > result.source * 1.02 && <p className="vx-alert">Ce fichier pèse plus que l'extrait d'origine ({fmtBytes(result.source)}) : sur une sélection très courte ou une vidéo déjà légère, cet encodeur ne fait pas mieux que l'original.</p>}
       {result && underTarget === false && (
         <p className="vx-alert">
           Le fichier dépasse les {result.target} Mo : l'encodeur de ce navigateur ne descend pas assez bas pour cette durée.
@@ -299,7 +300,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       {result && (
         <div className="vx-result">
           <span>
-            {underTarget === false ? "Cible non atteinte ·" : "✓"} {fmtBytes(result.size)} · {result.dims} · −{result.saved} %
+            {underTarget === false ? "Cible non atteinte ·" : "✓"} {fmtBytes(result.size)} · {result.dims} · {result.delta > 0 ? "+" : "−"}{Math.abs(result.delta)} %
             {underTarget !== null && (underTarget ? ` · sous les ${result.target} Mo` : ` · au-dessus des ${result.target} Mo`)}
           </span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-compresse.${result.ext}`} />
