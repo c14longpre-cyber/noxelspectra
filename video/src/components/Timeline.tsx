@@ -2,6 +2,7 @@
 // Raccourcis : Espace = lecture/pause, I = début, O = fin, ← → = ±1 s (Maj : ±0,1 s)
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import { HudButton } from "@hud/HudButton";
 import { fmtTime } from "../lib/probe";
 
 type Props = {
@@ -104,10 +105,10 @@ export function Timeline({ video, duration, inPoint, outPoint, onChange }: Props
   return (
     <div className="vx-timeline">
       <div className="vx-transport">
-        <button type="button" className="vx-btn" onClick={toggle} aria-label={playing ? "Pause" : "Lecture"}>{playing ? "❚❚" : "▶"}</button>
+        <HudButton action={playing ? "pause" : "play"} iconOnly onClick={toggle} />
         <span className="vx-time">{fmtTime(time)} / {fmtTime(duration)}</span>
-        <button type="button" className="vx-btn" onClick={setIn} title="Raccourci : I">[ Début</button>
-        <button type="button" className="vx-btn" onClick={setOut} title="Raccourci : O">Fin ]</button>
+        <HudButton action="set-in" compact label="Début" title="Début de la sélection (raccourci : I)" onClick={setIn} />
+        <HudButton action="set-out" compact label="Fin" title="Fin de la sélection (raccourci : O)" onClick={setOut} />
         <span className="vx-sel">Sélection : {fmtTime(inPoint)} → {fmtTime(outPoint)} · <b>{fmtTime(outPoint - inPoint)}</b></span>
       </div>
       <div

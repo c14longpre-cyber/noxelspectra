@@ -63,6 +63,7 @@ export default function App() {
       setError("Ce fichier ne semble pas être une vidéo.");
       return;
     }
+    stopCut(); // sinon l'extrait de l'ancienne vidéo apparaîtrait sous la nouvelle
     setError(null);
     setInfo(null);
     setCutResult((prev) => {

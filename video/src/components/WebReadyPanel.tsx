@@ -1,6 +1,6 @@
 // NOXEL Spectra Vidéo — Prêt pour mon site : vidéo légère, image d'aperçu, code d'intégration, JSON-LD
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HudButton } from "@hud/HudButton";
+import { HudButton, HudLink } from "@hud/HudButton";
 import { RESOLUTIONS, bitrateForQuality, compressVideo, formatSupport, outputSize } from "../lib/compress";
 import type { CompressFormat, SourceInfo } from "../lib/compress";
 import { canvasToBlob, drawCover, isoDuration } from "../lib/frames";
@@ -145,16 +145,16 @@ export function WebReadyPanel({ file, info, range, video }: Props) {
             {outs.map((o) => (
               <div key={o.name} className="vx-done-row">
                 <span>✓ {o.label} · {o.name} · {fmtBytes(o.size)}</span>
-                <a className="vx-btn" href={o.url} download={o.name}>Télécharger</a>
+                <HudLink action="download-result" compact label="Télécharger" href={o.url} download={o.name} />
               </div>
             ))}
-            {!step && outs.length > 1 && <button type="button" className="vx-btn" onClick={downloadAll}>Tout télécharger ({outs.length})</button>}
+            {!step && outs.length > 1 && <HudButton action="download-result" compact label={`Tout télécharger (${outs.length})`} onClick={downloadAll} />}
           </div>
           {!step && (
             <>
-              <h4 className="vx-code-title">Code d'intégration <button type="button" className="vx-btn" onClick={() => copy(html, "html")}>{copied === "html" ? "Copié !" : "Copier"}</button></h4>
+              <h4 className="vx-code-title">Code d'intégration <HudButton action="copy-code" compact label={copied === "html" ? "Copié !" : "Copier"} onClick={() => copy(html, "html")} /></h4>
               <pre className="vx-code">{html}</pre>
-              <h4 className="vx-code-title">Données structurées pour Google (VideoObject) <button type="button" className="vx-btn" onClick={() => copy(`<script type="application/ld+json">\n${jsonLd}\n</script>`, "ld")}>{copied === "ld" ? "Copié !" : "Copier"}</button></h4>
+              <h4 className="vx-code-title">Données structurées pour Google (VideoObject) <HudButton action="copy-code" compact label={copied === "ld" ? "Copié !" : "Copier"} onClick={() => copy(`<script type="application/ld+json">\n${jsonLd}\n</script>`, "ld")} /></h4>
               <pre className="vx-code">{`<script type="application/ld+json">\n${jsonLd}\n</script>`}</pre>
               <p className="vx-hint">Dépose les fichiers dans le dossier indiqué ci-dessus, puis colle le code à l'endroit voulu de ta page. Le JSON-LD aide Google à afficher ta vidéo dans ses résultats ; il ne garantit pas l'affichage.</p>
             </>

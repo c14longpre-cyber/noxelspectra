@@ -1,11 +1,12 @@
 // NOXEL Spectra Vidéo — Décliner pour les réseaux : plusieurs formats en un clic,
 // chacun avec son propre cadrage (aperçu en direct, cadre déplaçable).
 import { useEffect, useRef, useState } from "react";
-import { HudButton } from "@hud/HudButton";
+import { HudButton, HudLink } from "@hud/HudButton";
 import { ASPECTS, reframeVideo, targetDims } from "../lib/reframe";
 import type { Aspect, ReframeMode } from "../lib/reframe";
 import { formatSupport } from "../lib/compress";
 import type { CompressFormat } from "../lib/compress";
+import { useCancel } from "../lib/useCancel";
 import { fmtBytes, referenceBitrate } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 import { AspectIcon, FramePreview } from "./FramePreview";
@@ -17,7 +18,8 @@ type Done = { aspect: Aspect; url: string; size: number; dims: string; name: str
 const DEFAULT_ON: Aspect[] = ["9:16", "1:1", "16:9"];
 
 export function SocialPanel({ file, info, range, video }: Props) {
-  const src = { width: info.video?.width || 0, height: info.video?.height || 0, fps: info.video?.fps || 30 };
+  const src = { width: info.video?.width || 0, height: info.video?.height || 0, fps: info.video?.fps || 30, audioBitrate: info.audio?.bitrate || 0 };
+  const audioEstimate = info.audio ? Math.min(128000, info.audio.bitrate || 128000) : 0;
   const [variants, setVariants] = useState<Variant[]>(() =>
     ASPECTS.map((a) => ({ aspect: a.id, on: DEFAULT_ON.includes(a.id), mode: "crop" as ReframeMode, focus: { x: 0.5, y: 0.5 } }))
   );
@@ -28,8 +30,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
   const [running, setRunning] = useState<{ index: number; total: number; aspect: Aspect; progress: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<Done[]>([]);
-  const cancel = useRef<(() => Promise<void>) | null>(null);
-  const stopped = useRef(false);
+  const job = useCancel();
 
   useEffect(() => {
     formatSupport().then((s) => {
@@ -53,16 +54,16 @@ export function SocialPanel({ file, info, range, video }: Props) {
     const d = targetDims(a, side);
     return Math.round(referenceBitrate(d.width, d.height, fps) * 0.7);
   };
-  const totalEstimate = selected.reduce((sum, v) => sum + ((bitrateOf(v.aspect) + 128000) * dur) / 8, 0);
+  const totalEstimate = selected.reduce((sum, v) => sum + ((bitrateOf(v.aspect) + audioEstimate) * dur) / 8, 0);
   const base = file.name.replace(/\.[^.]+$/, "");
 
   async function runAll() {
     setError(null);
     setDone((prev) => { prev.forEach((d) => URL.revokeObjectURL(d.url)); return []; });
-    stopped.current = false;
+    job.begin();
     const list = selected;
     for (let i = 0; i < list.length; i++) {
-      if (stopped.current) break;
+      if (job.stopped.current) break;
       const v = list[i];
       setRunning({ index: i + 1, total: list.length, aspect: v.aspect, progress: 0 });
       try {
@@ -70,8 +71,9 @@ export function SocialPanel({ file, info, range, video }: Props) {
           file, src,
           { start: range[0], end: range[1], aspect: v.aspect, mode: v.mode, focusX: v.focus.x, focusY: v.focus.y, shortSide: side, format, videoBitrate: bitrateOf(v.aspect), fps30 },
           (p) => setRunning((cur) => (cur ? { ...cur, progress: p } : cur)),
-          (c) => (cancel.current = c)
+          job.register
         );
+        if (job.stopped.current) break;
         const name = `${base}-${v.aspect.replace(":", "x")}.${r.ext}`;
         setDone((prev) => [...prev, { aspect: v.aspect, url: URL.createObjectURL(r.blob), size: r.blob.size, dims: `${r.width} × ${r.height}`, name }]);
       } catch (e) {
@@ -80,7 +82,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
       }
     }
     setRunning(null);
-    cancel.current = null;
+    job.end();
   }
 
   // Télécharge toutes les versions (le navigateur peut demander d'autoriser plusieurs téléchargements)
@@ -148,7 +150,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
         <HudButton action="resize-social" label={`Créer ${selected.length} version(s)`} disabled={!selected.length || !support || (!support.mp4 && !support.webm)}
           busy={running !== null} busyLabel={running ? `Version ${running.index}/${running.total} (${running.aspect}) — ${Math.round(running.progress * 100)} %` : undefined}
           onClick={runAll} />
-        {running && <HudButton action="cancel" compact onClick={() => { stopped.current = true; cancel.current?.().catch(() => {}); }} />}
+        {running && <HudButton action="cancel" compact onClick={job.stop} />}
       </div>
       {error && <p className="vx-alert">{error}</p>}
 
@@ -157,7 +159,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
           {done.map((d) => (
             <div key={d.aspect} className="vx-done-row">
               <span>✓ {d.aspect} · {d.dims} · {fmtBytes(d.size)}</span>
-              <a className="vx-btn" href={d.url} download={d.name}>Télécharger</a>
+              <HudLink action="download-result" compact label="Télécharger" href={d.url} download={d.name} />
             </div>
           ))}
           {done.length > 1 && !running && (

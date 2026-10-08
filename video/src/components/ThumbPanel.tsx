@@ -62,9 +62,7 @@ export function ThumbPanel({ file, url, range, video }: Props) {
   return (
     <div className="vx-thumb">
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-        <button type="button" className="vx-btn" onClick={suggest} disabled={scanning}>
-          {scanning ? "Analyse des images…" : "✨ Suggérer les meilleures images"}
-        </button>
+        <HudButton action="suggest-frames" compact busy={scanning} onClick={suggest} />
         <span className="vx-muted">ou place la tête de lecture sur l'image voulue.</span>
       </div>
       {suggestions && (

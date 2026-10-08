@@ -4,6 +4,8 @@
 // blur  : toute l'image, sur un fond flouté de la vidéo elle-même
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
 import type { VideoSample } from "mediabunny";
+import { audioEncoding, audioOptions } from "./audio";
+import { assertNoLostTrack } from "./tracks";
 import type { CompressFormat } from "./compress";
 
 export type Aspect = "9:16" | "1:1" | "4:5" | "16:9";
@@ -51,7 +53,7 @@ export type ReframeOptions = {
 
 export async function reframeVideo(
   file: File,
-  src: { width: number; height: number; fps: number },
+  src: { width: number; height: number; fps: number; audioBitrate?: number },
   o: ReframeOptions,
   onProgress: (p: number) => void,
   register?: (cancel: () => Promise<void>) => void
@@ -104,17 +106,15 @@ export async function reframeVideo(
       };
     }
 
+    const at = await input.getPrimaryAudioTrack();
     const conversion = await Conversion.init({
       input,
       output,
       trim: { start: o.start, end: o.end },
       video,
-      audio: { codec: mp4 ? "aac" : "opus", bitrate: 128000 },
+      audio: at ? audioOptions(await audioEncoding(mp4 ? "aac" : "opus", 128000, src.audioBitrate || 0, at)) : { discard: true as const },
     });
-    if (!conversion.isValid) {
-      const why = conversion.discardedTracks.map((d) => `${d.track.type} : ${d.reason}`).join(", ");
-      throw new Error(`format non pris en charge par ce navigateur (${why})`);
-    }
+    assertNoLostTrack(conversion); // un son écarté en silence = erreur, pas un « ✓ » sans son
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();

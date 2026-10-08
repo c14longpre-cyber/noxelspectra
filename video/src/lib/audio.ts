@@ -211,6 +211,20 @@ export function audioOptions(enc: AudioEncoding, process?: (s: AudioSample) => A
   return { ...enc.options, ...(chain ? { forceTranscode: true, process: chain } : {}) };
 }
 
+/** Débit que l'encodeur utilisera réellement pour le son de ce fichier (null : pas de son, ou
+ *  encodeur qui le refuse), pour afficher une estimation exacte avant d'agir. */
+export async function realAudioBitrate(file: File, codec: "aac" | "opus", target: number, sourceBitrate: number): Promise<number | null> {
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  try {
+    const at = await input.getPrimaryAudioTrack();
+    if (!at) return null;
+    const enc = await audioEncoding(codec, target, sourceBitrate, at);
+    return enc.ok ? enc.options.bitrate : null;
+  } finally {
+    input.dispose();
+  }
+}
+
 const TARGET_BITRATE = { edit: 160000, m4a: 192000, ogg: 128000 };
 
 export type AudioPlan = { copy: boolean; codec: "aac" | "opus"; bitrate: number; downmix: boolean; ok: boolean };

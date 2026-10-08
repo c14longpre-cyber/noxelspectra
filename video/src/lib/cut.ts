@@ -2,6 +2,7 @@
 // Mediabunny copie les images sans réencoder quand c'est possible (rapide, sans
 // perte) et ne réencode que le nécessaire pour couper précisément à l'image près.
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
+import { assertNoLostTrack } from "./tracks";
 
 export type CutResult = { blob: Blob; ext: "mp4" | "webm"; duration: number };
 // precise : coupe à l'image près (réencodage au débit de la source si nécessaire)
@@ -38,10 +39,7 @@ export async function cutVideo(
           ? { video: { bitrate: sourceBitrate } }
           : {}),
     });
-    if (!conversion.isValid) {
-      const why = conversion.discardedTracks.map((d) => `${d.track.type} : ${d.reason}`).join(", ");
-      throw new Error(`format non pris en charge par ce navigateur (${why})`);
-    }
+    assertNoLostTrack(conversion);
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();

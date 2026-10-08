@@ -6,6 +6,7 @@ import { AspectIcon, FramePreview } from "./FramePreview";
 import type { Aspect, ReframeMode } from "../lib/reframe";
 import { formatSupport } from "../lib/compress";
 import type { CompressFormat } from "../lib/compress";
+import { useCancel } from "../lib/useCancel";
 import { fmtBytes, referenceBitrate } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 
@@ -18,7 +19,8 @@ type Props = {
 };
 
 export function ReframePanel({ file, info, range, video, onContinue }: Props) {
-  const src = { width: info.video?.width || 0, height: info.video?.height || 0, fps: info.video?.fps || 30 };
+  const src = { width: info.video?.width || 0, height: info.video?.height || 0, fps: info.video?.fps || 30, audioBitrate: info.audio?.bitrate || 0 };
+  const audioEstimate = info.audio ? Math.min(128000, info.audio.bitrate || 128000) : 0;
   const [aspect, setAspect] = useState<Aspect>("9:16");
   const [mode, setMode] = useState<ReframeMode>("crop");
   const [focus, setFocus] = useState({ x: 0.5, y: 0.5 });
@@ -29,7 +31,8 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; blob: Blob; ext: string; size: number; dims: string } | null>(null);
-  const cancel = useRef<(() => Promise<void>) | null>(null);
+  const job = useCancel();
+  const urls = useRef<string[]>([]);
 
   useEffect(() => {
     formatSupport().then((s) => {
@@ -37,7 +40,8 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
       if (!s.mp4 && s.webm) setFormat("webm");
     });
   }, []);
-  useEffect(() => () => { if (result) URL.revokeObjectURL(result.url); }, [result]);
+  // Les fichiers produits ne sont libérés qu'en quittant l'outil
+  useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
   const out = targetDims(aspect, Math.min(shortSide, Math.min(src.width, src.height) || shortSide));
   const rect = cropRect(src, aspect, focus.x, focus.y);
@@ -46,23 +50,28 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
 
   const fps = fps30 ? Math.min(30, src.fps) : src.fps;
   const videoBitrate = Math.round(referenceBitrate(out.width, out.height, fps) * 0.7);
-  const estimate = ((videoBitrate + 128000) * (range[1] - range[0])) / 8;
+  const estimate = ((videoBitrate + audioEstimate) * (range[1] - range[0])) / 8;
 
   async function run() {
+    job.begin();
     setError(null);
+    setResult(null); // pas d'ancien résultat affiché à côté d'une erreur ou d'une annulation
     setProgress(0);
     try {
       const r = await reframeVideo(
         file, src,
         { start: range[0], end: range[1], aspect, mode, focusX: focus.x, focusY: focus.y, shortSide: Math.min(shortSide, Math.min(src.width, src.height)), format, videoBitrate, fps30 },
-        setProgress, (c) => (cancel.current = c)
+        setProgress, job.register
       );
-      setResult({ url: URL.createObjectURL(r.blob), blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${r.width} × ${r.height}` });
+      if (job.stopped.current) return;
+      const url = URL.createObjectURL(r.blob);
+      urls.current.push(url);
+      setResult({ url, blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${r.width} × ${r.height}` });
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Recadrage impossible : ${e.message}` : "Recadrage impossible.");
     } finally {
       setProgress(null);
-      cancel.current = null;
+      job.end();
     }
   }
 
@@ -118,7 +127,7 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
         <HudButton action="crop" label={`Créer la version ${aspect}`} busy={progress !== null}
           busyLabel={progress !== null ? `Recadrage… ${Math.round(progress * 100)} %` : undefined}
           disabled={!support || (!support.mp4 && !support.webm)} onClick={run} />
-        {progress !== null && <HudButton action="cancel" compact onClick={() => cancel.current?.()} />}
+        {progress !== null && <HudButton action="cancel" compact onClick={job.stop} />}
       </div>
       {error && <p className="vx-alert">{error}</p>}
       {result && (

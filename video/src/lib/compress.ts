@@ -1,6 +1,8 @@
 // NOXEL Spectra Vidéo — compression dans le navigateur (WebCodecs via Mediabunny).
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat, canEncodeVideo } from "mediabunny";
+import { audioEncoding, audioOptions } from "./audio";
 import { referenceBitrate } from "./probe";
+import { assertNoLostTrack } from "./tracks";
 
 export type CompressFormat = "mp4" | "webm"; // mp4 = H.264 + AAC (compatible partout) ; webm = VP9 + Opus (plus léger)
 export type CompressOptions = {
@@ -13,7 +15,7 @@ export type CompressOptions = {
   videoBitrate: number; // bits/s
   audioBitrate: number; // bits/s
 };
-export type SourceInfo = { width: number; height: number; fps: number; duration: number; videoBitrate: number; hasAudio: boolean };
+export type SourceInfo = { width: number; height: number; fps: number; duration: number; videoBitrate: number; hasAudio: boolean; audioBitrate?: number };
 
 export const RESOLUTIONS = [2160, 1440, 1080, 720, 480, 360];
 
@@ -80,6 +82,11 @@ export async function compressVideo(
       target: new BufferTarget(),
     });
     const size = outputSize(src, o.shortSide);
+    // Son : au plus le débit demandé et celui de la source, à un débit que l'encodeur accepte
+    const at = o.removeAudio ? null : await input.getPrimaryAudioTrack();
+    const audio = at
+      ? { ...audioOptions(await audioEncoding(mp4 ? "aac" : "opus", o.audioBitrate || 128000, src.audioBitrate || 0, at)), forceTranscode: true }
+      : { discard: true as const };
     const conversion = await Conversion.init({
       input,
       output,
@@ -91,14 +98,9 @@ export async function compressVideo(
         ...(o.shortSide ? { width: size.width, height: size.height, fit: "fill" as const } : {}),
         ...(o.fps30 && src.fps > 31 ? { frameRate: 30 } : {}),
       },
-      audio: o.removeAudio
-        ? { discard: true }
-        : { codec: mp4 ? "aac" : "opus", bitrate: o.audioBitrate || 128000, forceTranscode: true },
+      audio,
     });
-    if (!conversion.isValid) {
-      const why = conversion.discardedTracks.map((d) => `${d.track.type} : ${d.reason}`).join(", ");
-      throw new Error(`format non pris en charge par ce navigateur (${why})`);
-    }
+    assertNoLostTrack(conversion); // un son écarté en silence = erreur, pas un « ✓ » sans son
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
