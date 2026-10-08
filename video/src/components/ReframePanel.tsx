@@ -49,7 +49,8 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const nothingToCrop = rect.width >= src.width - 2 && rect.height >= src.height - 2;
 
   const fps = fps30 ? Math.min(30, src.fps) : src.fps;
-  const videoBitrate = Math.round(referenceBitrate(out.width, out.height, fps) * 0.7);
+  // Sous le débit de la source, avec 10 % de marge : l'encodeur dépasse de quelques pour cent
+  const videoBitrate = Math.round(Math.min(referenceBitrate(out.width, out.height, fps) * 0.7, (info.video?.bitrate || Infinity) * 0.9));
   const estimate = ((videoBitrate + audioEstimate) * (range[1] - range[0])) / 8;
 
   async function run() {

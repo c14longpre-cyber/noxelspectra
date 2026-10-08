@@ -60,6 +60,18 @@ export function planForTarget(src: SourceInfo, targetBytes: number, duration: nu
   };
 }
 
+// Résolutions de repli quand l'encodeur ne descend pas jusqu'au débit prévu
+const FLOOR_RESOLUTIONS = [1080, 720, 480, 360, 240, 180, 144];
+
+/** Mêmes réglages à la résolution immédiatement inférieure (null = il n'y en a pas). Le débit
+ *  plancher d'un encodeur ne suit pas toujours le nombre de pixels : on descend d'un cran à la
+ *  fois et on mesure. */
+export function nextLowerResolution(src: SourceInfo, o: CompressOptions): CompressOptions | null {
+  const current = Math.min(o.shortSide ?? Infinity, src.width, src.height);
+  const next = FLOOR_RESOLUTIONS.find((r) => r < current);
+  return next ? { ...o, shortSide: next } : null;
+}
+
 export const estimateBytes = (o: CompressOptions) => Math.round(((o.videoBitrate + o.audioBitrate) * (o.end - o.start)) / 8 / 0.97);
 
 export async function formatSupport(): Promise<Record<CompressFormat, boolean>> {

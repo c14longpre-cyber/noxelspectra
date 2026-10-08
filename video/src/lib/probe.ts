@@ -108,8 +108,9 @@ export async function encoderSupport(): Promise<{ webcodecs: boolean; h264: bool
   return { webcodecs, h264, vp9, av1 };
 }
 
+// Unités décimales, comme les plateformes les comptent : 1 Mo = 1 000 000 octets
 export const fmtBytes = (b: number) =>
-  b < 1024 ? `${b} o` : b < 1048576 ? `${(b / 1024).toFixed(1)} Ko` : b < 1073741824 ? `${(b / 1048576).toFixed(1)} Mo` : `${(b / 1073741824).toFixed(2)} Go`;
+  b < 1000 ? `${Math.round(b)} o` : b < 1e6 ? `${(b / 1e3).toFixed(1)} Ko` : b < 1e9 ? `${(b / 1e6).toFixed(1)} Mo` : `${(b / 1e9).toFixed(2)} Go`;
 export const fmtBitrate = (bps: number) => (bps >= 1e6 ? `${(bps / 1e6).toFixed(1)} Mb/s` : `${Math.round(bps / 1e3)} kb/s`);
 export function fmtTime(s: number): string {
   if (!Number.isFinite(s)) return "0:00";

@@ -52,7 +52,8 @@ export function SocialPanel({ file, info, range, video }: Props) {
   const dur = range[1] - range[0];
   const bitrateOf = (a: Aspect) => {
     const d = targetDims(a, side);
-    return Math.round(referenceBitrate(d.width, d.height, fps) * 0.7);
+    // Sous le débit de la source, avec 10 % de marge : l'encodeur dépasse de quelques pour cent
+    return Math.round(Math.min(referenceBitrate(d.width, d.height, fps) * 0.7, (info.video?.bitrate || Infinity) * 0.9));
   };
   const totalEstimate = selected.reduce((sum, v) => sum + ((bitrateOf(v.aspect) + audioEstimate) * dur) / 8, 0);
   const base = file.name.replace(/\.[^.]+$/, "");
