@@ -1,159 +1,199 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NOXEL Spectra — Coming Soon</title>
-<meta name="description" content="NOXEL Spectra is an image toolkit for the web — conversion, compression, and vectorization. Coming soon.">
+<title>NOXEL Spectra — outils en ligne pour les images et la vidéo</title>
+<meta name="description" content="NOXEL Spectra réunit des outils en ligne pour tes images et tes vidéos : convertir, compresser, redimensionner, détourer, vectoriser, couper et recadrer.">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta property="og:type" content="website">
-<meta property="og:title" content="NOXEL Spectra — Coming Soon">
-<meta property="og:description" content="An image toolkit for the web — conversion, compression, and vectorization. Coming soon.">
+<meta property="og:site_name" content="NOXEL Spectra">
+<meta property="og:locale" content="fr_CA">
+<meta property="og:title" content="NOXEL Spectra — outils en ligne pour les images et la vidéo">
+<meta property="og:description" content="NOXEL Spectra réunit des outils en ligne pour tes images et tes vidéos : convertir, compresser, redimensionner, détourer, vectoriser, couper et recadrer.">
 <meta property="og:url" content="https://www.noxelspectra.com/">
 <meta property="og:image" content="https://www.noxelspectra.com/logo.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="NOXEL Spectra — Coming Soon">
-<meta name="twitter:description" content="An image toolkit for the web — conversion, compression, and vectorization. Coming soon.">
+<meta name="twitter:title" content="NOXEL Spectra — outils en ligne pour les images et la vidéo">
+<meta name="twitter:description" content="NOXEL Spectra réunit des outils en ligne pour tes images et tes vidéos : convertir, compresser, redimensionner, détourer, vectoriser, couper et recadrer.">
 <meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
 <link rel="canonical" href="https://www.noxelspectra.com/">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
-    { "@type": "Organization", "@id": "https://www.noxelspectra.com/#org", "name": "NOXEL Spectra", "url": "https://www.noxelspectra.com/", "logo": "https://www.noxelspectra.com/logo.png", "parentOrganization": { "@type": "Organization", "name": "NOXEL360", "url": "https://noxel360.com" } },
-    { "@type": "WebSite", "@id": "https://www.noxelspectra.com/#site", "name": "NOXEL Spectra", "url": "https://www.noxelspectra.com/", "publisher": { "@id": "https://www.noxelspectra.com/#org" } }
+    {
+      "@type": "Organization",
+      "@id": "https://www.noxelspectra.com/#org",
+      "name": "NOXEL Spectra",
+      "url": "https://www.noxelspectra.com/",
+      "logo": "https://www.noxelspectra.com/logo.png",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "NOXEL360",
+        "url": "https://noxel360.com"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.noxelspectra.com/#site",
+      "name": "NOXEL Spectra",
+      "url": "https://www.noxelspectra.com/",
+      "inLanguage": "fr",
+      "publisher": {
+        "@id": "https://www.noxelspectra.com/#org"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.noxelspectra.com/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Mes images sont-elles conservées ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non. Une image est envoyée à notre serveur le temps du traitement, puis elle n'est pas conservée."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes vidéos sont-elles téléversées ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Non. NOXEL Spectra Vidéo fait tout le travail dans ton navigateur : la vidéo reste sur ton appareil."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quels formats d'image sont pris en charge en sortie ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "JPEG, PNG, WebP, AVIF et GIF. La vectorisation produit un fichier SVG et l'outil Favicons produit un ensemble d'icônes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quelle est la taille maximale d'une image ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "25 Mo par image. Le traitement par lots accepte jusqu'à 20 images et 100 Mo au total."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "NOXEL Spectra Vidéo est-il terminé ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Pas encore : il est en version de test. Les outils déjà en place fonctionnent, d'autres s'ajoutent, et il demande un navigateur récent."
+          }
+        }
+      ]
+    }
   ]
 }
 </script>
 <style>
-  :root {
-    --bg: #07090f;
-    --text: #e8e8ef;
-    --muted: #9a9aab;
-    --green: #3ddc84;
-    --purple: #a855f7;
-  }
+  :root { --bg: #07090f; --text: #e8e8ef; --muted: #9a9aab; --green: #3ddc84; --purple: #a855f7; }
   * { box-sizing: border-box; }
-  html, body {
-    height: 100%;
-    margin: 0;
-  }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 24px;
-  }
-  .glow {
-    position: fixed;
-    top: -20%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 900px;
-    height: 900px;
-    background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%);
-    pointer-events: none;
-  }
-  main {
-    position: relative;
-    max-width: 560px;
-  }
-  .logo {
-    width: 220px;
-    margin-bottom: 32px;
-  }
-  h1 {
-    font-size: 15px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--muted);
-    font-weight: 700;
-    margin: 0 0 12px;
-  }
-  h2 {
-    font-size: 34px;
-    font-weight: 900;
-    line-height: 1.25;
-    margin: 0 0 20px;
-  }
-  h2 span {
-    background: linear-gradient(90deg, var(--green), var(--purple));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  p {
-    color: #cfcfdb;
-    font-size: 16px;
-    line-height: 1.65;
-    margin: 0 0 32px;
-  }
-  .tags {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 40px;
-  }
-  .tags span {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .back {
-    color: var(--green);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-  }
-  .back:hover { text-decoration: underline; }
-  footer {
-    position: fixed;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    color: var(--muted);
-    font-size: 12px;
-  }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.65; }
+  .glow { position: fixed; top: -20%; left: 50%; transform: translateX(-50%); width: 900px; max-width: 100%; height: 900px; background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%); pointer-events: none; }
+  header, main, footer { position: relative; max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; padding-bottom: 20px; }
+  .brand { color: var(--text); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; }
+  .brand span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  nav { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
+  a { color: var(--green); }
+  nav a, footer a { text-decoration: none; }
+  nav a:hover, footer a:hover { text-decoration: underline; }
+  .hero { text-align: center; padding: 28px 0 8px; }
+  .logo { width: 220px; height: auto; max-width: 60%; margin-bottom: 20px; }
+  h1 { font-size: 34px; font-weight: 900; line-height: 1.25; margin: 0 0 16px; }
+  h1 span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: 22px; margin: 44px 0 10px; }
+  h3 { font-size: 16px; margin: 22px 0 4px; }
+  p, li { color: #cfcfdb; font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  .crumbs { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .cta { display: inline-block; margin: 6px 8px 6px 0; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--green); color: var(--green); font-weight: 700; text-decoration: none; }
+  .cta.alt { border-color: var(--purple); color: #e3ccff; }
+  .cta:hover { background: rgba(255,255,255,0.06); }
+  .note { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 56px; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid rgba(255,255,255,0.1); color: var(--muted); font-size: 13px; }
+  footer nav { margin-bottom: 8px; }
 </style>
 </head>
 <body>
 
 <div class="glow"></div>
 
+<header>
+  <a class="brand" href="/"><span>NOXEL</span> Spectra</a>
+  <nav aria-label="Navigation principale">
+    <a href="/images/">Images</a>
+    <a href="/video/">Vidéo</a>
+    <a href="/#confidentialite">Confidentialité</a>
+    <a href="/#questions">Questions</a>
+  </nav>
+</header>
+
 <main>
-  <img class="logo" src="/logo.webp" alt="NOXEL Spectra" width="220" height="184">
-
-  <h1>NOXEL Spectra</h1>
-  <h2>An image toolkit for the web,<br><span>built for speed and simplicity</span></h2>
-  <p>
-    Conversion, compression, and vectorization — designed to help you ship
-    lighter, faster images without the guesswork. Part of the NOXEL ecosystem,
-    launching soon.
-  </p>
-
-  <div class="tags">
-    <span>Format conversion</span>
-    <span>Target-size compression</span>
-    <span>Color palettes</span>
-    <span>SVG vectorization</span>
-    <span>Favicon generation</span>
+  <div class="hero">
+    <img class="logo" src="/logo.webp" alt="NOXEL Spectra" width="220" height="184">
+    <h1>NOXEL Spectra,<br><span>tes images et tes vidéos, prêtes pour le web</span></h1>
+    <p>NOXEL Spectra réunit des outils en ligne pour préparer tes images et tes vidéos : convertir, compresser, redimensionner, détourer, vectoriser, couper et recadrer. Tu choisis un fichier, tu règles, tu télécharges le résultat.</p>
+    <p>
+      <a class="cta" href="https://app.noxelspectra.com/">Ouvrir Spectra pour les images</a>
+      <a class="cta alt" href="https://video.noxelspectra.com/">Essayer Spectra Vidéo (test)</a>
+    </p>
   </div>
 
-  <a class="back" href="https://noxel360.com">← Back to NOXEL360</a>
+  <h2 id="images">Des outils pour les images</h2>
+  <p>Spectra pour les images couvre le travail de tous les jours : changer de format, alléger un fichier jusqu'à un poids précis, adapter une image à un réseau social ou préparer les icônes d'un site.</p>
+  <ul>
+    <li>Convertir et compresser en JPEG, PNG, WebP, AVIF ou GIF.</li>
+    <li>Redimensionner, rogner, pivoter, et traiter plusieurs images d'un coup.</li>
+    <li>Supprimer l'arrière-plan d'une photo.</li>
+    <li>Vectoriser un logo en SVG et générer des favicons.</li>
+  </ul>
+  <p><a href="/images/">Voir tous les outils pour les images</a></p>
+
+  <h2 id="video">Des outils pour la vidéo</h2>
+  <p>NOXEL Spectra Vidéo travaille directement dans ton navigateur. Il est en version de test : tu peux déjà couper, compresser, convertir et recadrer une vidéo, régler le son et la vitesse, ajouter du texte ou un logo.</p>
+  <p><a href="/video/">Voir les outils pour la vidéo</a></p>
+
+  <h2 id="confidentialite">Confidentialité</h2>
+  <p>Tes fichiers t'appartiennent. Pour les images, le fichier est envoyé à notre serveur le temps du traitement, puis il n'est pas conservé. Pour la vidéo, rien n'est téléversé : tout se passe sur ton appareil.</p>
+
+  <h2 id="questions">Questions fréquentes</h2>
+  <h3>Mes images sont-elles conservées ?</h3>
+  <p>Non. Une image est envoyée à notre serveur le temps du traitement, puis elle n'est pas conservée.</p>
+  <h3>Mes vidéos sont-elles téléversées ?</h3>
+  <p>Non. NOXEL Spectra Vidéo fait tout le travail dans ton navigateur : la vidéo reste sur ton appareil.</p>
+  <h3>Quels formats d'image sont pris en charge en sortie ?</h3>
+  <p>JPEG, PNG, WebP, AVIF et GIF. La vectorisation produit un fichier SVG et l'outil Favicons produit un ensemble d'icônes.</p>
+  <h3>Quelle est la taille maximale d'une image ?</h3>
+  <p>25 Mo par image. Le traitement par lots accepte jusqu'à 20 images et 100 Mo au total.</p>
+  <h3>NOXEL Spectra Vidéo est-il terminé ?</h3>
+  <p>Pas encore : il est en version de test. Les outils déjà en place fonctionnent, d'autres s'ajoutent, et il demande un navigateur récent.</p>
+
+  <h2>L'écosystème NOXEL</h2>
+  <p>NOXEL Spectra est un module de <a href="https://noxel360.com">NOXEL360</a>, un ensemble d'outils pour créer et faire connaître un site web.</p>
 </main>
 
-<footer>NOXEL Spectra — part of the NOXEL ecosystem</footer>
+<footer>
+  <nav aria-label="Pied de page">
+    <a href="/">Accueil</a>
+    <a href="/images/">Outils pour les images</a>
+    <a href="/video/">Outils pour la vidéo</a>
+    <a href="https://noxel360.com">NOXEL360</a>
+  </nav>
+  NOXEL Spectra fait partie de l'écosystème NOXEL.
+</footer>
 
 </body>
 </html>

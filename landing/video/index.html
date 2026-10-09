@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outils pour la vidéo — NOXEL Spectra Vidéo</title>
+<meta name="description" content="NOXEL Spectra Vidéo, en version de test : couper, compresser, convertir, recadrer et pivoter une vidéo dans ton navigateur, sans téléverser le fichier.">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NOXEL Spectra">
+<meta property="og:locale" content="fr_CA">
+<meta property="og:title" content="Outils pour la vidéo — NOXEL Spectra Vidéo">
+<meta property="og:description" content="NOXEL Spectra Vidéo, en version de test : couper, compresser, convertir, recadrer et pivoter une vidéo dans ton navigateur, sans téléverser le fichier.">
+<meta property="og:url" content="https://www.noxelspectra.com/video/">
+<meta property="og:image" content="https://www.noxelspectra.com/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Outils pour la vidéo — NOXEL Spectra Vidéo">
+<meta name="twitter:description" content="NOXEL Spectra Vidéo, en version de test : couper, compresser, convertir, recadrer et pivoter une vidéo dans ton navigateur, sans téléverser le fichier.">
+<meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
+<link rel="canonical" href="https://www.noxelspectra.com/video/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.noxelspectra.com/#org",
+      "name": "NOXEL Spectra",
+      "url": "https://www.noxelspectra.com/",
+      "logo": "https://www.noxelspectra.com/logo.png",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "NOXEL360",
+        "url": "https://noxel360.com"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.noxelspectra.com/#site",
+      "name": "NOXEL Spectra",
+      "url": "https://www.noxelspectra.com/",
+      "inLanguage": "fr",
+      "publisher": {
+        "@id": "https://www.noxelspectra.com/#org"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Accueil",
+          "item": "https://www.noxelspectra.com/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Vidéo",
+          "item": "https://www.noxelspectra.com/video/"
+        }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root { --bg: #07090f; --text: #e8e8ef; --muted: #9a9aab; --green: #3ddc84; --purple: #a855f7; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.65; }
+  .glow { position: fixed; top: -20%; left: 50%; transform: translateX(-50%); width: 900px; max-width: 100%; height: 900px; background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%); pointer-events: none; }
+  header, main, footer { position: relative; max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; padding-bottom: 20px; }
+  .brand { color: var(--text); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; }
+  .brand span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  nav { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
+  a { color: var(--green); }
+  nav a, footer a { text-decoration: none; }
+  nav a:hover, footer a:hover { text-decoration: underline; }
+  .hero { text-align: center; padding: 28px 0 8px; }
+  .logo { width: 220px; height: auto; max-width: 60%; margin-bottom: 20px; }
+  h1 { font-size: 34px; font-weight: 900; line-height: 1.25; margin: 0 0 16px; }
+  h1 span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: 22px; margin: 44px 0 10px; }
+  h3 { font-size: 16px; margin: 22px 0 4px; }
+  p, li { color: #cfcfdb; font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  .crumbs { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .cta { display: inline-block; margin: 6px 8px 6px 0; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--green); color: var(--green); font-weight: 700; text-decoration: none; }
+  .cta.alt { border-color: var(--purple); color: #e3ccff; }
+  .cta:hover { background: rgba(255,255,255,0.06); }
+  .note { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 56px; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid rgba(255,255,255,0.1); color: var(--muted); font-size: 13px; }
+  footer nav { margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<header>
+  <a class="brand" href="/"><span>NOXEL</span> Spectra</a>
+  <nav aria-label="Navigation principale">
+    <a href="/images/">Images</a>
+    <a href="/video/">Vidéo</a>
+    <a href="/#confidentialite">Confidentialité</a>
+    <a href="/#questions">Questions</a>
+  </nav>
+</header>
+
+<main>
+  <p class="crumbs"><a href="/">Accueil</a> › Vidéo</p>
+  <h1>NOXEL Spectra Vidéo</h1>
+  <p>NOXEL Spectra Vidéo prépare tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé.</p>
+  <p><a class="cta alt" href="https://video.noxelspectra.com/">Essayer Spectra Vidéo (test)</a></p>
+  <p class="note">Version de test : les outils ci-dessous fonctionnent, d'autres s'ajoutent. Un navigateur récent est nécessaire.</p>
+
+  <h2>Alléger et convertir</h2>
+  <ul>
+    <li><b>Analyser</b> : format, durée, dimensions, débit et pistes de la vidéo.</li>
+    <li><b>Moins de 25 Mo</b> et <b>Compresser</b> : viser une taille en Mo ou choisir la qualité.</li>
+    <li><b>Convertir</b> : MP4, WebM ou MOV.</li>
+    <li><b>Prêt pour mon site</b> : une vidéo légère, sa miniature et le code d'intégration.</li>
+  </ul>
+
+  <h2>Couper et cadrer</h2>
+  <ul>
+    <li><b>Couper</b> : garder un extrait de la vidéo.</li>
+    <li><b>Recadrer et redimensionner</b> : 9:16, 1:1, 4:5 ou 16:9.</li>
+    <li><b>Décliner pour les réseaux</b> : versions verticale, carrée et horizontale du même clip.</li>
+    <li><b>Pivoter et retourner</b>, <b>Vitesse</b>.</li>
+  </ul>
+
+  <h2>Son, texte et droits</h2>
+  <ul>
+    <li><b>Audio</b> : couper le son, régler le volume, ajouter une musique.</li>
+    <li><b>Texte et logo</b> : titres et logo placés sur la vidéo.</li>
+    <li><b>Copyright</b> : droits inscrits dans le fichier et filigrane visible.</li>
+    <li><b>Miniature</b> : une image de couverture tirée de la vidéo.</li>
+  </ul>
+
+  <p class="note">Tu travailles aussi avec des images ? Vois <a href="/images/">les outils pour les images</a>.</p>
+</main>
+
+<footer>
+  <nav aria-label="Pied de page">
+    <a href="/">Accueil</a>
+    <a href="/images/">Outils pour les images</a>
+    <a href="/video/">Outils pour la vidéo</a>
+    <a href="https://noxel360.com">NOXEL360</a>
+  </nav>
+  NOXEL Spectra fait partie de l'écosystème NOXEL.
+</footer>
+
+</body>
+</html>
