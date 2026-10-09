@@ -4,14 +4,14 @@
 
 ## Tools
 
-- [Convert & Compress](https://noxelspectra.com/): Convert images between JPEG, PNG, WebP, AVIF and GIF; compress to a manual quality level or an exact target file size in KB.
-- [Resize](https://noxelspectra.com/): Resize images by width/height, with or without preserving aspect ratio.
-- [Color Palette Extractor](https://noxelspectra.com/): Extract an image's dominant colors as hex codes with usage percentages.
-- [Vectorizer](https://noxelspectra.com/): Trace a PNG or WebP logo into a multi-color SVG, with an editable color palette before tracing.
-- [Favicon Generator](https://noxelspectra.com/): Generate a complete favicon package (favicon.ico, PNG sizes, Apple touch icon) from a single logo image.
+- [Convert & Compress](https://app.noxelspectra.com/): Convert images between JPEG, PNG, WebP, AVIF and GIF; compress to a manual quality level or an exact target file size in KB.
+- [Resize](https://app.noxelspectra.com/): Resize images by width/height, with or without preserving aspect ratio.
+- [Color Palette Extractor](https://app.noxelspectra.com/): Extract an image's dominant colors as hex codes with usage percentages.
+- [Vectorizer](https://app.noxelspectra.com/): Trace a PNG or WebP logo into a multi-color SVG, with an editable color palette before tracing.
+- [Favicon Generator](https://app.noxelspectra.com/): Generate a complete favicon package (favicon.ico, PNG sizes, Apple touch icon) from a single logo image.
 
 ## Learn
 
-- [What is SVG?](https://noxelspectra.com/learn/images/image-formats/what-is-svg/): What SVG is, when to use it for logos and icons, and how it compares to PNG.
-- [What is PNG?](https://noxelspectra.com/learn/images/image-formats/what-is-png/): What PNG is, its lossless compression and transparency support, and when to use it over JPEG or WebP.
-- [What is a Favicon?](https://noxelspectra.com/learn/images/web-images/what-is-a-favicon/): What a favicon is, what sizes are needed, what favicon.ico is, and how to generate a full favicon package.
+- [What is SVG?](https://app.noxelspectra.com/learn/images/image-formats/what-is-svg/): What SVG is, when to use it for logos and icons, and how it compares to PNG.
+- [What is PNG?](https://app.noxelspectra.com/learn/images/image-formats/what-is-png/): What PNG is, its lossless compression and transparency support, and when to use it over JPEG or WebP.
+- [What is a Favicon?](https://app.noxelspectra.com/learn/images/web-images/what-is-a-favicon/): What a favicon is, what sizes are needed, what favicon.ico is, and how to generate a full favicon package.
