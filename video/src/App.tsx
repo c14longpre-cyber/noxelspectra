@@ -5,19 +5,23 @@ import { HudButton, HudLink } from "@hud/HudButton";
 import { Timeline } from "./components/Timeline";
 import { analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
 import type { VideoInfo } from "./lib/probe";
-import { cutVideo } from "./lib/cut";
-import { CompressPanel } from "./components/CompressPanel";
-import { ReframePanel } from "./components/ReframePanel";
-import { SocialPanel } from "./components/SocialPanel";
-import { ThumbPanel } from "./components/ThumbPanel";
-import { WebReadyPanel } from "./components/WebReadyPanel";
-import { ConvertPanel, RotatePanel, SpeedPanel } from "./components/BasicPanels";
-import { AudioPanel } from "./components/AudioPanel";
-import { TextLogoPanel } from "./components/TextLogoPanel";
-import { RightsPanel } from "./components/RightsPanel";
+import type { OverlayItem } from "./lib/overlay";
+import { LOAD_FAILED, lazyTool, preloadTools } from "./lib/lazyTool";
 import { OverlayStage } from "./components/OverlayStage";
 import { OverlayTracks } from "./components/OverlayTracks";
-import type { OverlayItem } from "./lib/overlay";
+
+// Chaque outil (et le moteur vidéo qu'il utilise) est téléchargé quand on l'ouvre, pas au premier affichage
+const CompressPanel = lazyTool(() => import("./components/CompressPanel").then((m) => m.CompressPanel));
+const ReframePanel = lazyTool(() => import("./components/ReframePanel").then((m) => m.ReframePanel));
+const SocialPanel = lazyTool(() => import("./components/SocialPanel").then((m) => m.SocialPanel));
+const ThumbPanel = lazyTool(() => import("./components/ThumbPanel").then((m) => m.ThumbPanel));
+const WebReadyPanel = lazyTool(() => import("./components/WebReadyPanel").then((m) => m.WebReadyPanel));
+const ConvertPanel = lazyTool(() => import("./components/BasicPanels").then((m) => m.ConvertPanel));
+const RotatePanel = lazyTool(() => import("./components/BasicPanels").then((m) => m.RotatePanel));
+const SpeedPanel = lazyTool(() => import("./components/BasicPanels").then((m) => m.SpeedPanel));
+const AudioPanel = lazyTool(() => import("./components/AudioPanel").then((m) => m.AudioPanel));
+const TextLogoPanel = lazyTool(() => import("./components/TextLogoPanel").then((m) => m.TextLogoPanel));
+const RightsPanel = lazyTool(() => import("./components/RightsPanel").then((m) => m.RightsPanel));
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
@@ -88,6 +92,9 @@ export default function App() {
       return;
     }
     stopCut(); // sinon l'extrait de l'ancienne vidéo apparaîtrait sous la nouvelle
+    // Une vidéo est choisie : les outils et le moteur de découpe sont téléchargés d'avance
+    preloadTools();
+    import("./lib/cut").catch(() => {});
     setError(null);
     setInfo(null);
     setOverlays([]); // les éléments appartiennent à la vidéo précédente
@@ -121,6 +128,8 @@ export default function App() {
     cutStopped.current = true;
     cancelCut.current?.().catch(() => {});
   }
+  // Une erreur appartient à l'outil où elle est arrivée
+  useEffect(() => { setError(null); }, [tool]);
   // Comme les autres outils : quitter Couper annule la découpe en cours
   useEffect(() => { if (tool !== "cut") stopCut(); }, [tool]);
 
@@ -135,6 +144,7 @@ export default function App() {
     });
     setCutProgress(0);
     try {
+      const { cutVideo } = await import("./lib/cut").catch(() => { throw new Error(LOAD_FAILED); });
       const r = await cutVideo(file, range[0], range[1], cutMode, (p) => setCutProgress(p), (c) => {
         cancelCut.current = c;
         if (cutStopped.current) c().catch(() => {});
@@ -171,13 +181,15 @@ export default function App() {
   }
 
   const current = TOOLS.find((t) => t.id === tool)!;
+  // Texte d'attente des outils qui ont besoin de l'analyse
+  const waitText = !file ? "Choisis d'abord une vidéo." : busy || !error ? "Analyse de la vidéo…" : "L'analyse de la vidéo n'a pas abouti.";
   const baseName = file ? file.name.replace(/\.[^.]+$/, "") : "video";
 
   return (
     <div className="vx-shell">
       <aside className="vx-sidebar">
         <div className="vx-brand">
-          <span className="vx-brand-mark">NOXEL</span> Spectra <b>Vidéo</b>
+          <h1 className="vx-brand-name"><span className="vx-brand-mark">NOXEL</span> Spectra <b>Vidéo</b></h1>
           <span className="vx-badge">TEST</span>
         </div>
         <nav>
@@ -245,20 +257,20 @@ export default function App() {
             file && info ? (
               <RightsPanel file={file} info={info} range={range} duration={duration} onPreview={setMarkPreview} onContinue={continueWith} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "text" ? (
             file && info ? (
               <TextLogoPanel file={file} info={info} range={range} duration={duration} video={videoEl} items={overlays} setItems={setOverlays}
                 selectedId={overlaySel} onSelect={selectOverlay} onContinue={continueWith} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "audio" ? (
             file && info ? (
               <AudioPanel file={file} info={info} range={range} video={videoEl} onContinue={continueWith} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : (tool === "convert" || tool === "rotate" || tool === "speed") ? (
             file && info ? (
@@ -266,7 +278,7 @@ export default function App() {
               : tool === "rotate" ? <RotatePanel file={file} info={info} range={range} onContinue={continueWith} />
               : <SpeedPanel file={file} info={info} range={range} onContinue={continueWith} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "thumb" ? (
             file && url ? <ThumbPanel file={file} url={url} range={range} video={videoEl} /> : <p className="vx-muted">Choisis d'abord une vidéo.</p>
@@ -274,26 +286,26 @@ export default function App() {
             file && info ? (
               <WebReadyPanel file={file} info={info} range={range} video={videoEl} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "social" ? (
             file && info ? (
               <SocialPanel file={file} info={info} range={range} video={videoEl} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "crop" ? (
             file && info ? (
               <ReframePanel file={file} info={info} range={range} video={videoEl} onContinue={continueWith} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "compress" || tool === "under25" ? (
             file && info ? (
               <CompressPanel file={file} info={info} range={range} initialTargetMb={tool === "under25" ? 25 : null}
                 onContinue={(blob, ext) => continueWith(blob, ext, "compresse")} />
             ) : (
-              <p className="vx-muted">{file ? "Analyse de la vidéo…" : "Choisis d'abord une vidéo."}</p>
+              <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "cut" ? (
             <>
@@ -338,7 +350,7 @@ export default function App() {
           ) : (
             <p className="vx-muted">🛠 En construction — {current.plan}</p>
           )}
-          {error && <p className="vx-alert">{error}</p>}
+          {error && <p className="vx-alert" role="alert">{error}</p>}
         </section>
 
         {support && (
