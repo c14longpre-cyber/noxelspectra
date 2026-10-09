@@ -8,36 +8,50 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <title>NOXEL Spectra Vidéo — test</title>
-    <meta name="description" content="Coupe, compresse, convertis et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
+    <meta name="description" content="NOXEL Spectra Vidéo coupe, compresse, convertit et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
     <link rel="canonical" href="https://video.noxelspectra.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="NOXEL Spectra" />
     <meta property="og:locale" content="fr_CA" />
     <meta property="og:title" content="NOXEL Spectra Vidéo" />
-    <meta property="og:description" content="Coupe, compresse, convertis et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
+    <meta property="og:description" content="NOXEL Spectra Vidéo coupe, compresse, convertit et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
     <meta property="og:url" content="https://video.noxelspectra.com/" />
     <meta property="og:image" content="https://app.noxelspectra.com/logo.png" />
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="NOXEL Spectra Vidéo" />
-    <meta name="twitter:description" content="Coupe, compresse, convertis et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
+    <meta name="twitter:description" content="NOXEL Spectra Vidéo coupe, compresse, convertit et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé." />
     <meta name="twitter:image" content="https://app.noxelspectra.com/logo.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "NOXEL Spectra Vidéo",
-        "url": "https://video.noxelspectra.com/",
-        "applicationCategory": "MultimediaApplication",
-        "operatingSystem": "Navigateur web",
-        "inLanguage": "fr",
-        "description": "Coupe, compresse, convertis et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé.",
-        "publisher": { "@type": "Organization", "name": "NOXEL", "url": "https://noxel360.com" }
+        "@graph": [
+          { "@type": "Organization", "@id": "https://www.noxelspectra.com/#org", "name": "NOXEL Spectra", "url": "https://www.noxelspectra.com/", "logo": "https://www.noxelspectra.com/logo.png", "parentOrganization": { "@type": "Organization", "name": "NOXEL360", "url": "https://noxel360.com" } },
+          { "@type": "WebSite", "@id": "https://video.noxelspectra.com/#site", "name": "NOXEL Spectra Vidéo", "url": "https://video.noxelspectra.com/", "inLanguage": "fr", "publisher": { "@id": "https://www.noxelspectra.com/#org" } },
+          {
+            "@type": "WebApplication",
+            "name": "NOXEL Spectra Vidéo",
+            "url": "https://video.noxelspectra.com/",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Navigateur web",
+            "inLanguage": "fr",
+            "description": "NOXEL Spectra Vidéo coupe, compresse, convertit et recadre tes vidéos directement dans ton navigateur. La vidéo reste sur ton appareil : rien n'est téléversé.",
+            "publisher": { "@id": "https://www.noxelspectra.com/#org" }
+          }
+        ]
       }
     </script>
   </head>
   <body>
-    <div id="root"></div>
-    <noscript>NOXEL Spectra Vidéo a besoin de JavaScript pour fonctionner : toute l'édition se fait dans ton navigateur.</noscript>
+    <div id="root">
+      <!-- Affiché pendant le chargement, puis remplacé par l'éditeur -->
+      <div style="max-width: 640px; padding: 24px; line-height: 1.6">
+        <h1 style="font-size: 20px">NOXEL Spectra Vidéo</h1>
+        <p id="vx-loading">Chargement de l'éditeur…</p>
+        <noscript><style>#vx-loading { display: none; }</style><p>NOXEL Spectra Vidéo a besoin de JavaScript pour fonctionner : toute l'édition se fait dans ton navigateur.</p></noscript>
+        <p>NOXEL Spectra Vidéo coupe, compresse, convertit, recadre et pivote tes vidéos directement dans ton navigateur. Tu peux aussi régler la vitesse et le son, ajouter du texte ou un logo, inscrire tes droits dans le fichier et créer une miniature. La vidéo reste sur ton appareil : rien n'est téléversé.</p>
+        <p><a href="https://app.noxelspectra.com/">NOXEL Spectra pour les images</a> · <a href="https://www.noxelspectra.com/">noxelspectra.com</a></p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
