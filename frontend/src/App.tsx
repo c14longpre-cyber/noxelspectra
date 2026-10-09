@@ -1843,9 +1843,9 @@ export default function App() {
         onClick={() => setSidebarOpen(false)}
       />
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
-        <div className="sidebar-logo">
+        <h1 className="sidebar-logo">
           <img src="/noxel_spectra_logo.svg" alt="NOXEL Spectra" className="sidebar-logo-img" />
-        </div>
+        </h1>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
             <button

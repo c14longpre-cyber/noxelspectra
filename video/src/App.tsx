@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { Timeline } from "./components/Timeline";
-import { analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
+import { LoadError, analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
 import type { VideoInfo } from "./lib/probe";
 import type { OverlayItem } from "./lib/overlay";
 import { LOAD_FAILED, lazyTool, preloadTools } from "./lib/lazyTool";
@@ -52,6 +52,7 @@ export default function App() {
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsReload, setNeedsReload] = useState(false); // l'erreur affichée ne se répare qu'en rechargeant la page
   const [support, setSupport] = useState<Awaited<ReturnType<typeof encoderSupport>> | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -89,6 +90,7 @@ export default function App() {
     if (!f) return;
     if (!f.type.startsWith("video/") && !/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name)) {
       setError("Ce fichier ne semble pas être une vidéo.");
+      setNeedsReload(false);
       return;
     }
     stopCut(); // sinon l'extrait de l'ancienne vidéo apparaîtrait sous la nouvelle
@@ -118,6 +120,7 @@ export default function App() {
       setInfo(await analyzeVideo(file));
     } catch (e) {
       setError(e instanceof Error ? `Analyse impossible : ${e.message}` : "Analyse impossible.");
+      setNeedsReload(e instanceof LoadError);
     } finally {
       setBusy(false);
     }
@@ -129,7 +132,7 @@ export default function App() {
     cancelCut.current?.().catch(() => {});
   }
   // Une erreur appartient à l'outil où elle est arrivée
-  useEffect(() => { setError(null); }, [tool]);
+  useEffect(() => { setError(null); setNeedsReload(false); }, [tool]);
   // Comme les autres outils : quitter Couper annule la découpe en cours
   useEffect(() => { if (tool !== "cut") stopCut(); }, [tool]);
 
@@ -144,7 +147,7 @@ export default function App() {
     });
     setCutProgress(0);
     try {
-      const { cutVideo } = await import("./lib/cut").catch(() => { throw new Error(LOAD_FAILED); });
+      const { cutVideo } = await import("./lib/cut").catch(() => { throw new LoadError(LOAD_FAILED); });
       const r = await cutVideo(file, range[0], range[1], cutMode, (p) => setCutProgress(p), (c) => {
         cancelCut.current = c;
         if (cutStopped.current) c().catch(() => {});
@@ -154,7 +157,10 @@ export default function App() {
         return { url: URL.createObjectURL(r.blob), size: r.blob.size, ext: r.ext, duration: r.duration, requested: range[1] - range[0], blob: r.blob };
       });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Découpe impossible : ${e.message}` : "Découpe impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) {
+        setError(e instanceof Error ? `Découpe impossible : ${e.message}` : "Découpe impossible.");
+        setNeedsReload(e instanceof LoadError);
+      }
     } finally {
       setCutProgress(null);
       cancelCut.current = null;
@@ -351,6 +357,7 @@ export default function App() {
             <p className="vx-muted">🛠 En construction — {current.plan}</p>
           )}
           {error && <p className="vx-alert" role="alert">{error}</p>}
+          {error && needsReload && <HudButton action="reload-page" compact onClick={() => window.location.reload()} />}
         </section>
 
         {support && (

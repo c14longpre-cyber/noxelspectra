@@ -224,6 +224,8 @@ a {
 .sidebar-logo {
   display: flex;
   align-items: center;
+  margin: 0;
+  font: inherit;
   padding: 4px 10px 24px;
 }
 

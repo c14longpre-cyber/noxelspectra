@@ -37,12 +37,15 @@ export function referenceBitrate(width: number, height: number, fps: number): nu
   return fps > 40 ? base * 1.5 : base;
 }
 
+/** Un morceau de l'application n'a pas pu être téléchargé : seul un rechargement de la page le répare. */
+export class LoadError extends Error {}
+
 async function loadEngine() {
   try {
     const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
     return { ALL_FORMATS, BlobSource, Input };
   } catch {
-    throw new Error("le moteur vidéo n'a pas pu être téléchargé. Vérifie ta connexion, puis recharge la page (il faudra choisir ta vidéo de nouveau).");
+    throw new LoadError("le moteur vidéo n'a pas pu être téléchargé. Vérifie ta connexion, puis recharge la page (il faudra choisir ta vidéo de nouveau).");
   }
 }
 
@@ -51,7 +54,10 @@ export async function analyzeVideo(file: File): Promise<VideoInfo> {
   const { ALL_FORMATS, BlobSource, Input } = await loadEngine();
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
-    const format = await input.getFormat();
+    // Fichier illisible : message en français plutôt que celui du moteur
+    const format = await input.getFormat().catch(() => {
+      throw new Error("ce fichier n'est pas une vidéo lisible, ou son format n'est pas pris en charge.");
+    });
     const duration = await input.computeDuration();
     const vt = await input.getPrimaryVideoTrack();
     const at = await input.getPrimaryAudioTrack();
