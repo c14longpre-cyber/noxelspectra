@@ -43,18 +43,9 @@
         "publisher": { "@type": "Organization", "name": "NOXEL", "url": "https://noxel360.com" }
       }
     </script>
-    <!-- NOXEL Consent 1.3.0 : chargé avant tout outil facultatif (voir public/consent/) -->
+    <!-- NOXEL Consent 1.4.0 : chargé avant tout outil facultatif ; outils du réseau NOXEL déclarés dans public/consent/sites.js -->
     <link rel="stylesheet" href="/consent/noxel-consent.css">
     <script src="/consent/sites.js"></script>
-    <script>
-      window.NOXEL_CONSENT_CONFIG = Object.assign({}, window.NOXEL_CONSENT_CONFIG, {
-        // Vercel Web Analytics est un composant React (main.tsx) : la catégorie doit être annoncée ici.
-        enabledCategories: ['analytics'],
-        providers: [
-          {name: 'Vercel Web Analytics — Vercel', category: 'analytics', purpose: 'Compter les visites et les pages vues, sans cookie.'}
-        ]
-      });
-    </script>
     <script src="/consent/noxel-consent.js"></script>
   </head>
   <body>
