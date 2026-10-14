@@ -7,6 +7,8 @@ import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
 import { RightsTool } from "./components/spectra-rights/RightsTool";
 import { BgRefiner } from "./components/spectra-bg/BgRefiner";
+import { ExifNotice } from "./components/spectra-exif/ExifNotice";
+import { readMetadata, stripMetadata, type ImageMetadata } from "./utils/exifUtils";
 import {
   deleteProject,
   exportProject,
@@ -468,6 +470,13 @@ export default function App() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [continuing, setContinuing] = useState(false);
   const [chainError, setChainError] = useState<string | null>(null);
+  // Images chargées en attente du choix sur leurs métadonnées (GPS, date, appareil…)
+  const [exifPrompt, setExifPrompt] = useState<{
+    target: "main" | "batch";
+    files: File[];
+    metas: (ImageMetadata | null)[];
+  } | null>(null);
+  const [exifBusy, setExifBusy] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectName, setProjectName] = useState("");
   const [projectCreatedAt, setProjectCreatedAt] = useState(0);
@@ -854,6 +863,62 @@ export default function App() {
     }
   }
 
+  // Point d'entrée des images choisies ou déposées par l'utilisateur :
+  // s'il y a des métadonnées, on demande d'abord s'il faut les supprimer.
+  async function loadMainFile(f: File | null) {
+    if (!f) {
+      handleFileChange(null);
+      return;
+    }
+    const meta = await readMetadata(f);
+    if (meta) setExifPrompt({ target: "main", files: [f], metas: [meta] });
+    else handleFileChange(f);
+  }
+
+  async function loadBatchFiles(list: FileList | null) {
+    if (!list) return;
+    // Copie immédiate : la liste de l'input est vidée juste après l'appel
+    const images = Array.from(list).filter((f) => f.type.startsWith("image/"));
+    if (!images.length) return;
+    const metas: (ImageMetadata | null)[] = [];
+    for (const f of images) metas.push(await readMetadata(f));
+    if (metas.some(Boolean)) setExifPrompt({ target: "batch", files: images, metas });
+    else addBatchFiles(images);
+  }
+
+  async function resolveExifPrompt(strip: boolean) {
+    const prompt = exifPrompt;
+    if (!prompt || exifBusy) return;
+    let files = prompt.files;
+    const failed: string[] = [];
+    if (strip) {
+      setExifBusy(true);
+      files = [];
+      for (let i = 0; i < prompt.files.length; i++) {
+        const f = prompt.files[i];
+        if (!prompt.metas[i]) {
+          files.push(f);
+          continue;
+        }
+        const r = await stripMetadata(f);
+        if (!r.removed) failed.push(f.name);
+        files.push(r.file);
+      }
+      setExifBusy(false);
+    }
+    setExifPrompt(null);
+    const failMsg = failed.length
+      ? `Impossible de retirer les métadonnées de ${failed.map((n) => `« ${n} »`).join(", ")} : fichier d'origine conservé.`
+      : null;
+    if (prompt.target === "main") {
+      handleFileChange(files[0]);
+      if (failMsg) setChainError(failMsg);
+    } else {
+      addBatchFiles(files);
+      if (failMsg) setBatchError(failMsg);
+    }
+  }
+
   function handleFileChange(f: File | null) {
     setHistory(f ? [{ file: f, label: "Original", lossy: false, part: {} }] : []);
     setHistoryIndex(f ? 0 : -1);
@@ -1047,9 +1112,7 @@ export default function App() {
     if (batchRecipeId === id) setBatchRecipeId(PRESET_RECIPES[0].id);
   }
 
-  function addBatchFiles(list: FileList | null) {
-    if (!list) return;
-    const images = Array.from(list).filter((f) => f.type.startsWith("image/"));
+  function addBatchFiles(images: File[]) {
     setBatchError(null);
     setBatchFiles((prev) => {
       const merged = [...prev, ...images];
@@ -1878,7 +1941,7 @@ export default function App() {
           e.preventDefault();
           setIsDraggingOver(false);
           const droppedFile = e.dataTransfer.files?.[0];
-          if (droppedFile) handleFileChange(droppedFile);
+          if (droppedFile) void loadMainFile(droppedFile);
         }}
       >
         <input
@@ -1887,8 +1950,9 @@ export default function App() {
           accept="image/*"
           style={{ display: "none" }}
           onChange={(e) => {
-            handleFileChange(e.target.files?.[0] || null);
+            const picked = e.target.files?.[0] || null;
             e.target.value = "";
+            void loadMainFile(picked);
           }}
         />
         <HudButton action="choose-file" compact onClick={() => mainFileInputRef.current?.click()} />
@@ -3533,7 +3597,7 @@ export default function App() {
         onDrop={(e) => {
           e.preventDefault();
           setBatchDragging(false);
-          addBatchFiles(e.dataTransfer.files);
+          void loadBatchFiles(e.dataTransfer.files);
         }}
       >
         <input
@@ -3543,7 +3607,7 @@ export default function App() {
           multiple
           style={{ display: "none" }}
           onChange={(e) => {
-            addBatchFiles(e.target.files);
+            void loadBatchFiles(e.target.files);
             e.target.value = "";
           }}
         />
@@ -3668,6 +3732,18 @@ export default function App() {
       )}
         </div>
       </main>
+      {exifPrompt && (
+        <ExifNotice
+          items={exifPrompt.files.flatMap((f, i) => {
+            const meta = exifPrompt.metas[i];
+            return meta ? [{ name: f.name, meta }] : [];
+          })}
+          total={exifPrompt.files.length}
+          busy={exifBusy}
+          onStrip={() => void resolveExifPrompt(true)}
+          onKeep={() => void resolveExifPrompt(false)}
+        />
+      )}
     </div>
   );
 }
