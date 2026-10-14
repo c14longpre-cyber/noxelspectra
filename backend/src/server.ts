@@ -1,7 +1,39 @@
 import * as Sentry from "@sentry/node";
 
+// Vie privée : aucune donnée personnelle envoyée à Sentry (pas d'IP, pas de
+// corps de requête, pas de cookies, pas de query string, pas d'utilisateur).
+const SENSITIVE_HEADERS = ["cookie", "authorization", "x-forwarded-for", "x-real-ip", "forwarded", "referer", "user-agent"];
+
 Sentry.init({
-  dsn: "https://ba780166e2a30533cb4531f9f15a47ae@o4512186773078016.ingest.us.sentry.io/4512186795229184",
+  dsn:
+    process.env.SENTRY_DSN ||
+    "https://ba780166e2a30533cb4531f9f15a47ae@o4512186773078016.ingest.us.sentry.io/4512186795229184",
+  // @sentry/node 11 a remplacé `sendDefaultPii` par `dataCollection` :
+  // on coupe explicitement chaque catégorie de données personnelles.
+  dataCollection: {
+    userInfo: false,
+    cookies: false,
+    httpHeaders: { request: { deny: SENSITIVE_HEADERS }, response: false },
+    httpBodies: [],
+    urlQueryParams: false,
+    stackFrameVariables: false,
+  },
+  integrations: [Sentry.httpIntegration({ maxRequestBodySize: "none" })],
+  beforeSend(event) {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.cookies;
+      delete event.request.query_string;
+      const headers = event.request.headers;
+      if (headers) {
+        for (const key of Object.keys(headers)) {
+          if (SENSITIVE_HEADERS.includes(key.toLowerCase())) delete headers[key];
+        }
+      }
+    }
+    delete event.user;
+    return event;
+  },
 });
 import express from "express";
 import cors from "cors";
@@ -38,12 +70,25 @@ function detectFormat(meta: { format?: string; compression?: string }, fallback:
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ALLOWED_ORIGINS (comma-separated) restricts CORS in production.
-// Left unset, all origins are allowed — safe default for local dev.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+// ALLOWED_ORIGINS (comma-separated) restricts CORS.
+// Unset in production: only the official NOXEL Spectra domains are allowed.
+// Unset outside production: all origins are allowed (local dev).
+const DEFAULT_PRODUCTION_ORIGINS = [
+  "https://noxelspectra.com",
+  "https://www.noxelspectra.com",
+  "https://app.noxelspectra.com",
+  "https://video.noxelspectra.com",
+];
+let allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+if (allowedOrigins.length === 0 && process.env.NODE_ENV === "production") {
+  allowedOrigins = DEFAULT_PRODUCTION_ORIGINS;
+  console.warn(
+    "ALLOWED_ORIGINS non défini : liste CORS par défaut utilisée (" + DEFAULT_PRODUCTION_ORIGINS.join(", ") + ")"
+  );
+}
 
 app.use(
   cors({
@@ -1920,11 +1965,12 @@ app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, 
   }
 
   try {
-    const results = await mapWithLimit(files, 2, async (file) => {
+    const results = await mapWithLimit(files, 2, async (file, i) => {
       try {
         return { file, ok: true as const, result: await runRecipe(file.buffer, recipe) };
       } catch (err) {
-        console.error("Batch item error:", file.originalname, err);
+        // Pas de nom de fichier dans les journaux (donnée potentiellement personnelle)
+        console.error(`Batch item error: #${i + 1}/${files.length}, ${file.size} octets, ${file.mimetype}`, err);
         return { file, ok: false as const, error: "Traitement impossible (fichier illisible ou non supporté)" };
       }
     });
@@ -1982,11 +2028,6 @@ app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, 
 });
 
 // Let Sentry capture the error before our own handler responds to the client.
-// TEMPORARY — remove after confirming Sentry receives a real error.
-app.get("/api/sentry-test", () => {
-  throw new Error("Test Sentry volontaire");
-});
-
 Sentry.setupExpressErrorHandler(app);
 
 // Global error handler — catches multer errors (oversized file, wrong

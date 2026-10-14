@@ -46,6 +46,15 @@ const LABELS: Record<string, string> = {
 
 const input = { width: "100%", marginTop: 4 } as const;
 
+// Coché seulement si la personne a déjà choisi de mémoriser son identité
+function hasSavedDefaults(): boolean {
+  try {
+    return localStorage.getItem(DEFAULTS_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
 function loadDefaults(): Fields {
   try {
     const raw = localStorage.getItem(DEFAULTS_KEY);
@@ -57,7 +66,7 @@ function loadDefaults(): Fields {
 
 export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipePart }: Props) {
   const [f, setF] = useState<Fields>(() => ({ status: "copyrighted", licenseChoice: "arr", ...loadDefaults() }));
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(hasSavedDefaults);
   const [advanced, setAdvanced] = useState(false);
   const [origin, setOrigin] = useState(false);
   const [prefillNote, setPrefillNote] = useState<string | null>(null);
@@ -157,6 +166,13 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
           localStorage.setItem(DEFAULTS_KEY, JSON.stringify(keep));
         } catch {
           // stockage plein ou désactivé : sans conséquence
+        }
+      } else {
+        // Case décochée : on oublie l'identité mémorisée auparavant
+        try {
+          localStorage.removeItem(DEFAULTS_KEY);
+        } catch {
+          // stockage désactivé : rien à effacer
         }
       }
     } catch (err) {

@@ -320,9 +320,20 @@ export class SpectraOverlayEditor {
     if(next!=null) { item.text=next.slice(0,500); this.commit(); }
   }
 
+  // Nom de police entre guillemets (« Baloo 2 » est invalide sans) ; les polices
+  // auto-hébergées ne se chargent qu'à l'usage : on les charge puis on redessine.
+  fontFor(item) {
+    const font=`${item.bold?'700 ':''}${item.size}px "${item.font}"`;
+    if(document.fonts && !document.fonts.check(font)) {
+      this.fontsLoading ??= new Set();
+      if(!this.fontsLoading.has(font)) { this.fontsLoading.add(font); document.fonts.load(font).then(()=>this.render()).catch(()=>{}); }
+    }
+    return font;
+  }
+
   measure(item,ctx=this.ctx) {
     if(item.type==='text') {
-      ctx.font=`${item.bold?'700 ':''}${item.size}px ${item.font}`;
+      ctx.font=this.fontFor(item);
       const lines=item.text.split('\n');
       return { w:Math.max(24,...lines.map(line=>ctx.measureText(line||' ').width)), h:item.size*1.25*lines.length };
     }
@@ -337,7 +348,7 @@ export class SpectraOverlayEditor {
       return item.color;
     };
     if(item.type==='text') {
-      ctx.font=`${item.bold?'700 ':''}${item.size}px ${item.font}`;
+      ctx.font=this.fontFor(item);
       ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
       const lines=item.text.split('\n');
       const fs=fillStyle();
