@@ -37,6 +37,10 @@ a { color: var(--g); }
 .vx-muted { color: var(--muted); font-size: 13px; }
 .vx-alert { color: #e0b155; font-size: 13px; }
 .vx-foot { color: #7f93a8; font: 11px/1.4 ui-monospace, "SF Mono", Consolas, monospace; }
+.vx-legal { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 18px; padding: 12px 10px 0; border-top: 1px solid var(--border); font: 11px/1.4 ui-monospace, "SF Mono", Consolas, monospace; }
+.vx-legal-btn { padding: 0; border: 0; background: none; color: #7f93a8; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; }
+.vx-legal-btn:hover, .vx-legal a:hover { color: var(--g); }
+.vx-legal a { color: #7f93a8; }
 
 .vx-drop { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; border-style: dashed; }
 .vx-drop.is-over { border-color: var(--g); background: rgba(61, 220, 132, 0.06); }
