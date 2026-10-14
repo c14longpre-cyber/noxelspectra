@@ -1,6 +1,6 @@
 // NOXEL Spectra — lecture et retrait des métadonnées d'une image, sans dépendance.
 //
-// readMetadata() repère ce qu'un fichier JPEG, PNG ou WebP révèle (position GPS,
+// readMetadata() repère ce qu'un fichier JPEG, PNG, WebP ou AVIF révèle (position GPS,
 // date de prise de vue, appareil, logiciel, blocs XMP/IPTC/texte).
 // stripMetadata() retire ces blocs SANS ré-encoder l'image : les pixels, le
 // profil de couleur (ICC) et le reste du fichier restent identiques à l'octet près.
@@ -10,10 +10,19 @@
 // l'EXIF coucherait donc une photo de téléphone. Quand l'orientation n'est pas 1,
 // on remet un bloc EXIF minimal qui ne contient QUE l'orientation.
 //
+// AVIF (conteneur ISOBMFF/HEIF) : l'EXIF et le XMP sont des « items » dont la
+// position est donnée par la boîte iloc. Les retirer obligerait à recalculer
+// toutes les positions du fichier ; on vide donc leur contenu SUR PLACE (EXIF
+// vide mais valide, XMP remis à zéro), sans changer aucune taille ni position.
+// L'orientation y est portée par les propriétés irot/imir, pas par l'EXIF :
+// vider l'EXIF ne fait pas pivoter l'image. Le HEIC n'est pas analysé : le
+// serveur (sharp précompilé) ne sait pas le décoder, l'application ne le prend
+// donc pas en charge.
+//
 // Toutes les lectures sont bornées : un fichier mal formé ne lève jamais
 // d'exception, il donne simplement null (rien trouvé / rien retiré).
 
-export type ImageMetaFormat = "jpeg" | "png" | "webp";
+export type ImageMetaFormat = "jpeg" | "png" | "webp" | "avif";
 
 export type ImageMetadata = {
   format: ImageMetaFormat;
@@ -80,6 +89,14 @@ export function sniffFormat(b: Uint8Array): ImageMetaFormat | null {
   if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return "jpeg";
   if (b.length >= 8 && b[0] === 0x89 && startsWith(b, 1, "PNG\r\n\x1a\n")) return "png";
   if (b.length >= 12 && startsWith(b, 0, "RIFF") && startsWith(b, 8, "WEBP")) return "webp";
+  if (startsWith(b, 4, "ftyp")) {
+    // Marque principale (octet 8) puis marques compatibles (à partir de l'octet 16)
+    const size = Math.min(u32be(b, 0), b.length, 4096);
+    for (let o = 8; o + 4 <= size; o += o === 8 ? 8 : 4) {
+      const brand = ascii(b, o, 4);
+      if (brand === "avif" || brand === "avis") return "avif";
+    }
+  }
   return null;
 }
 
@@ -505,13 +522,214 @@ function stripWebp(b: Uint8Array, orientation: number | undefined): Uint8Array<A
   return out;
 }
 
+// ── AVIF (ISOBMFF / HEIF) ─────────────────────────────────────────────
+
+type IsoBox = { type: string; start: number; dataStart: number; end: number };
+
+/** Boîtes ISOBMFF entre start et end. Arrêt silencieux sur une boîte mal formée. */
+function isoBoxes(b: Uint8Array, start: number, end: number): IsoBox[] {
+  const boxes: IsoBox[] = [];
+  let pos = start;
+  while (pos + 8 <= end && boxes.length < 10000) {
+    let size = u32be(b, pos);
+    const type = ascii(b, pos + 4, 4);
+    let header = 8;
+    if (size === 1) {
+      size = u64be(b, pos + 8);
+      header = 16;
+    } else if (size === 0) size = end - pos; // jusqu'à la fin du conteneur
+    if (size < header || pos + size > end) break;
+    boxes.push({ type, start: pos, dataStart: pos + header, end: pos + size });
+    pos += size;
+  }
+  return boxes;
+}
+
+function u64be(b: Uint8Array, o: number): number {
+  const hi = u32be(b, o);
+  const lo = u32be(b, o + 4);
+  if (hi < 0 || lo < 0 || hi > 0x1fffff) return -1; // au-delà de 2^53 : refusé
+  return hi * 0x100000000 + lo;
+}
+/** Entier gros-boutiste de 0, 4 ou 8 octets (tailles permises par iloc). */
+function uNbe(b: Uint8Array, o: number, n: number): number {
+  return n === 0 ? 0 : n === 4 ? u32be(b, o) : n === 8 ? u64be(b, o) : -1;
+}
+/** Chaîne terminée par un zéro ; renvoie le texte et la position suivante. */
+function cString(b: Uint8Array, o: number, end: number): { text: string; next: number } | null {
+  let i = o;
+  while (i < end && b[i] !== 0) i++;
+  if (i >= end) return null;
+  return { text: ascii(b, o, Math.min(i - o, MAX_STRING)), next: i + 1 };
+}
+
+type IsoExtent = { pos: number; len: number };
+type IsoItem = { id: number; type: string; contentType?: string; extents?: IsoExtent[] };
+
+/** Items EXIF et XMP de la boîte meta, avec la position de leurs données dans le fichier. */
+function isoMetaItems(b: Uint8Array): IsoItem[] | null {
+  if (sniffFormat(b) !== "avif") return null;
+  const top = isoBoxes(b, 0, b.length);
+  const meta = top.find((x) => x.type === "meta");
+  if (!meta) return [];
+  // meta est une « full box » : 4 octets de version et de drapeaux
+  const children = isoBoxes(b, meta.dataStart + 4, meta.end);
+  const items = new Map<number, IsoItem>();
+
+  const iinf = children.find((x) => x.type === "iinf");
+  if (iinf) {
+    const version = b[iinf.dataStart];
+    const first = iinf.dataStart + 4 + (version === 0 ? 2 : 4);
+    for (const infe of isoBoxes(b, first, iinf.end)) {
+      if (infe.type !== "infe") continue;
+      const v = b[infe.dataStart];
+      let p = infe.dataStart + 4;
+      if (v >= 2) {
+        const id = v === 2 ? u16be(b, p) : u32be(b, p);
+        p += (v === 2 ? 2 : 4) + 2; // item_ID, protection_index
+        const type = ascii(b, p, 4);
+        p += 4;
+        const name = cString(b, p, infe.end);
+        let contentType: string | undefined;
+        if (type === "mime" && name) contentType = cString(b, name.next, infe.end)?.text;
+        if (id >= 0 && (type === "Exif" || type === "mime")) items.set(id, { id, type, contentType });
+      } else {
+        // Versions 0 et 1 : pas de type d'item, seulement un type MIME
+        const id = u16be(b, p);
+        const name = cString(b, p + 4, infe.end);
+        const contentType = name ? cString(b, name.next, infe.end)?.text : undefined;
+        if (id >= 0 && contentType) items.set(id, { id, type: "mime", contentType });
+      }
+    }
+  }
+  if (!items.size) return [];
+
+  const idat = children.find((x) => x.type === "idat");
+  const iloc = children.find((x) => x.type === "iloc");
+  if (iloc) {
+    const version = b[iloc.dataStart];
+    let p = iloc.dataStart + 4;
+    const offsetSize = b[p] >> 4;
+    const lengthSize = b[p] & 15;
+    const baseOffsetSize = b[p + 1] >> 4;
+    const indexSize = version === 1 || version === 2 ? b[p + 1] & 15 : 0;
+    p += 2;
+    const count = version < 2 ? u16be(b, p) : u32be(b, p);
+    p += version < 2 ? 2 : 4;
+    if (version > 2 || count < 0) return [...items.values()];
+    for (let i = 0; i < count && p < iloc.end; i++) {
+      const id = version < 2 ? u16be(b, p) : u32be(b, p);
+      p += version < 2 ? 2 : 4;
+      let method = 0;
+      if (version === 1 || version === 2) {
+        method = u16be(b, p) & 15;
+        p += 2;
+      }
+      p += 2; // data_reference_index
+      const base = uNbe(b, p, baseOffsetSize);
+      p += baseOffsetSize;
+      const extentCount = u16be(b, p);
+      p += 2;
+      if (id < 0 || base < 0 || extentCount < 0) break;
+      const extents: IsoExtent[] = [];
+      let valid = method === 0 || (method === 1 && !!idat);
+      for (let k = 0; k < extentCount; k++) {
+        p += indexSize;
+        const off = uNbe(b, p, offsetSize);
+        p += offsetSize;
+        let len = uNbe(b, p, lengthSize);
+        p += lengthSize;
+        if (p > iloc.end || off < 0 || len < 0) {
+          valid = false;
+          break;
+        }
+        // Méthode 1 : données dans la boîte idat de meta
+        const origin = method === 1 && idat ? idat.dataStart : 0;
+        const limit = method === 1 && idat ? idat.end : b.length;
+        const pos = origin + base + off;
+        if (len === 0) len = limit - pos; // 0 = jusqu'à la fin
+        if (pos < origin || pos + len > limit) valid = false;
+        else extents.push({ pos, len });
+      }
+      if (p > iloc.end) break;
+      const item = items.get(id);
+      if (item && valid) item.extents = extents;
+    }
+  }
+  return [...items.values()];
+}
+
+const MAX_ISO_ITEM = 4 * 1024 * 1024;
+
+/** Copie des données d'un item (bornée). null si position inconnue. */
+function isoItemData(b: Uint8Array, item: IsoItem): Uint8Array | null {
+  if (!item.extents) return null;
+  const total = item.extents.reduce((n, e) => n + e.len, 0);
+  if (total > MAX_ISO_ITEM) return null;
+  return concat(item.extents.map((e) => b.subarray(e.pos, e.pos + e.len)));
+}
+
+const isXmpItem = (item: IsoItem) => item.type === "mime" && item.contentType?.trim() === "application/rdf+xml";
+
+function parseAvif(b: Uint8Array): ImageMetadata | null {
+  const items = isoMetaItems(b);
+  if (!items) return null;
+  const meta = emptyMeta("avif");
+  for (const item of items) {
+    if (item.type === "Exif") {
+      const data = isoItemData(b, item);
+      // Contenu entièrement nul = EXIF déjà vidé
+      if (!data) meta.otherExif = true;
+      else if (data.some((v) => v !== 0)) {
+        // 4 octets : décalage jusqu'à l'en-tête TIFF (souvent 6, après « Exif\0\0 »)
+        const skip = u32be(data, 0);
+        const t = skip >= 0 ? parseTiff(data, 4 + skip, data.length - 4 - skip) : null;
+        if (t) mergeTiff(meta, { ...t, orientation: undefined }); // orientation : irot/imir
+        else meta.otherExif = true;
+      }
+    } else if (isXmpItem(item)) {
+      const data = isoItemData(b, item);
+      if (!data || data.some((v) => v !== 0)) meta.hasXmp = true;
+    }
+  }
+  return meta;
+}
+
+/** Vide sur place les items EXIF et XMP (mêmes tailles, mêmes positions). */
+function stripAvif(b: Uint8Array): Uint8Array<ArrayBuffer> | null {
+  const items = isoMetaItems(b);
+  if (!items) return null;
+  const out = b.slice();
+  for (const item of items) {
+    if (item.type !== "Exif" && !isXmpItem(item)) continue;
+    if (!item.extents) return null; // position inconnue : impossible de garantir le retrait
+    // EXIF vide mais valide : décalage 0, en-tête TIFF, IFD0 sans entrée
+    const fill =
+      item.type === "Exif"
+        ? new Uint8Array([0, 0, 0, 0, 0x4d, 0x4d, 0x00, 0x2a, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0])
+        : new Uint8Array(0);
+    const total = item.extents.reduce((n, e) => n + e.len, 0);
+    let logical = 0;
+    for (const e of item.extents) {
+      out.fill(0, e.pos, e.pos + e.len);
+      if (total >= fill.length && logical < fill.length) {
+        const part = fill.subarray(logical, Math.min(fill.length, logical + e.len));
+        out.set(part, e.pos);
+      }
+      logical += e.len;
+    }
+  }
+  return out;
+}
+
 // ── API publique ──────────────────────────────────────────────────────
 
 /** Analyse des octets. null si rien de notable n'est trouvé (ou format inconnu). */
 export function parseMetadata(bytes: Uint8Array): ImageMetadata | null {
   try {
     const fmt = sniffFormat(bytes);
-    const meta = fmt === "jpeg" ? parseJpeg(bytes) : fmt === "png" ? parsePng(bytes) : fmt === "webp" ? parseWebp(bytes) : null;
+    const meta =
+      fmt === "jpeg" ? parseJpeg(bytes) : fmt === "png" ? parsePng(bytes) : fmt === "webp" ? parseWebp(bytes) : fmt === "avif" ? parseAvif(bytes) : null;
     return meta && isSignificant(meta) ? meta : null;
   } catch {
     return null;
@@ -523,6 +741,10 @@ export function stripMetadataBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> |
   try {
     const fmt = sniffFormat(bytes);
     if (!fmt) return null;
+    if (fmt === "avif") {
+      const avif = stripAvif(bytes);
+      return avif && parseMetadata(avif) === null ? avif : null;
+    }
     const meta = fmt === "jpeg" ? parseJpeg(bytes) : fmt === "png" ? parsePng(bytes) : parseWebp(bytes);
     const orientation = meta?.orientation;
     const out = fmt === "jpeg" ? stripJpeg(bytes, orientation) : fmt === "png" ? stripPng(bytes, orientation) : stripWebp(bytes, orientation);
