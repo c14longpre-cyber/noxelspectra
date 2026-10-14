@@ -12,6 +12,10 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="canonical" href="https://www.noxelspectra.com/pricing/">
 <link rel="stylesheet" href="/pricing/nx-pricing.css">
+<!-- NOXEL Consent 1.4.0 : aucun outil facultatif sur la vitrine ; préférences + relais du choix entre les sites NOXEL -->
+<link rel="stylesheet" href="/consent/noxel-consent.css">
+<script src="/consent/sites.js"></script>
+<script src="/consent/noxel-consent.js"></script>
 </head>
 <body>
   <nav class="nx-nav">
@@ -153,7 +157,8 @@
     </section>
 
     <footer class="nx-foot">
-      © <span id="year"></span> NOXEL Spectra · part of <a href="https://noxel360.com/pricing/">NOXEL360</a>
+      © <span id="year"></span> NOXEL Spectra · part of <a href="https://noxel360.com/pricing/" rel="noopener">NOXEL360</a>
+      · <button type="button" data-noxel-consent-settings style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline">Privacy preferences</button>
     </footer>
   </main>
 
