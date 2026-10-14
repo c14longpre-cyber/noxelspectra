@@ -207,6 +207,10 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="vx-legal">
+          <button type="button" className="vx-legal-btn" data-noxel-consent-settings>Préférences de confidentialité</button>
+          <a href="https://www.noxelspectra.com/#confidentialite" target="_blank" rel="noopener">Confidentialité</a>
+        </div>
       </aside>
 
       <main className="vx-main">
