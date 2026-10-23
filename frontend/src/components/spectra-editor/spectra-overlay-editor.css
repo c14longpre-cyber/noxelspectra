@@ -17,7 +17,9 @@
 .sp-inspector h2{font-size:18px;margin:0 0 8px}.sp-inspector h3{font-size:13px;margin:0 0 10px}
 .sp-help{color:var(--sp-muted);font-size:12px;margin:0 0 12px}
 .sp-section{border-top:2px solid transparent;border-image:linear-gradient(90deg,var(--sp-green),var(--sp-purple),transparent) 1;padding-top:15px;margin-top:17px}
-.sp-stickers{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-height:150px;overflow-y:auto;padding-right:2px}
+.sp-stickers{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;max-height:220px;overflow-y:auto;padding-right:2px}
+.sp-stickers .sp-group{grid-column:1/-1;margin:6px 0 1px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#8fa3bd}
+.sp-stickers .sp-group:first-child{margin-top:0}
 .sp-stickers button{font-size:20px;padding:4px;display:flex;align-items:center;justify-content:center}
 .sp-stickers img{width:20px;height:20px;display:block}
 .sp-layers{display:grid;gap:5px}.sp-layers button{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
