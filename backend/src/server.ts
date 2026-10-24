@@ -43,7 +43,7 @@ import dotenv from "dotenv";
 import archiver = require("archiver");
 import toIco from "to-ico";
 import { Potrace } from "potrace";
-import { parseRecipe, runRecipe, mapWithLimit } from "./ops";
+import { parseRecipe, runRecipe, mapWithLimit, shadowLayer } from "./ops";
 import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
 import { parseRights, hasRights, readRights, missingAfterExport, applyRights } from "./rights";
 import { renderTextOverlay } from "./textOverlay";
@@ -1497,43 +1497,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
       .png()
       .toBuffer();
 
-    // Build the shadow: take the alpha channel as a mask, recolor it solid
-    // black at the requested opacity, then blur it for a soft edge.
-    const alphaMask = await sharp(sourceWithAlpha)
-      .extractChannel(3)
-      .png()
-      .toBuffer();
-    const shadowLayer = await sharp({
-      create: {
-        width,
-        height,
-        channels: 4,
-        background: { r: 0, g: 0, b: 0, alpha: 0 },
-      },
-    })
-      .composite([{ input: alphaMask, blend: "dest-in" }])
-      .ensureAlpha()
-      .png()
-      .toBuffer();
-
-    const blurredShadow = blurAmount >= 0.3 ? await sharp(shadowLayer).blur(blurAmount).png().toBuffer() : shadowLayer;
-
-    const shadowWithOpacity = await sharp(blurredShadow)
-      .composite([
-        {
-          input: {
-            create: {
-              width,
-              height,
-              channels: 4,
-              background: { r: 0, g: 0, b: 0, alpha: opacity },
-            },
-          },
-          blend: "dest-in",
-        },
-      ])
-      .png()
-      .toBuffer();
+    const shadowWithOpacity = await shadowLayer(sourceWithAlpha, width, height, blurAmount, opacity);
 
     const outputBuffer = await sharp({
       create: {

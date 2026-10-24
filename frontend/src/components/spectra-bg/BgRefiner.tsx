@@ -9,6 +9,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HudButton } from "../hud/HudButton";
+import { NumberInput } from "../NumberInput";
 
 type Props = {
   original: File;
@@ -431,11 +432,11 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
         <HudButton action="restore" compact selected={mode === "restore" && !panMode} onClick={() => { setMode("restore"); setPanMode(false); }} />
         <HudButton action="move" compact selected={panMode} onClick={() => setPanMode((v) => !v)} title="Déplacer l'image zoomée (ou maintiens la barre d'espace)" />
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-          Taille {brush}px
+          Taille <NumberInput label="Taille du pinceau" value={brush} onChange={setBrush} min={1} max={maxBrush} unit="px" />
           <input type="range" min={1} max={maxBrush} value={brush} onChange={(e) => setBrush(Number(e.target.value))} />
         </label>
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-          Douceur {softness === 0 ? "nette" : `${softness}%`}
+          Douceur <NumberInput label="Douceur du pinceau" value={softness} onChange={setSoftness} min={0} max={100} unit="%" />{softness === 0 && " (nette)"}
           <input type="range" min={0} max={100} step={5} value={softness} onChange={(e) => setSoftness(Number(e.target.value))} />
         </label>
         <HudButton action="undo-mask" compact disabled={undoCount === 0} onClick={undo} />
