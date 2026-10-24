@@ -611,6 +611,12 @@ export default function App() {
   const [shadowOffsetY, setShadowOffsetY] = useState(15);
   const [shadowBlur, setShadowBlur] = useState(8);
   const [shadowOpacity, setShadowOpacity] = useState(60);
+  const [shadowColor, setShadowColor] = useState("#000000");
+  const [shadowGradient, setShadowGradient] = useState(false);
+  const [shadowColor2, setShadowColor2] = useState("#A855F7");
+  const [shadowAngle, setShadowAngle] = useState(45);
+  // Fond de l'aperçu : une ombre blanche est invisible sur le damier clair
+  const [shadowPreviewBg, setShadowPreviewBg] = useState<"checker" | "dark" | "light">("checker");
   const [shadowLoading, setShadowLoading] = useState(false);
   const [shadowError, setShadowError] = useState<string | null>(null);
   const [shadowResultUrl, setShadowResultUrl] = useState<string | null>(null);
@@ -1668,6 +1674,11 @@ export default function App() {
     formData.append("offsetY", String(shadowOffsetY));
     formData.append("blur", String(shadowBlur));
     formData.append("opacity", String(shadowOpacity));
+    formData.append("color", shadowColor);
+    if (shadowGradient) {
+      formData.append("color2", shadowColor2);
+      formData.append("angle", String(shadowAngle));
+    }
 
     try {
       const res = await fetch(`${apiUrl}/api/drop-shadow`, {
@@ -1680,7 +1691,7 @@ export default function App() {
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity }] };
+      recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity, color: shadowColor, ...(shadowGradient ? { color2: shadowColor2, angle: shadowAngle } : {}) }] };
       setShadowResultUrl(outUrl);
     } catch (err) {
       setShadowError(err instanceof Error ? err.message : "Ombre portée échouée");
@@ -3193,18 +3204,60 @@ export default function App() {
         </label>
       </div>
 
+      <div className="shadow-colors">
+        <div className="shadow-colors__modes" role="radiogroup" aria-label="Couleur de l'ombre">
+          <label><input type="radio" checked={!shadowGradient} onChange={() => setShadowGradient(false)} /> Couleur unie</label>
+          <label><input type="radio" checked={shadowGradient} onChange={() => setShadowGradient(true)} /> Dégradé</label>
+        </div>
+        <div className="shadow-colors__row">
+          <label>
+            {shadowGradient ? "De" : "Couleur"}
+            <input type="color" value={shadowColor} onChange={(e) => setShadowColor(e.target.value)} />
+          </label>
+          {shadowGradient && (
+            <>
+              <label>
+                vers
+                <input type="color" value={shadowColor2} onChange={(e) => setShadowColor2(e.target.value)} />
+              </label>
+              <label>
+                Angle : <NumberInput label="Angle du dégradé" value={shadowAngle} onChange={setShadowAngle} min={0} max={360} unit="°" />
+                <input type="range" min={0} max={360} step={5} value={shadowAngle} onChange={(e) => setShadowAngle(Number(e.target.value))} />
+              </label>
+            </>
+          )}
+        </div>
+        <div className="shadow-colors__swatches">
+          {[["#000000", "Noir"], ["#ffffff", "Blanc"], ["#3ddc84", "Vert NOXEL"], ["#A855F7", "Violet NOXEL"]].map(([c, name]) => (
+            <button key={c} type="button" className="shadow-swatch" title={name} aria-label={`Ombre ${name.toLowerCase()}`} style={{ background: c }}
+              onClick={() => setShadowColor(c)} />
+          ))}
+          <button type="button" className="shadow-swatch shadow-swatch--gradient" title="Dégradé vert → violet" aria-label="Ombre en dégradé vert vers violet"
+            onClick={() => { setShadowGradient(true); setShadowColor("#3ddc84"); setShadowColor2("#A855F7"); }} />
+        </div>
+      </div>
+
       <HudButton action="apply-shadow" disabled={!file} busy={shadowLoading} onClick={handleDropShadow} style={{ marginTop: 16 }} />
 
       {shadowError && <p style={{ color: "red", marginTop: 16 }}>{shadowError}</p>}
 
       {shadowResultUrl && (
         <div style={{ marginTop: 20 }}>
+          <div className="shadow-preview-bg" role="radiogroup" aria-label="Fond de l'aperçu">
+            Fond de l'aperçu :
+            {([["checker", "Damier"], ["dark", "Noir"], ["light", "Blanc"]] as const).map(([id, name]) => (
+              <label key={id}><input type="radio" checked={shadowPreviewBg === id} onChange={() => setShadowPreviewBg(id)} /> {name}</label>
+            ))}
+          </div>
           <div
             style={{
               border: "1px solid #ddd",
               borderRadius: 8,
               padding: 12,
-              background: "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
+              background:
+                shadowPreviewBg === "dark" ? "#000"
+                : shadowPreviewBg === "light" ? "#fff"
+                : "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
             }}
           >
             <img src={shadowResultUrl} alt="Résultat" style={{ maxWidth: "100%", display: "block" }} />

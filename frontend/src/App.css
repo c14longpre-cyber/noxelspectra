@@ -312,6 +312,51 @@ a {
   padding: 2px 6px;
   text-align: right;
 }
+.shadow-colors {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.shadow-colors__modes,
+.shadow-colors__row,
+.shadow-colors__swatches,
+.shadow-preview-bg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+.shadow-colors__row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.shadow-colors input[type="color"] {
+  width: 44px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+.shadow-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  padding: 0;
+}
+.shadow-swatch--gradient {
+  background: linear-gradient(135deg, #3ddc84, #A855F7);
+}
+.shadow-preview-bg {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted, #888);
+}
 .num-input__unit {
   color: var(--muted, #888);
 }
