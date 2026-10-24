@@ -3,8 +3,9 @@
 // ce qu'on voit sur l'aperçu est ce qui est incrusté.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
-import { loadLogo } from "../lib/overlay";
-import type { OverlayItem } from "../lib/overlay";
+import { DEFAULT_SHADOW, loadLogo } from "../lib/overlay";
+import type { OverlayItem, ShadowStyle } from "../lib/overlay";
+import { NumberInput } from "../../../frontend/src/components/NumberInput";
 import { PLACES, containerFor, layoutMark } from "../lib/rights";
 import { FontPicker } from "./FontPicker";
 import { FillEditor } from "./FillEditor";
@@ -28,11 +29,12 @@ type Props = {
 };
 
 const pc = (v: number) => Math.round(v * 100);
+const SHADOW_COLORS: [string, string][] = [["#000000", "noir"], ["#ffffff", "blanc"], ["#3ddc84", "vert NOXEL"], ["#a855f7", "mauve NOXEL"], ["#ffd23f", "jaune"], ["#ff4d6d", "rose"]];
 
 // Réglages gardés tant que la page est ouverte, même pour une autre vidéo (sauf le logo choisi, qui reste aussi)
 type Session = { mark: Mark; sizes: { text: number; logo: number } };
 let session: Session = {
-  mark: { kind: "text", text: "NOXEL", logo: null, place: "br", size: 0.045, opacity: 0.6, rotation: 0, color: "#ffffff" },
+  mark: { kind: "text", text: "NOXEL", logo: null, place: "br", size: 0.045, opacity: 0.6, rotation: 0, color: "#ffffff", shadowStyle: DEFAULT_SHADOW },
   sizes: { text: 0.045, logo: 0.16 },
 };
 
@@ -51,6 +53,10 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
   const logoInput = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => { formatSupport().then(setSupport); }, []);
+  // Ombre : par défaut sur un texte (comme avant), à demander pour un logo
+  const shadowOn = mark.shadow ?? mark.kind === "text";
+  const sh = mark.shadowStyle ?? DEFAULT_SHADOW;
+  const setSh = (patch: Partial<ShadowStyle>) => setMark((m) => ({ ...m, shadowStyle: { ...(m.shadowStyle ?? DEFAULT_SHADOW), ...patch } }));
   // Les fichiers produits ne sont libérés qu'en quittant l'outil
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
@@ -61,7 +67,7 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
   const layout = useMemo(
     () => layoutMark(mark, 0, Math.max(duration, range[1]), frameW, frameH),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, mark.font, mark.fill, mark.shadow, fontTick, duration, range[1], frameW, frameH]
+    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, mark.font, mark.fill, mark.shadow, mark.shadowStyle, fontTick, duration, range[1], frameW, frameH]
   );
   const overlays = layout.items;
   useEffect(() => { onPreview(overlays); }, [overlays, onPreview]);
@@ -132,7 +138,6 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
             <div className="vx-font-field"><span>Police</span>
               <FontPicker value={mark.font || "sans"} onChange={(font) => setMark((m) => ({ ...m, font }))} onReady={() => setFontTick((n) => n + 1)} />
             </div>
-            <label className="vx-check"><input type="checkbox" checked={mark.shadow ?? true} onChange={(e) => setMark((m) => ({ ...m, shadow: e.target.checked }))} /> Ombre portée</label>
             <div className="vx-fill-field"><span>Couleur</span>
               <FillEditor value={mark.fill ?? { kind: "solid", color: mark.color || "#ffffff" }}
                 onChange={(fill) => setMark((m) => ({ ...m, fill, ...(fill.kind === "solid" ? { color: fill.color } : {}) }))} />
@@ -149,16 +154,42 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
             {PLACES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
         </label>
-        <label>{mark.kind === "text" ? `Taille : ${(mark.size * 100).toFixed(1)} % de la hauteur` : `Largeur : ${pc(mark.size)} % de l'image`}
+        <label>{mark.kind === "text" ? "Taille : " : "Largeur : "}
+          <NumberInput label={mark.kind === "text" ? "Taille du texte" : "Largeur du logo"} value={Number((mark.size * 100).toFixed(1))} onChange={(v) => setSize(v / 100)}
+            min={mark.kind === "text" ? 2 : 4} max={mark.kind === "text" ? 20 : 60} step={mark.kind === "text" ? 0.5 : 1} unit={mark.kind === "text" ? "% de la hauteur" : "% de l'image"} />
           <input type="range" min={mark.kind === "text" ? 2 : 4} max={mark.kind === "text" ? 20 : 60} step={mark.kind === "text" ? 0.5 : 1} value={mark.size * 100} onChange={(e) => setSize(Number(e.target.value) / 100)} />
         </label>
-        <label>Opacité : {pc(mark.opacity)} %
+        <label>Opacité : <NumberInput label="Opacité du filigrane" value={pc(mark.opacity)} onChange={(v) => setMark((m) => ({ ...m, opacity: v / 100 }))} min={5} max={100} unit="%" />
           <input type="range" min={5} max={100} step={5} value={pc(mark.opacity)} onChange={(e) => setMark((m) => ({ ...m, opacity: Number(e.target.value) / 100 }))} />
         </label>
-        <label>Rotation : {mark.rotation}°
+        <label>Rotation : <NumberInput label="Rotation du filigrane" value={mark.rotation} onChange={(v) => setMark((m) => ({ ...m, rotation: v }))} min={-90} max={90} unit="°" />
           <input type="range" min={-90} max={90} step={5} value={mark.rotation} onChange={(e) => setMark((m) => ({ ...m, rotation: Number(e.target.value) }))} />
         </label>
       </div>
+
+      <h4 className="vx-code-title">Ombre portée</h4>
+      <label className="vx-check"><input type="checkbox" checked={shadowOn} onChange={(e) => setMark((m) => ({ ...m, shadow: e.target.checked }))} />
+        {" "}Ajouter une ombre{mark.kind === "logo" ? " (elle suit la forme du logo s'il a un fond transparent)" : ""}</label>
+      {shadowOn && (
+        <div className="vx-fields">
+          <label>Décalage X : <NumberInput label="Décalage X de l'ombre" value={pc(sh.dx)} onChange={(v) => setSh({ dx: v / 100 })} min={-100} max={100} unit="%" />
+            <input type="range" min={-50} max={50} value={pc(sh.dx)} onChange={(e) => setSh({ dx: Number(e.target.value) / 100 })} />
+          </label>
+          <label>Décalage Y : <NumberInput label="Décalage Y de l'ombre" value={pc(sh.dy)} onChange={(v) => setSh({ dy: v / 100 })} min={-100} max={100} unit="%" />
+            <input type="range" min={-50} max={50} value={pc(sh.dy)} onChange={(e) => setSh({ dy: Number(e.target.value) / 100 })} />
+          </label>
+          <label>Flou : <NumberInput label="Flou de l'ombre" value={pc(sh.blur)} onChange={(v) => setSh({ blur: v / 100 })} min={0} max={100} unit="%" />
+            <input type="range" min={0} max={60} value={pc(sh.blur)} onChange={(e) => setSh({ blur: Number(e.target.value) / 100 })} />
+          </label>
+          <label>Opacité : <NumberInput label="Opacité de l'ombre" value={pc(sh.opacity)} onChange={(v) => setSh({ opacity: v / 100 })} min={0} max={100} unit="%" />
+            <input type="range" min={0} max={100} value={pc(sh.opacity)} onChange={(e) => setSh({ opacity: Number(e.target.value) / 100 })} />
+          </label>
+          <div className="vx-fill-field"><span>Couleur de l'ombre</span>
+            <FillEditor value={sh.fill} onChange={(fill) => setSh({ fill })} colors={SHADOW_COLORS} label="Couleur de l'ombre" />
+          </div>
+          <p className="vx-muted" style={{ gridColumn: "1 / -1", margin: 0 }}>Décalages et flou en % de la taille {mark.kind === "text" ? "du texte" : "du logo"} : le rendu reste le même quelle que soit la résolution de la vidéo.</p>
+        </div>
+      )}
       {empty && <p className="vx-alert">{mark.kind === "text" ? "Le filigrane est vide : écris un texte." : "Aucun logo choisi."}</p>}
       {layout.overflow && <p className="vx-alert">Le filigrane est plus grand que l'image : il sera coupé. Réduis sa taille ou raccourcis le texte.</p>}
 
