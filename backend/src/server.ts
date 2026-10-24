@@ -1468,6 +1468,9 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
 //   offsetY     optional, px (default 15)
 //   blur        optional, sigma (default 8, min 0.3 if > 0)
 //   opacity     optional 0-100 (default 60)
+//   color       optional #rrggbb (default #000000)
+//   color2      optional #rrggbb — ombre en dégradé de color vers color2
+//   angle       optional, degrés du dégradé (0 = gauche → droite, 90 = haut → bas)
 // Works best on images with transparency (logos, vectorized icons);
 // on fully-opaque images it shadows the whole rectangle.
 app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
@@ -1497,7 +1500,12 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
       .png()
       .toBuffer();
 
-    const shadowWithOpacity = await shadowLayer(sourceWithAlpha, width, height, blurAmount, opacity);
+    const hex = (v: unknown) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : undefined);
+    const shadowWithOpacity = await shadowLayer(sourceWithAlpha, width, height, blurAmount, opacity, {
+      color: hex(req.body.color),
+      color2: hex(req.body.color2),
+      angle: num(req.body.angle, -360, 360, 0),
+    });
 
     const outputBuffer = await sharp({
       create: {

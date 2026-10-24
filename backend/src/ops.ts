@@ -38,7 +38,7 @@ export type RecipeStep =
       reduceNoise: number;
       vignetteIntensity: number;
     }
-  | { op: "shadow"; offsetX: number; offsetY: number; blur: number; opacity: number }
+  | { op: "shadow"; offsetX: number; offsetY: number; blur: number; opacity: number; color: string; color2?: string; angle: number }
   | { op: "glow"; intensity: number }
   | {
       op: "watermarkText";
@@ -119,6 +119,9 @@ export function parseRecipe(raw: unknown): Recipe {
           offsetY: Math.round(clamp(s.offsetY, -500, 500, 15)),
           blur: clamp(s.blur, 0, 100, 8),
           opacity: clamp(s.opacity, 0, 100, 60),
+          color: /^#[0-9a-fA-F]{6}$/.test(s.color) ? s.color : "#000000",
+          color2: /^#[0-9a-fA-F]{6}$/.test(s.color2) ? s.color2 : undefined,
+          angle: Math.round(clamp(s.angle, -360, 360, 0)),
         };
       case "removeBg":
         return {
@@ -170,13 +173,32 @@ export function parseRecipe(raw: unknown): Recipe {
 const lossless = (p: ReturnType<typeof sharp>) => p.png({ compressionLevel: 0 }).toBuffer();
 
 /**
- * Ombre d'une image RGBA : noir, à la forme de sa transparence, floutée et à l'opacité voulue.
- * Le noir doit être opaque avant de prendre la forme de l'image : un calque transparent
+ * Ombre d'une image RGBA : unie (noir par défaut ; blanc ou vert pour une image posée sur fond
+ * noir) ou en dégradé de `fill.color` vers `fill.color2` selon `fill.angle` (0° = de gauche à
+ * droite, 90° = de haut en bas), à la forme de sa transparence, floutée et à l'opacité voulue.
+ * La couleur doit être opaque avant de prendre la forme de l'image : un calque transparent
  * « découpé » à la forme du logo reste transparent (l'ombre était invisible).
  */
-export async function shadowLayer(sourceRgba: Buffer, width: number, height: number, blur: number, opacity: number): Promise<Buffer> {
+export type ShadowFill = { color?: string; color2?: string; angle?: number };
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+export async function shadowLayer(sourceRgba: Buffer, width: number, height: number, blur: number, opacity: number, fill: ShadowFill = {}): Promise<Buffer> {
+  const c1 = fill.color && HEX6.test(fill.color) ? fill.color : "#000000";
+  const c2 = fill.color2 && HEX6.test(fill.color2) ? fill.color2 : null;
   const alpha = await sharp(sourceRgba).extractChannel(3).linear(opacity, 0).png().toBuffer();
-  const shadow = sharp({ create: { width, height, channels: 3, background: { r: 0, g: 0, b: 0 } } }).joinChannel(alpha);
+  let colors: ReturnType<typeof sharp>;
+  if (c2) {
+    const a = Number.isFinite(fill.angle) ? Number(fill.angle) : 0;
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+      `<defs><linearGradient id="g" x1="0" y1="0.5" x2="1" y2="0.5" gradientTransform="rotate(${a} 0.5 0.5)">` +
+      `<stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>` +
+      `<rect width="100%" height="100%" fill="url(#g)"/></svg>`;
+    colors = sharp(await sharp(Buffer.from(svg)).removeAlpha().png().toBuffer());
+  } else {
+    const rgb = { r: parseInt(c1.slice(1, 3), 16), g: parseInt(c1.slice(3, 5), 16), b: parseInt(c1.slice(5, 7), 16) };
+    colors = sharp({ create: { width, height, channels: 3, background: rgb } });
+  }
+  const shadow = colors.joinChannel(alpha);
   // blur() n'accepte pas de sigma sous 0,3 : en dessous, ombre nette
   return (blur >= 0.3 ? sharp(await shadow.png().toBuffer()).blur(blur) : shadow).png().toBuffer();
 }
@@ -250,7 +272,7 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
       const opacity = step.opacity / 100;
       const padding = Math.ceil(step.blur * 3) + Math.max(Math.abs(step.offsetX), Math.abs(step.offsetY));
       const source = await sharp(buf).ensureAlpha().png().toBuffer();
-      const faded = await shadowLayer(source, width, height, step.blur, opacity);
+      const faded = await shadowLayer(source, width, height, step.blur, opacity, { color: step.color, color2: step.color2, angle: step.angle });
       return lossless(
         sharp({
           create: {
