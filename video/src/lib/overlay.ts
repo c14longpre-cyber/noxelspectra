@@ -16,7 +16,9 @@ export const ANIMS: { id: Anim; label: string; textOnly?: boolean }[] = [
   { id: "typewriter", label: "Machine à écrire", textOnly: true },
 ];
 
-export type Fill = { kind: "solid"; color: string } | { kind: "gradient"; id: string };
+export type Stop = { at: number; color: string }; // at : 0–1 le long du dégradé
+// stops : couleurs et emplacements modifiés par l'utilisateur ; sinon ceux du dégradé prédéfini
+export type Fill = { kind: "solid"; color: string } | { kind: "gradient"; id: string; stops?: Stop[] };
 
 type Base = {
   id: string;
@@ -72,6 +74,11 @@ export const GRADIENTS: GradientDef[] = PRESETS.flatMap((p) => {
   if (layers.length !== 1 || l.type !== "linear" || l.repeat !== "none") return [];
   return [{ id: p.id, name: p.name, x1: l.x1 / 100, y1: l.y1 / 100, x2: l.x2 / 100, y2: l.y2 / 100, stops: l.stops.map((s) => ({ at: s.position / 100, color: s.color })) }];
 });
+/** Couleurs d'un remplissage dégradé, dans l'ordre où l'utilisateur les a créées (pour les modifier). */
+export const rawStops = (fill: Extract<Fill, { kind: "gradient" }>): Stop[] =>
+  fill.stops ?? (GRADIENTS.find((x) => x.id === fill.id) || GRADIENTS[0]).stops;
+/** Mêmes couleurs triées par emplacement (pour dessiner). */
+export const fillStops = (fill: Extract<Fill, { kind: "gradient" }>): Stop[] => rawStops(fill).slice().sort((a, b) => a.at - b.at);
 export const gradientCss = (g: GradientDef) => {
   const angle = (Math.atan2(g.y2 - g.y1, g.x2 - g.x1) * 180) / Math.PI + 90;
   return `linear-gradient(${Math.round(angle)}deg, ${g.stops.map((s) => `${s.color} ${Math.round(s.at * 100)}%`).join(", ")})`;
@@ -198,7 +205,7 @@ function drawText(ctx: Ctx, it: TextItem, W: number, H: number, reveal: number) 
     const fill = it.fill;
     const g = GRADIENTS.find((x) => x.id === fill.id) || GRADIENTS[0];
     const grad = ctx.createLinearGradient(-inner / 2 + g.x1 * inner, -h / 2 + g.y1 * h, -inner / 2 + g.x2 * inner, -h / 2 + g.y2 * h);
-    g.stops.forEach((s) => grad.addColorStop(s.at, s.color));
+    fillStops(fill).forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.at)), s.color));
     ctx.fillStyle = grad;
   } else ctx.fillStyle = it.fill.color;
   const lines = it.text.split("\n");

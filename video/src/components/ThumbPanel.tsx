@@ -4,13 +4,16 @@ import { HudButton, HudLink } from "@hud/HudButton";
 import { THUMB_SIZES, canvasToBlob, renderThumbnail, suggestFrames } from "../lib/frames";
 import type { FrameCandidate, ThumbAspect, TitleStyle } from "../lib/frames";
 import { fmtBytes, fmtTime } from "../lib/probe";
+import { ensureFont } from "../../../frontend/src/components/spectra-editor/font-library";
+import { FontPicker } from "./FontPicker";
+import { FONTS } from "../lib/overlay";
 
 type Props = { file: File; url: string; range: [number, number]; video: HTMLVideoElement | null };
 const COLORS = ["#ffffff", "#3ddc84", "#a855f7", "#ffd23f"];
 
 export function ThumbPanel({ file, url, range, video }: Props) {
   const [aspect, setAspect] = useState<ThumbAspect>("16:9");
-  const [title, setTitle] = useState<TitleStyle>({ text: "", position: "bottom", size: 9, color: "#ffffff", band: true });
+  const [title, setTitle] = useState<TitleStyle>({ text: "", position: "bottom", size: 9, color: "#ffffff", band: true, font: "Inter" });
   const [type, setType] = useState<"image/jpeg" | "image/webp" | "image/png">("image/jpeg");
   const [suggestions, setSuggestions] = useState<FrameCandidate[] | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -52,6 +55,8 @@ export function ThumbPanel({ file, url, range, video }: Props) {
   async function exportThumb() {
     if (!video) return;
     video.pause();
+    // La police du titre doit être chargée avant de dessiner l'image finale
+    if (title.text.trim() && !FONTS.some((f) => f.id === title.font)) await ensureFont(title.font).catch(() => {});
     const c = renderThumbnail(video, aspect, title);
     const blob = await canvasToBlob(c, type, 0.9);
     const ext = type === "image/png" ? "png" : type === "image/webp" ? "webp" : "jpg";
@@ -95,6 +100,9 @@ export function ThumbPanel({ file, url, range, video }: Props) {
           </label>
           {title.text.trim() && (
             <>
+              <div className="vx-font-field"><span>Police</span>
+                <FontPicker value={title.font} onChange={(font) => setTitle({ ...title, font })} onReady={draw} />
+              </div>
               <label>Position
                 <select value={title.position} onChange={(e) => setTitle({ ...title, position: e.target.value as TitleStyle["position"] })}>
                   <option value="top">En haut</option>

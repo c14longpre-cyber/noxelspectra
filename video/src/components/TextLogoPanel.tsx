@@ -1,8 +1,9 @@
 // NOXEL Spectra Vidéo — Texte & logo : éléments, réglages, incrustation
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
-import { ANIMS, GRADIENTS, TEXT_TEMPLATES, gradientCss, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
+import { ANIMS, GRADIENTS, rawStops, TEXT_TEMPLATES, gradientCss, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
 import { FontPicker } from "./FontPicker";
+import { GradientStops } from "./GradientStops";
 import type { Anim, OverlayItem, TextItem } from "../lib/overlay";
 import { burnOverlays } from "../lib/textlogo";
 import { formatSupport } from "../lib/compress";
@@ -234,6 +235,15 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
                     aria-label={`Dégradé ${g.name}`} title={g.name} aria-pressed={sel.fill.kind === "gradient" && sel.fill.id === g.id} onClick={() => patchText({ fill: { kind: "gradient", id: g.id } })} />
                 ))}
               </div>
+              {sel.fill.kind === "gradient" && (() => {
+                const id = sel.fill.id;
+                return (
+                  <>
+                    <p className="vx-muted" style={{ margin: "10px 0 4px" }}>Couleurs du dégradé : glisse une pastille sur la barre ou règle son emplacement. Choisir un modèle ci-dessus remet ses couleurs d'origine.</p>
+                    <GradientStops stops={rawStops(sel.fill)} onChange={(stops) => patchText({ fill: { kind: "gradient", id, stops } })} />
+                  </>
+                );
+              })()}
               <div className="vx-fields" style={{ marginTop: 12 }}>
                 <label className="vx-check"><input type="checkbox" checked={sel.shadow} onChange={(e) => patchText({ shadow: e.target.checked })} /> Ombre portée</label>
                 <label className="vx-check">

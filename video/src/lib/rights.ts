@@ -163,6 +163,7 @@ export type Mark = {
   opacity: number;
   rotation: number;
   color?: string; // texte : couleur (blanc par défaut)
+  font?: string; // texte : police (id d'appareil ou famille de la bibliothèque) ; « sans » par défaut
 };
 export const PLACES: { id: Mark["place"]; label: string }[] = [
   { id: "tl", label: "Haut gauche" }, { id: "tc", label: "Haut centre" }, { id: "tr", label: "Haut droite" },
@@ -212,7 +213,7 @@ export function layoutMark(m: Mark, start: number, end: number, W: number, H: nu
   const make = (x: number, y: number): OverlayItem =>
     m.kind === "logo"
       ? makeLogo(start, end, m.logo!.image, m.logo!.ratio, m.logo!.fileName, { ...base, x, y, width: m.size, name: "Filigrane" })
-      : makeText(start, end, { ...base, x, y, text: m.text.trim(), size: m.size, weight: 700, shadow: true, name: "Filigrane", ...(m.color ? { fill: { kind: "solid" as const, color: m.color } } : {}) });
+      : makeText(start, end, { ...base, x, y, text: m.text.trim(), font: m.font || "sans", size: m.size, weight: 700, shadow: true, name: "Filigrane", ...(m.color ? { fill: { kind: "solid" as const, color: m.color } } : {}) });
   // Place occupée, rotation comprise, en fraction de l'image
   probe ||= document.createElement("canvas").getContext("2d")!;
   const { w, h } = itemSize(probe, make(0.5, 0.5), W, H);

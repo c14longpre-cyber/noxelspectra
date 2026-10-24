@@ -6,10 +6,18 @@ import { FONTS, fontStack } from "../lib/overlay";
 
 const DEVICE = FONTS.map((f) => ({ value: f.id, label: f.label, css: f.stack }));
 
-export function FontPicker({ value, onChange }: { value: string; onChange: (font: string) => void }) {
+/** `onReady` : appelé quand la police choisie est chargée (pour remesurer ou redessiner un aperçu). */
+export function FontPicker({ value, onChange, onReady }: { value: string; onChange: (font: string) => void; onReady?: () => void }) {
   const btn = useRef<HTMLButtonElement>(null);
   const device = FONTS.find((f) => f.id === value);
-  useEffect(() => { if (!device) ensureFont(value).catch(() => {}); }, [value, device]);
+  const ready = useRef(onReady);
+  ready.current = onReady;
+  useEffect(() => {
+    if (device) return;
+    let live = true;
+    ensureFont(value).then(() => { if (live) ready.current?.(); }).catch(() => {});
+    return () => { live = false; };
+  }, [value, device]);
   return (
     <button
       ref={btn}
