@@ -10,6 +10,7 @@
 
 import sharp from "sharp";
 import { removeBackground } from "./bgremove";
+import { renderTextOverlay } from "./textOverlay";
 import { parseRights, hasRights, applyRights, type Rights } from "./rights";
 
 export type OutputFormat = "jpeg" | "png" | "webp" | "avif" | "gif";
@@ -285,23 +286,15 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
       const { width, height } = await dims(buf);
       const opacity = step.opacity / 100;
       const fontSize = step.size > 0 ? step.size : Math.max(18, Math.round(width * 0.04));
-      const escaped = step.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const pad = Math.round(fontSize * 0.6);
-      const tw = Math.round(escaped.length * fontSize * 0.6) + pad * 2;
-      const th = Math.round(fontSize * 1.5) + pad;
-      const svg =
-        `<svg width="${tw}" height="${th}" xmlns="http://www.w3.org/2000/svg">` +
-        `<text x="${pad}" y="${Math.round(th * 0.68)}" font-family="Arial, sans-serif" font-size="${fontSize}" ` +
-        `font-weight="700" fill="${step.color}" fill-opacity="${opacity}">${escaped}</text></svg>`;
-      let overlay = await sharp(Buffer.from(svg)).png().toBuffer();
+      let overlay = await renderTextOverlay({ text: step.text, color: step.color, opacity, fontSize });
       let om = await sharp(overlay).metadata();
       // Un filigrane plus grand que l'image ferait planter composite()
       if ((om.width || 0) > width || (om.height || 0) > height) {
         overlay = await sharp(overlay).resize({ width, height, fit: "inside" }).png().toBuffer();
         om = await sharp(overlay).metadata();
       }
-      const ow = om.width || tw;
-      const oh = om.height || th;
+      const ow = om.width || 1;
+      const oh = om.height || 1;
       const margin = Math.round(Math.min(width, height) * 0.03);
       const composites: { input: Buffer; left: number; top: number }[] = [];
       if (step.position === "tiled") {
