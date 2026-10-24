@@ -6,6 +6,7 @@ import type { FrameCandidate, ThumbAspect, TitleStyle } from "../lib/frames";
 import { fmtBytes, fmtTime } from "../lib/probe";
 import { ensureFont } from "../../../frontend/src/components/spectra-editor/font-library";
 import { FontPicker } from "./FontPicker";
+import { FillEditor } from "./FillEditor";
 import { FONTS } from "../lib/overlay";
 
 type Props = { file: File; url: string; range: [number, number]; video: HTMLVideoElement | null };
@@ -113,15 +114,11 @@ export function ThumbPanel({ file, url, range, video }: Props) {
               <label>Taille : {title.size} %
                 <input type="range" min={4} max={16} value={title.size} onChange={(e) => setTitle({ ...title, size: Number(e.target.value) })} />
               </label>
-              <label>Couleur
-                <span className="vx-chips">
-                  {COLORS.map((c) => (
-                    <button key={c} type="button" className={`vx-swatch${title.color === c ? " is-on" : ""}`} style={{ background: c }}
-                      onClick={() => setTitle({ ...title, color: c })} aria-label={`Couleur ${c}`} />
-                  ))}
-                  <input type="color" value={title.color} onChange={(e) => setTitle({ ...title, color: e.target.value })} aria-label="Autre couleur" />
-                </span>
-              </label>
+              <label className="vx-check"><input type="checkbox" checked={title.shadow !== false} onChange={(e) => setTitle({ ...title, shadow: e.target.checked })} /> Ombre portée</label>
+              <div className="vx-fill-field"><span>Couleur</span>
+                <FillEditor value={title.fill ?? { kind: "solid", color: title.color }} colors={COLORS.map((c) => [c, c] as [string, string])}
+                  onChange={(fill) => setTitle({ ...title, fill, ...(fill.kind === "solid" ? { color: fill.color } : {}) })} />
+              </div>
               <label className="vx-check"><input type="checkbox" checked={title.band} onChange={(e) => setTitle({ ...title, band: e.target.checked })} /> Bande de fond NOXEL (meilleure lisibilité)</label>
             </>
           )}

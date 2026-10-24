@@ -1,5 +1,6 @@
 // NOXEL Spectra Vidéo — images tirées de la vidéo : capture, suggestions, miniature.
-import { fontStack } from "./overlay";
+import { canvasGradient, fontStack } from "./overlay";
+import type { Fill } from "./overlay";
 
 export type ThumbAspect = "original" | "16:9" | "1:1" | "9:16";
 export const THUMB_SIZES: Record<Exclude<ThumbAspect, "original">, { width: number; height: number; label: string }> = {
@@ -15,6 +16,8 @@ export type TitleStyle = {
   color: string;
   band: boolean; // bande sombre derrière le texte
   font: string; // police : id d'appareil ou famille de la bibliothèque (Inter par défaut)
+  fill?: Fill; // couleur unie ou dégradé (remplace `color` quand présent)
+  shadow?: boolean; // ombre portée (oui par défaut)
 };
 
 /** Dessine une image de la vidéo en mode « couvrir » (recadrage centré) dans les dimensions voulues. */
@@ -70,9 +73,15 @@ function drawTitle(ctx: CanvasRenderingContext2D, w: number, h: number, t: Title
     ctx.fillStyle = "#a855f7";
     ctx.fillRect(0, cy + blockH / 2 + pad - Math.max(2, fontSize * 0.06), w, Math.max(2, fontSize * 0.06));
   }
-  ctx.fillStyle = t.color;
-  ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-  ctx.shadowBlur = fontSize * 0.25;
+  if (t.fill?.kind === "gradient") {
+    // Le dégradé couvre le bloc de texte (largeur de la plus longue ligne), pas toute l'image
+    const tw = Math.max(1, ...shown.map((l) => ctx.measureText(l).width));
+    ctx.fillStyle = canvasGradient(ctx, t.fill, w / 2 - tw / 2, cy - blockH / 2, tw, blockH);
+  } else ctx.fillStyle = t.fill?.color ?? t.color;
+  if (t.shadow !== false) {
+    ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+    ctx.shadowBlur = fontSize * 0.25;
+  }
   shown.forEach((l, i) => ctx.fillText(l, w / 2, cy - blockH / 2 + lh * (i + 0.5)));
   ctx.shadowBlur = 0;
 }

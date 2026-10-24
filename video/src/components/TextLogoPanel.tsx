@@ -1,9 +1,9 @@
 // NOXEL Spectra Vidéo — Texte & logo : éléments, réglages, incrustation
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
-import { ANIMS, GRADIENTS, rawStops, TEXT_TEMPLATES, gradientCss, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
+import { ANIMS, TEXT_TEMPLATES, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
 import { FontPicker } from "./FontPicker";
-import { GradientStops } from "./GradientStops";
+import { FillEditor } from "./FillEditor";
 import type { Anim, OverlayItem, TextItem } from "../lib/overlay";
 import { burnOverlays } from "../lib/textlogo";
 import { formatSupport } from "../lib/compress";
@@ -221,29 +221,7 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
               </div>
 
               <h4 className="vx-code-title">Couleur</h4>
-              <div className="vx-row" role="group" aria-label="Couleur unie">
-                {COLORS.map(([c, name]) => (
-                  <button key={c} type="button" className={`vx-swatch${sel.fill.kind === "solid" && sel.fill.color === c ? " is-on" : ""}`} style={{ background: c }}
-                    aria-label={`Couleur ${name}`} title={name} aria-pressed={sel.fill.kind === "solid" && sel.fill.color === c} onClick={() => patchText({ fill: { kind: "solid", color: c } })} />
-                ))}
-                <input type="color" aria-label="Autre couleur" value={sel.fill.kind === "solid" ? sel.fill.color : "#ffffff"} onChange={(e) => patchText({ fill: { kind: "solid", color: e.target.value } })} />
-              </div>
-              <div className="vx-row" role="group" aria-label="Dégradé" style={{ marginTop: 8 }}>
-                <span className="vx-muted">Dégradés :</span>
-                {GRADIENTS.map((g) => (
-                  <button key={g.id} type="button" className={`vx-grad${sel.fill.kind === "gradient" && sel.fill.id === g.id ? " is-on" : ""}`} style={{ background: gradientCss(g) }}
-                    aria-label={`Dégradé ${g.name}`} title={g.name} aria-pressed={sel.fill.kind === "gradient" && sel.fill.id === g.id} onClick={() => patchText({ fill: { kind: "gradient", id: g.id } })} />
-                ))}
-              </div>
-              {sel.fill.kind === "gradient" && (() => {
-                const id = sel.fill.id;
-                return (
-                  <>
-                    <p className="vx-muted" style={{ margin: "10px 0 4px" }}>Couleurs du dégradé : glisse une pastille sur la barre ou règle son emplacement. Choisir un modèle ci-dessus remet ses couleurs d'origine.</p>
-                    <GradientStops stops={rawStops(sel.fill)} onChange={(stops) => patchText({ fill: { kind: "gradient", id, stops } })} />
-                  </>
-                );
-              })()}
+              <FillEditor value={sel.fill} onChange={(fill) => patchText({ fill })} colors={COLORS} />
               <div className="vx-fields" style={{ marginTop: 12 }}>
                 <label className="vx-check"><input type="checkbox" checked={sel.shadow} onChange={(e) => patchText({ shadow: e.target.checked })} /> Ombre portée</label>
                 <label className="vx-check">

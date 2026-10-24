@@ -7,6 +7,7 @@ import { loadLogo } from "../lib/overlay";
 import type { OverlayItem } from "../lib/overlay";
 import { PLACES, containerFor, layoutMark } from "../lib/rights";
 import { FontPicker } from "./FontPicker";
+import { FillEditor } from "./FillEditor";
 import type { Mark } from "../lib/rights";
 import { burnOverlays } from "../lib/textlogo";
 import type { BurnResult } from "../lib/textlogo";
@@ -60,7 +61,7 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
   const layout = useMemo(
     () => layoutMark(mark, 0, Math.max(duration, range[1]), frameW, frameH),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, mark.font, fontTick, duration, range[1], frameW, frameH]
+    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, mark.font, mark.fill, mark.shadow, fontTick, duration, range[1], frameW, frameH]
   );
   const overlays = layout.items;
   useEffect(() => { onPreview(overlays); }, [overlays, onPreview]);
@@ -131,9 +132,11 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
             <div className="vx-font-field"><span>Police</span>
               <FontPicker value={mark.font || "sans"} onChange={(font) => setMark((m) => ({ ...m, font }))} onReady={() => setFontTick((n) => n + 1)} />
             </div>
-            <label>Couleur
-              <input type="color" value={mark.color || "#ffffff"} onChange={(e) => setMark((m) => ({ ...m, color: e.target.value }))} />
-            </label>
+            <label className="vx-check"><input type="checkbox" checked={mark.shadow ?? true} onChange={(e) => setMark((m) => ({ ...m, shadow: e.target.checked }))} /> Ombre portée</label>
+            <div className="vx-fill-field"><span>Couleur</span>
+              <FillEditor value={mark.fill ?? { kind: "solid", color: mark.color || "#ffffff" }}
+                onChange={(fill) => setMark((m) => ({ ...m, fill, ...(fill.kind === "solid" ? { color: fill.color } : {}) }))} />
+            </div>
           </>
         ) : (
           <div className="vx-row">

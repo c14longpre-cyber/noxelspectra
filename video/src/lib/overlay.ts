@@ -18,7 +18,10 @@ export const ANIMS: { id: Anim; label: string; textOnly?: boolean }[] = [
 
 export type Stop = { at: number; color: string }; // at : 0–1 le long du dégradé
 // stops : couleurs et emplacements modifiés par l'utilisateur ; sinon ceux du dégradé prédéfini
-export type Fill = { kind: "solid"; color: string } | { kind: "gradient"; id: string; stops?: Stop[] };
+// dir : sens du dégradé ; absent = celui du modèle prédéfini
+export type GradDir = "horizontal" | "vertical" | "diagonal" | "radial";
+export type GradientFill = { kind: "gradient"; id: string; stops?: Stop[]; dir?: GradDir };
+export type Fill = { kind: "solid"; color: string } | GradientFill;
 
 type Base = {
   id: string;
@@ -74,6 +77,38 @@ export const GRADIENTS: GradientDef[] = PRESETS.flatMap((p) => {
   if (layers.length !== 1 || l.type !== "linear" || l.repeat !== "none") return [];
   return [{ id: p.id, name: p.name, x1: l.x1 / 100, y1: l.y1 / 100, x2: l.x2 / 100, y2: l.y2 / 100, stops: l.stops.map((s) => ({ at: s.position / 100, color: s.color })) }];
 });
+const presetOf = (fill: GradientFill) => GRADIENTS.find((x) => x.id === fill.id) || GRADIENTS[0];
+/** Sens effectif : celui choisi, sinon celui du modèle (classé selon son vecteur). */
+export function fillDir(fill: GradientFill): GradDir {
+  if (fill.dir) return fill.dir;
+  const g = presetOf(fill);
+  const dx = Math.abs(g.x2 - g.x1), dy = Math.abs(g.y2 - g.y1);
+  return dy < 0.15 * dx ? "horizontal" : dx < 0.15 * dy ? "vertical" : "diagonal";
+}
+type Gc = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+/** Dégradé de canevas couvrant le rectangle (x, y, w, h), dans le sens choisi. */
+export function canvasGradient(ctx: Gc, fill: GradientFill, x: number, y: number, w: number, h: number): CanvasGradient {
+  const dir = fillDir(fill);
+  let grad: CanvasGradient;
+  if (dir === "radial") grad = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, Math.hypot(w, h) / 2);
+  else if (dir === "horizontal") grad = ctx.createLinearGradient(x, y + h / 2, x + w, y + h / 2);
+  else if (dir === "vertical") grad = ctx.createLinearGradient(x + w / 2, y, x + w / 2, y + h);
+  else if (!fill.dir) { const g = presetOf(fill); grad = ctx.createLinearGradient(x + g.x1 * w, y + g.y1 * h, x + g.x2 * w, y + g.y2 * h); }
+  else grad = ctx.createLinearGradient(x, y, x + w, y + h);
+  fillStops(fill).forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.at)), s.color));
+  return grad;
+}
+/** Même dégradé en CSS (pastilles et aperçus). */
+export function fillCss(fill: GradientFill): string {
+  const stops = fillStops(fill).map((s) => `${s.color} ${Math.round(s.at * 100)}%`).join(", ");
+  const dir = fillDir(fill);
+  if (dir === "radial") return `radial-gradient(circle closest-corner, ${stops})`;
+  if (dir === "horizontal") return `linear-gradient(90deg, ${stops})`;
+  if (dir === "vertical") return `linear-gradient(180deg, ${stops})`;
+  if (!fill.dir) return gradientCss({ ...presetOf(fill), stops: fillStops(fill) });
+  return `linear-gradient(135deg, ${stops})`;
+}
+
 /** Couleurs d'un remplissage dégradé, dans l'ordre où l'utilisateur les a créées (pour les modifier). */
 export const rawStops = (fill: Extract<Fill, { kind: "gradient" }>): Stop[] =>
   fill.stops ?? (GRADIENTS.find((x) => x.id === fill.id) || GRADIENTS[0]).stops;
@@ -201,13 +236,7 @@ function drawText(ctx: Ctx, it: TextItem, W: number, H: number, reveal: number) 
   ctx.textAlign = "left";
   ctx.lineJoin = "round";
   const inner = w - pad * 2;
-  if (it.fill.kind === "gradient") {
-    const fill = it.fill;
-    const g = GRADIENTS.find((x) => x.id === fill.id) || GRADIENTS[0];
-    const grad = ctx.createLinearGradient(-inner / 2 + g.x1 * inner, -h / 2 + g.y1 * h, -inner / 2 + g.x2 * inner, -h / 2 + g.y2 * h);
-    fillStops(fill).forEach((s) => grad.addColorStop(Math.min(1, Math.max(0, s.at)), s.color));
-    ctx.fillStyle = grad;
-  } else ctx.fillStyle = it.fill.color;
+  ctx.fillStyle = it.fill.kind === "gradient" ? canvasGradient(ctx, it.fill, -inner / 2, -h / 2 + pad, inner, h - pad * 2) : it.fill.color;
   const lines = it.text.split("\n");
   // Machine à écrire : nombre de caractères révélés sur l'ensemble des lignes
   const split = lines.map(chars);
