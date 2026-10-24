@@ -4,6 +4,7 @@
 // Rien n'est téléchargé d'avance : chaque police se charge à son premier usage,
 // et le menu n'affiche qu'un mini-fichier par nom (preview.woff2, quelques Ko).
 // Généré par tools/fonts-gen (catalogue.json + fichiers).
+import "./font-picker.css";
 
 export type FontCategory = "sans-serif" | "serif" | "display" | "handwriting" | "monospace";
 export interface FontEntry { id: string; family: string; category: FontCategory; bold: boolean; accents: boolean }
@@ -21,13 +22,21 @@ const CODES: Record<string, FontCategory> = { s: "sans-serif", e: "serif", d: "d
 const BUNDLED = new Set(["Inter", "Manrope", "Space Grotesk", "Anton", "Bebas Neue", "Oswald", "Playfair Display", "Lora",
   "Merriweather", "JetBrains Mono", "Space Mono", "Fira Code", "Caveat", "Pacifico", "Dancing Script", "Fredoka", "Quicksand", "Baloo 2"]);
 
+// Adresse des fichiers. Spectra image : /fonts (frontend/public/fonts). Spectra Vidéo copie le
+// même dossier dans son build (video/vite.config.ts), donc /fonts aussi par défaut.
+let BASE = "/fonts";
+export function setFontBase(url: string): void { BASE = url.replace(/\/$/, ""); }
+
+/** Entrée hors bibliothèque affichée en tête du menu (ex. polices de l'appareil dans Spectra Vidéo). */
+export interface PickerExtra { value: string; label: string; css: string }
+
 let catalogue: FontEntry[] | null = null;
 let cataloguePromise: Promise<FontEntry[]> | null = null;
 const byFamily = new Map<string, FontEntry>();
 
 export function loadCatalogue(): Promise<FontEntry[]> {
   if (catalogue) return Promise.resolve(catalogue);
-  cataloguePromise ??= fetch("/fonts/catalogue.json")
+  cataloguePromise ??= fetch(`${BASE}/catalogue.json`)
     .then((r) => {
       if (!r.ok) throw new Error(`catalogue ${r.status}`);
       return r.json() as Promise<[string, string, string, number, number][]>;
@@ -61,8 +70,8 @@ export function ensureFont(family: string): Promise<void> {
   p = loadCatalogue().then(async () => {
     const entry = byFamily.get(family);
     if (!entry) return;
-    const faces = [new FontFace(family, `url(/fonts/${entry.id}/400.woff2) format("woff2")`, { weight: "400", display: "swap" })];
-    if (entry.bold) faces.push(new FontFace(family, `url(/fonts/${entry.id}/700.woff2) format("woff2")`, { weight: "700", display: "swap" }));
+    const faces = [new FontFace(family, `url(${BASE}/${entry.id}/400.woff2) format("woff2")`, { weight: "400", display: "swap" })];
+    if (entry.bold) faces.push(new FontFace(family, `url(${BASE}/${entry.id}/700.woff2) format("woff2")`, { weight: "700", display: "swap" }));
     await Promise.all(faces.map((f) => f.load().then(() => document.fonts.add(f))));
   });
   const tracked = p.then(
@@ -78,7 +87,7 @@ const previews = new Set<string>();
 function loadPreview(entry: FontEntry): void {
   if (previews.has(entry.id)) return;
   previews.add(entry.id);
-  const face = new FontFace(`nxp-${entry.id}`, `url(/fonts/${entry.id}/preview.woff2) format("woff2")`);
+  const face = new FontFace(`nxp-${entry.id}`, `url(${BASE}/${entry.id}/preview.woff2) format("woff2")`);
   face.load().then((f) => document.fonts.add(f)).catch(() => previews.delete(entry.id));
 }
 // Guillemets échappés : la valeur est placée dans un attribut style="…"
@@ -112,11 +121,13 @@ export function bindFontPicker(host: HTMLElement, current: () => string, onPick:
   ensureFont(current()).then(() => btn.querySelector<HTMLElement>(".sp-font-btn-name")?.style.setProperty("opacity", "1")).catch(() => {});
   btn.addEventListener("click", () => {
     if (openPanel) { openPanel.close(); return; }
-    openPicker(btn, current(), onPick);
+    openFontPicker(btn, current(), onPick);
   });
 }
 
-function openPicker(anchor: HTMLButtonElement, current: string, onPick: (family: string) => void): void {
+/** Ouvre le panneau sous `anchor`. `extras` : entrées supplémentaires en tête (valeur rendue telle quelle). */
+export function openFontPicker(anchor: HTMLElement, current: string, onPick: (value: string) => void, extras: PickerExtra[] = []): void {
+  if (openPanel) { openPanel.close(); return; }
   const panel = document.createElement("div");
   panel.className = "sp-font-panel";
   panel.setAttribute("role", "dialog");
@@ -172,7 +183,11 @@ function openPicker(anchor: HTMLButtonElement, current: string, onPick: (family:
     const match = catalogue.filter((f) => (!category || f.category === category) && (!q || fold(f.family).includes(q)));
     let html = "";
     const recent = !q && !category ? readRecent().map((n) => byFamily.get(n)).filter((f): f is FontEntry => !!f) : [];
-    if (recent.length) html += `<p class="sp-font-head">Récentes</p>${recent.map((f) => option(f, "-r")).join("")}<p class="sp-font-head">Toutes les polices</p>`;
+    const ex = !category ? extras.filter((x) => !q || fold(x.label).includes(q)) : [];
+    if (ex.length) html += `<p class="sp-font-head">Polices de l'appareil</p>${ex.map((x, i) => `<div role="option" id="spf-x${i}" class="sp-font-opt" data-family="${esc(x.value)}" data-extra="1" aria-selected="${x.value === current}">
+      <span class="sp-font-preview" style="font-family:${esc(x.css)}">${esc(x.label)}</span><span class="sp-font-label">Installée sur cet appareil</span></div>`).join("")}`;
+    if (recent.length) html += `<p class="sp-font-head">Récentes</p>${recent.map((f) => option(f, "-r")).join("")}`;
+    if (ex.length || recent.length) html += `<p class="sp-font-head">Toutes les polices</p>`;
     html += match.map((f) => option(f, "")).join("") || `<p class="sp-font-msg">Aucune police ne correspond à « ${esc(search.value)} ».</p>`;
     list.innerHTML = html;
     rows = [...list.querySelectorAll<HTMLElement>("[role=option]")];
@@ -194,7 +209,7 @@ function openPicker(anchor: HTMLButtonElement, current: string, onPick: (family:
   };
 
   const pick = (family: string) => {
-    pushRecent(family);
+    if (byFamily.has(family)) pushRecent(family);
     close();
     onPick(family);
   };

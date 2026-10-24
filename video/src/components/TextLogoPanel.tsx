@@ -1,7 +1,8 @@
 // NOXEL Spectra Vidéo — Texte & logo : éléments, réglages, incrustation
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
-import { ANIMS, FONTS, GRADIENTS, TEXT_TEMPLATES, gradientCss, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
+import { ANIMS, GRADIENTS, TEXT_TEMPLATES, gradientCss, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";
+import { FontPicker } from "./FontPicker";
 import type { Anim, OverlayItem, TextItem } from "../lib/overlay";
 import { burnOverlays } from "../lib/textlogo";
 import { formatSupport } from "../lib/compress";
@@ -195,11 +196,9 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
                 <label>Contenu (Entrée pour une nouvelle ligne)
                   <textarea value={sel.text} rows={2} onChange={(e) => patchText({ text: e.target.value })} />
                 </label>
-                <label>Police
-                  <select value={sel.font} onChange={(e) => patchText({ font: e.target.value })}>
-                    {FONTS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
-                  </select>
-                </label>
+                <div className="vx-font-field"><span>Police</span>
+                  <FontPicker value={sel.font} onChange={(font) => patchText({ font })} />
+                </div>
                 <label>Graisse
                   <select value={sel.weight} onChange={(e) => patchText({ weight: Number(e.target.value) as TextItem["weight"] })}>
                     <option value={400}>Normale</option>
@@ -327,7 +326,7 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
         c'est plus long qu'une recopie et l'image perd en qualité, légèrement pour une vidéo ordinaire. Une vidéo déjà très légère peut ressortir plus lourde et moins nette,
         parce que l'encodeur du navigateur a un débit minimal. Le son est recopié tel quel quand le format le permet.
         Seule la sélection de la timeline ({fmtTime(range[1] - range[0])}) est exportée, en {info.video?.width} × {info.video?.height}.
-        Les polices sont celles de ton appareil : l'aperçu montre exactement ce qui sera incrusté.
+        Les polices de la liste sont hébergées par Spectra (aucune requête vers Google) et se chargent au premier choix ; l'aperçu montre exactement ce qui sera incrusté.
       </p>
       {outside > 0 && <p className="vx-alert">{outside > 1 ? `${outside} éléments sont hors de la sélection de la timeline : ils n'apparaîtront pas` : "1 élément est hors de la sélection de la timeline : il n'apparaîtra pas"} dans la vidéo produite.</p>}
       {!canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder en {webm ? "VP9" : "H.264"} : l'incrustation n'est pas possible ici pour cette vidéo.</p>}
