@@ -5,8 +5,8 @@
 // relu : un champ demandé qui n'y est pas = une erreur.
 import { ALL_FORMATS, BlobSource, BufferSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
 import type { MetadataTags } from "mediabunny";
-import { itemSize, makeLogo, makeText } from "./overlay";
-import type { OverlayItem, Fill } from "./overlay";
+import { DEFAULT_SHADOW, itemSize, makeLogo, makeText } from "./overlay";
+import type { OverlayItem, Fill, ShadowStyle } from "./overlay";
 import { burnOverlays } from "./textlogo";
 import { assertNoLostTrack } from "./tracks";
 
@@ -165,7 +165,8 @@ export type Mark = {
   color?: string; // texte : couleur (blanc par défaut)
   font?: string; // texte : police (id d'appareil ou famille de la bibliothèque) ; « sans » par défaut
   fill?: Fill; // texte : couleur unie ou dégradé (remplace `color` quand présent)
-  shadow?: boolean; // texte : ombre portée (oui par défaut)
+  shadow?: boolean; // ombre portée (texte : oui par défaut ; logo : seulement si vrai)
+  shadowStyle?: ShadowStyle; // réglages de l'ombre ; absent = ombre noire d'origine (texte)
 };
 export const PLACES: { id: Mark["place"]; label: string }[] = [
   { id: "tl", label: "Haut gauche" }, { id: "tc", label: "Haut centre" }, { id: "tr", label: "Haut droite" },
@@ -214,8 +215,8 @@ export function layoutMark(m: Mark, start: number, end: number, W: number, H: nu
   const base = { opacity: m.opacity, rotation: m.rotation, animIn: "none" as const, animOut: "none" as const };
   const make = (x: number, y: number): OverlayItem =>
     m.kind === "logo"
-      ? makeLogo(start, end, m.logo!.image, m.logo!.ratio, m.logo!.fileName, { ...base, x, y, width: m.size, name: "Filigrane" })
-      : makeText(start, end, { ...base, x, y, text: m.text.trim(), font: m.font || "sans", size: m.size, weight: 700, shadow: m.shadow ?? true, name: "Filigrane", fill: m.fill ?? { kind: "solid" as const, color: m.color || "#ffffff" } });
+      ? makeLogo(start, end, m.logo!.image, m.logo!.ratio, m.logo!.fileName, { ...base, x, y, width: m.size, name: "Filigrane", ...(m.shadow === true ? { shadowStyle: m.shadowStyle ?? DEFAULT_SHADOW } : {}) })
+      : makeText(start, end, { ...base, x, y, text: m.text.trim(), font: m.font || "sans", size: m.size, weight: 700, shadow: m.shadow ?? true, name: "Filigrane", fill: m.fill ?? { kind: "solid" as const, color: m.color || "#ffffff" }, ...(m.shadowStyle ? { shadowStyle: m.shadowStyle } : {}) });
   // Place occupée, rotation comprise, en fraction de l'image
   probe ||= document.createElement("canvas").getContext("2d")!;
   const { w, h } = itemSize(probe, make(0.5, 0.5), W, H);

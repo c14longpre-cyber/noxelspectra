@@ -23,6 +23,15 @@ export type GradDir = "horizontal" | "vertical" | "diagonal" | "radial";
 export type GradientFill = { kind: "gradient"; id: string; stops?: Stop[]; dir?: GradDir };
 export type Fill = { kind: "solid"; color: string } | GradientFill;
 
+/**
+ * Ombre portée réglable. dx, dy et blur sont des fractions de la taille de l'élément (texte :
+ * taille de la police ; logo : sa hauteur), donc indépendantes de la résolution. fill : couleur
+ * unie ou dégradé (jusqu'à 10 couleurs, horizontal, vertical, diagonal ou du centre vers l'extérieur).
+ */
+export type ShadowStyle = { dx: number; dy: number; blur: number; opacity: number; fill: Fill };
+/** Même rendu que l'ancienne ombre fixe (noire, un peu sous le texte). */
+export const DEFAULT_SHADOW: ShadowStyle = { dx: 0, dy: 0.05, blur: 0.14, opacity: 0.6, fill: { kind: "solid", color: "#000000" } };
+
 type Base = {
   id: string;
   name: string;
@@ -35,6 +44,7 @@ type Base = {
   animIn: Anim;
   animOut: Anim;
   animDuration: number; // secondes
+  shadowStyle?: ShadowStyle; // texte : réglages de l'ombre quand `shadow` est vrai ; logo : ombre si présent
 };
 export type TextItem = Base & {
   kind: "text";
@@ -248,7 +258,7 @@ function drawText(ctx: Ctx, it: TextItem, W: number, H: number, reveal: number) 
     const full = ctx.measureText(line).width;
     const tx = it.align === "left" ? -inner / 2 : it.align === "right" ? inner / 2 - full : -full / 2;
     const ty = -h / 2 + pad + px * LINE * (i + 0.5);
-    if (it.shadow) {
+    if (it.shadow && !it.shadowStyle) {
       ctx.shadowColor = "rgba(0, 0, 0, 0.6)";
       ctx.shadowBlur = px * 0.14;
       ctx.shadowOffsetY = px * 0.05;
@@ -264,6 +274,83 @@ function drawText(ctx: Ctx, it: TextItem, W: number, H: number, reveal: number) 
   });
 }
 
+// ── Ombre réglable ─────────────────────────────────────────────────────
+// La silhouette de l'élément (texte, contour et fond compris, ou logo) est recolorée avec la couleur
+// ou le dégradé de l'ombre, puis floutée et posée sous l'élément, décalée. Mise en cache : les copies
+// d'un filigrane répété et les images successives d'une vidéo réutilisent la même ombre.
+// Flou : filtre du canevas quand le navigateur le gère, sinon réduction puis agrandissement lissé.
+const canFilter = typeof document !== "undefined" && "filter" in (document.createElement("canvas").getContext("2d") ?? {});
+type ShadowSprite = { canvas: HTMLCanvasElement; small: HTMLCanvasElement | null; w: number; h: number; blur: number };
+const shadowCache = new Map<string, ShadowSprite>();
+const imageIds = new WeakMap<object, number>();
+let imageSeq = 0;
+const imageId = (img: CanvasImageSource) => {
+  let id = imageIds.get(img as object);
+  if (id === undefined) imageIds.set(img as object, (id = ++imageSeq));
+  return id;
+};
+
+function shadowSprite(it: OverlayItem, W: number, H: number, reveal: number, st: ShadowStyle): ShadowSprite | null {
+  const key = JSON.stringify([
+    it.kind === "logo" ? [imageId(it.image), it.width, it.ratio] : [it.text, it.font, isFontReady(it.font), it.weight, it.italic, it.size, it.align, it.stroke, it.box, Math.round(reveal * 1000)],
+    W, H, st.blur, st.fill,
+  ]);
+  const hit = shadowCache.get(key);
+  if (hit) return hit;
+  const probe = document.createElement("canvas").getContext("2d")!;
+  const { w, h } = itemSize(probe, it, W, H);
+  const ref = it.kind === "logo" ? h : it.size * H;
+  const blur = Math.max(0, st.blur * ref);
+  const m = Math.ceil(blur * 2.5) + 2;
+  const cw = Math.ceil(w + m * 2), ch = Math.ceil(h + m * 2);
+  if (cw * ch > 16e6) return null; // ombre démesurée : on s'abstient plutôt que de saturer la mémoire
+  const canvas = document.createElement("canvas");
+  canvas.width = cw;
+  canvas.height = ch;
+  const sc = canvas.getContext("2d")!;
+  sc.save();
+  sc.translate(cw / 2, ch / 2);
+  if (it.kind === "logo") sc.drawImage(it.image, -w / 2, -h / 2, w, h);
+  else drawText(sc, { ...it, shadow: false }, W, H, reveal);
+  sc.restore();
+  sc.globalCompositeOperation = "source-in";
+  sc.fillStyle = st.fill.kind === "gradient" ? canvasGradient(sc, st.fill, m, m, w, h) : st.fill.color;
+  sc.fillRect(0, 0, cw, ch);
+  let small: HTMLCanvasElement | null = null;
+  if (!canFilter && blur >= 1) {
+    const k = Math.max(1, blur / 1.5);
+    small = document.createElement("canvas");
+    small.width = Math.max(1, Math.round(cw / k));
+    small.height = Math.max(1, Math.round(ch / k));
+    const s2 = small.getContext("2d")!;
+    s2.imageSmoothingEnabled = true;
+    s2.imageSmoothingQuality = "high";
+    s2.drawImage(canvas, 0, 0, small.width, small.height);
+  }
+  const sprite = { canvas, small, w: cw, h: ch, blur };
+  shadowCache.set(key, sprite);
+  if (shadowCache.size > 24) shadowCache.delete(shadowCache.keys().next().value!);
+  return sprite;
+}
+
+function drawShadow(ctx: Ctx, it: OverlayItem, W: number, H: number, reveal: number, st: ShadowStyle) {
+  if (st.opacity <= 0) return;
+  const sprite = shadowSprite(it, W, H, reveal, st);
+  if (!sprite) return;
+  const ref = it.kind === "logo" ? (it.width * W) / it.ratio : it.size * H;
+  const x = -sprite.w / 2 + st.dx * ref, y = -sprite.h / 2 + st.dy * ref;
+  ctx.save();
+  ctx.globalAlpha *= st.opacity;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  if (sprite.small) ctx.drawImage(sprite.small, x, y, sprite.w, sprite.h);
+  else {
+    if (sprite.blur >= 0.5) (ctx as CanvasRenderingContext2D).filter = `blur(${sprite.blur.toFixed(1)}px)`;
+    ctx.drawImage(sprite.canvas, x, y);
+  }
+  ctx.restore();
+}
+
 /** Dessine les éléments visibles à l'instant t (secondes dans la vidéo source) sur une image W × H. */
 export function drawOverlays(ctx: Ctx, items: OverlayItem[], t: number, W: number, H: number) {
   for (const it of items) {
@@ -274,6 +361,8 @@ export function drawOverlays(ctx: Ctx, items: OverlayItem[], t: number, W: numbe
     ctx.translate((it.x + a.dx) * W, (it.y + a.dy) * H);
     ctx.rotate((it.rotation * Math.PI) / 180);
     ctx.scale(a.scale, a.scale);
+    const st = it.shadowStyle && (it.kind === "logo" || it.shadow) ? it.shadowStyle : null;
+    if (st) drawShadow(ctx, it, W, H, a.reveal, st);
     if (it.kind === "logo") {
       const { w, h } = itemSize(ctx, it, W, H);
       ctx.imageSmoothingEnabled = true;
