@@ -3,7 +3,7 @@
 // (même famille de codec, au débit de la source). Le son est recopié tel quel.
 import { ALL_FORMATS, BlobSource, BufferSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
 import type { ConversionOptions, VideoSample } from "mediabunny";
-import { drawOverlays } from "./overlay";
+import { drawOverlays, loadItemFonts } from "./overlay";
 import type { OverlayItem } from "./overlay";
 import { assertNoLostTrack } from "./tracks";
 
@@ -30,6 +30,8 @@ export async function burnOverlays(
     const webm = codec === "vp8" || codec === "vp9" || codec === "av1";
     const width = even(await vt.getDisplayWidth());
     const height = even(await vt.getDisplayHeight());
+    // Toutes les polices doivent être prêtes avant la première image encodée
+    await loadItemFonts(items);
     // Canevas du document (pas OffscreenCanvas) : mêmes polices que l'aperçu
     const canvas = document.createElement("canvas");
     canvas.width = width;

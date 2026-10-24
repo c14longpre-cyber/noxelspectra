@@ -137,3 +137,11 @@ a { color: var(--g); }
 .vx-code-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0 6px; font: 600 11px ui-monospace, "SF Mono", Consolas, monospace; letter-spacing: 0.1em; text-transform: uppercase; color: #7f93a8; }
 .vx-code { margin: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(61, 220, 132, 0.2); background: rgba(0, 0, 0, 0.35); color: #cfe9da; font: 12px/1.5 ui-monospace, "SF Mono", Consolas, monospace; white-space: pre-wrap; overflow-x: auto; }
 .vx-rot { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+/* Sélecteur de police (le panneau vient de frontend/…/font-picker.css) */
+.vx-font-field { display: flex; flex-direction: column; gap: 5px; color: #cad5e4; }
+.vx-font-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 10px; cursor: pointer; text-align: left; }
+.vx-font-btn > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; line-height: 1.25; }
+.vx-font-btn:hover { border-color: #3ddc84; }
+.vx-font-btn:focus-visible { outline: 2px solid #3ddc84; outline-offset: 2px; }
+.vx-font-caret { color: #8b9bb2; font-size: 11px; }

@@ -2,6 +2,7 @@
 // Le même code dessine l'aperçu et l'export : ce qu'on voit est ce qui est produit.
 // Toutes les mesures sont relatives à l'image (0–1), donc indépendantes de la résolution.
 import { PRESETS } from "../../../frontend/src/components/spectra-gradient/gradient-engine";
+import { ensureFont, isFontReady } from "../../../frontend/src/components/spectra-editor/font-library";
 
 export type Anim = "none" | "fade" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "zoom" | "typewriter";
 export const ANIMS: { id: Anim; label: string; textOnly?: boolean }[] = [
@@ -33,7 +34,7 @@ type Base = {
 export type TextItem = Base & {
   kind: "text";
   text: string;
-  font: string; // id de FONTS
+  font: string; // id de FONTS (police de l'appareil) ou nom d'une famille de la bibliothèque (/fonts)
   weight: 400 | 700 | 900;
   italic: boolean;
   size: number; // hauteur d'une ligne, 0–1 de la hauteur de l'image
@@ -109,7 +110,17 @@ export const TEXT_TEMPLATES: { id: string; label: string; whole?: boolean; build
 // ── Dessin ──────────────────────────────────────────────────────────────
 type Ctx = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 const ease = (p: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 3);
-const fontOf = (it: TextItem, px: number) => `${it.italic ? "italic " : ""}${it.weight} ${px}px ${FONTS.find((f) => f.id === it.font)?.stack || FONTS[0].stack}`;
+/** Pile CSS d'une police : celle de l'appareil, ou une famille de la bibliothèque avec repli. */
+export const fontStack = (font: string) => FONTS.find((f) => f.id === font)?.stack ?? `"${font.replace(/"/g, "")}", ${FONTS[0].stack}`;
+const isDevice = (font: string) => FONTS.some((f) => f.id === font);
+/** Charge les polices de bibliothèque utilisées (à attendre avant un export). */
+export const loadItemFonts = (items: OverlayItem[]) =>
+  Promise.all(items.flatMap((it) => (it.kind === "text" && !isDevice(it.font) ? [ensureFont(it.font).catch(() => {})] : [])));
+const fontOf = (it: TextItem, px: number) => {
+  // Police de la bibliothèque pas encore chargée : on la demande, l'aperçu (redessiné à chaque image) la prendra ensuite
+  if (!isDevice(it.font) && !isFontReady(it.font)) ensureFont(it.font).catch(() => {});
+  return `${it.italic ? "italic " : ""}${it.weight} ${px}px ${fontStack(it.font)}`;
+};
 const LINE = 1.2; // interligne
 // Découpe en caractères affichés (un emoji = un caractère), pour la machine à écrire
 const segmenter = typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : null;
