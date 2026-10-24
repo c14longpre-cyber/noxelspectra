@@ -1,5 +1,6 @@
 import { gradientFill, stickerSpectrum, gradientPanelHtml, bindGradientPanel, hudHtml, hudLabelHtml } from "./editor-gradient";
 import "./editor-hud.css";
+import { ensureFont, isFontReady, fontPickerHtml, bindFontPicker } from "./font-library";
 /** NOXEL Spectra overlay editor. Dégradés : moteur partagé avec l'outil Dégradé. */
 export class SpectraOverlayEditor {
   static STICKERS = [
@@ -434,8 +435,12 @@ export class SpectraOverlayEditor {
   // Nom de police entre guillemets (« Baloo 2 » est invalide sans) ; les polices
   // auto-hébergées ne se chargent qu'à l'usage : on les charge puis on redessine.
   fontFor(item) {
-    const font=`${item.bold?'700 ':''}${item.size}px "${item.font}"`;
-    if(document.fonts && !document.fonts.check(font)) {
+    const font=`${item.bold?'700 ':''}${item.size}px "${item.font}", system-ui, sans-serif`;
+    // Police de la bibliothèque /fonts : chargée à son premier usage, puis nouveau rendu
+    if(!isFontReady(item.font)) {
+      this.libraryLoading ??= new Set();
+      if(!this.libraryLoading.has(item.font)) { this.libraryLoading.add(item.font); ensureFont(item.font).then(()=>this.render()).catch(()=>this.libraryLoading.delete(item.font)); }
+    } else if(document.fonts && !document.fonts.check(font)) {
       this.fontsLoading ??= new Set();
       if(!this.fontsLoading.has(font)) { this.fontsLoading.add(font); document.fonts.load(font).then(()=>this.render()).catch(()=>{}); }
     }
@@ -525,7 +530,7 @@ export class SpectraOverlayEditor {
     const sizeLabel=item.type==='text'?'Taille du texte':'Taille';
     const number=(label,key,value,min,max,step=1)=>`<label>${label}<input data-prop="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
     host.innerHTML=`<h3>Propriétés</h3>
-      ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><label>Police<select data-prop="font">${['Inter','Manrope','Space Grotesk','Anton','Bebas Neue','Oswald','Playfair Display','Lora','Merriweather','JetBrains Mono','Space Mono','Fira Code','Caveat','Pacifico','Dancing Script','Fredoka','Quicksand','Baloo 2'].map(f=>`<option ${item.font===f?'selected':''}>${f}</option>`).join('')}</select></label><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
+      ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><div class="sp-font-row"><span>Police</span>${fontPickerHtml(item.font)}</div><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
       ${item.type==='shape'?`<label>Forme<select data-prop="shape">${['rectangle','circle','star'].map(s=>`<option ${item.shape===s?'selected':''} value="${s}">${s}</option>`).join('')}</select></label>`:''}
       <label>Type de remplissage<select data-prop="fillMode">${item.type==='sticker'?`<option value="original" ${item.fillMode==='original'?'selected':''}>Original (pack NOXEL)</option>`:''}<option value="solid" ${item.fillMode==='solid'?'selected':''}>Uni</option><option value="gradient" ${item.fillMode==='gradient'?'selected':''}>Dégradé</option></select></label>
       ${item.fillMode==='gradient'?gradientPanelHtml(item):item.fillMode==='solid'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
@@ -569,6 +574,12 @@ export class SpectraOverlayEditor {
       });
       input.addEventListener('change',()=>this.commit());
       if(input.dataset.prop==='text')input.addEventListener('blur',()=>this.commit());
+    });
+    if(item.type==='text')bindFontPicker(host,()=>item.font,family=>{
+      item.font=family;
+      this.commit();
+      this.renderProperties();
+      ensureFont(family).then(()=>this.render()).catch(()=>this.status('Cette police n’a pas pu être chargée. Vérifiez votre connexion.'));
     });
     if(item.fillMode==='gradient')bindGradientPanel(host,item,{
       draw:()=>{if(item.type==='sticker')this.refreshStickerImage(item);else this.drawOnly();},
@@ -648,6 +659,8 @@ export class SpectraOverlayEditor {
   async exportPng(){
     if(!this.image)throw new Error('Ouvrez d’abord une image à exporter.');
     const canvas=document.createElement('canvas');canvas.width=this.width;canvas.height=this.height;
+    // Toutes les polices doivent être chargées avant de dessiner, sinon le PNG garderait la police de secours
+    await Promise.all(this.items.filter(item=>item.type==='text').map(item=>ensureFont(item.font).then(()=>document.fonts.load(this.fontFor(item))).catch(()=>{})));
     const ctx=canvas.getContext('2d');ctx.drawImage(this.image,0,0,this.width,this.height);
     for(const item of this.items)this.paintItem(ctx,item);
     return new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Export impossible.')), 'image/png');}catch(e){reject(e);}});
