@@ -6,6 +6,7 @@ import { HudButton, HudLink } from "./components/hud/HudButton";
 import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
 import { NumberInput } from "./components/NumberInput";
+import { GradientStops, type Stop } from "./components/GradientStops";
 import { RightsTool } from "./components/spectra-rights/RightsTool";
 import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import { ExifNotice } from "./components/spectra-exif/ExifNotice";
@@ -613,7 +614,8 @@ export default function App() {
   const [shadowOpacity, setShadowOpacity] = useState(60);
   const [shadowColor, setShadowColor] = useState("#000000");
   const [shadowGradient, setShadowGradient] = useState(false);
-  const [shadowColor2, setShadowColor2] = useState("#A855F7");
+  const [shadowStops, setShadowStops] = useState<Stop[]>([{ at: 0, color: "#3ddc84" }, { at: 1, color: "#A855F7" }]);
+  const [shadowGradType, setShadowGradType] = useState<"horizontal" | "vertical" | "angle" | "radial">("horizontal");
   const [shadowAngle, setShadowAngle] = useState(45);
   // Fond de l'aperçu : une ombre blanche est invisible sur le damier clair
   const [shadowPreviewBg, setShadowPreviewBg] = useState<"checker" | "dark" | "light">("checker");
@@ -1662,6 +1664,9 @@ export default function App() {
     }
   }
 
+  // Horizontal = 0°, vertical = 90° (de haut en bas), sinon l'angle choisi
+  const shadowGradAngle = shadowGradType === "horizontal" ? 0 : shadowGradType === "vertical" ? 90 : shadowAngle;
+
   async function handleDropShadow() {
     if (!file) return;
     setShadowLoading(true);
@@ -1676,8 +1681,9 @@ export default function App() {
     formData.append("opacity", String(shadowOpacity));
     formData.append("color", shadowColor);
     if (shadowGradient) {
-      formData.append("color2", shadowColor2);
-      formData.append("angle", String(shadowAngle));
+      formData.append("stops", JSON.stringify(shadowStops));
+      formData.append("gradient", shadowGradType === "radial" ? "radial" : "linear");
+      formData.append("angle", String(shadowGradAngle));
     }
 
     try {
@@ -1691,7 +1697,7 @@ export default function App() {
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity, color: shadowColor, ...(shadowGradient ? { color2: shadowColor2, angle: shadowAngle } : {}) }] };
+      recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity, color: shadowColor, ...(shadowGradient ? { stops: shadowStops, gradient: shadowGradType === "radial" ? "radial" : "linear", angle: shadowGradAngle } : {}) }] };
       setShadowResultUrl(outUrl);
     } catch (err) {
       setShadowError(err instanceof Error ? err.message : "Ombre portée échouée");
@@ -3209,31 +3215,42 @@ export default function App() {
           <label><input type="radio" checked={!shadowGradient} onChange={() => setShadowGradient(false)} /> Couleur unie</label>
           <label><input type="radio" checked={shadowGradient} onChange={() => setShadowGradient(true)} /> Dégradé</label>
         </div>
-        <div className="shadow-colors__row">
-          <label>
-            {shadowGradient ? "De" : "Couleur"}
-            <input type="color" value={shadowColor} onChange={(e) => setShadowColor(e.target.value)} />
-          </label>
-          {shadowGradient && (
-            <>
+        {shadowGradient ? (
+          <>
+            <div className="shadow-colors__row">
               <label>
-                vers
-                <input type="color" value={shadowColor2} onChange={(e) => setShadowColor2(e.target.value)} />
+                Type :
+                <select value={shadowGradType} onChange={(e) => setShadowGradType(e.target.value as typeof shadowGradType)}>
+                  <option value="horizontal">Linéaire horizontal (gauche → droite)</option>
+                  <option value="vertical">Linéaire vertical (haut → bas)</option>
+                  <option value="angle">Linéaire, angle libre</option>
+                  <option value="radial">Radial (du centre vers l'extérieur)</option>
+                </select>
               </label>
-              <label>
-                Angle : <NumberInput label="Angle du dégradé" value={shadowAngle} onChange={setShadowAngle} min={0} max={360} unit="°" />
-                <input type="range" min={0} max={360} step={5} value={shadowAngle} onChange={(e) => setShadowAngle(Number(e.target.value))} />
-              </label>
-            </>
-          )}
-        </div>
+              {shadowGradType === "angle" && (
+                <label>
+                  Angle : <NumberInput label="Angle du dégradé" value={shadowAngle} onChange={setShadowAngle} min={0} max={360} unit="°" />
+                  <input type="range" min={0} max={360} step={5} value={shadowAngle} onChange={(e) => setShadowAngle(Number(e.target.value))} />
+                </label>
+              )}
+            </div>
+            <GradientStops stops={shadowStops} onChange={setShadowStops} />
+          </>
+        ) : (
+          <div className="shadow-colors__row">
+            <label>
+              Couleur
+              <input type="color" value={shadowColor} onChange={(e) => setShadowColor(e.target.value)} />
+            </label>
+          </div>
+        )}
         <div className="shadow-colors__swatches">
           {[["#000000", "Noir"], ["#ffffff", "Blanc"], ["#3ddc84", "Vert NOXEL"], ["#A855F7", "Violet NOXEL"]].map(([c, name]) => (
             <button key={c} type="button" className="shadow-swatch" title={name} aria-label={`Ombre ${name.toLowerCase()}`} style={{ background: c }}
-              onClick={() => setShadowColor(c)} />
+              onClick={() => { setShadowGradient(false); setShadowColor(c); }} />
           ))}
           <button type="button" className="shadow-swatch shadow-swatch--gradient" title="Dégradé vert → violet" aria-label="Ombre en dégradé vert vers violet"
-            onClick={() => { setShadowGradient(true); setShadowColor("#3ddc84"); setShadowColor2("#A855F7"); }} />
+            onClick={() => { setShadowGradient(true); setShadowStops([{ at: 0, color: "#3ddc84" }, { at: 1, color: "#A855F7" }]); }} />
         </div>
       </div>
 

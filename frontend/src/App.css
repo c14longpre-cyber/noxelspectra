@@ -444,3 +444,19 @@ a {
   border-color: var(--green);
   background: rgba(61, 220, 132, 0.06);
 }
+
+/* Couleurs d'un dégradé (GradientStops) — même look que Spectra Vidéo */
+.gs-stops { display: grid; gap: 10px; max-width: 560px; }
+.gs-stops-bar { position: relative; height: 28px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.25); margin: 6px 12px 10px; touch-action: none; }
+.gs-stop-handle { position: absolute; top: 50%; width: 22px; height: 22px; margin: 0; padding: 0; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #07090f, 0 2px 6px rgba(0, 0, 0, 0.5); transform: translate(-50%, -50%); cursor: grab; touch-action: none; }
+.gs-stop-handle:active { cursor: grabbing; }
+.gs-stop-handle.is-on { border-color: #3ddc84; box-shadow: 0 0 0 2px #07090f, 0 0 0 4px rgba(61, 220, 132, 0.45); z-index: 1; }
+.gs-stop-handle:focus-visible { outline: 2px solid #a855f7; outline-offset: 3px; }
+.gs-stops-rows { display: grid; gap: 6px; }
+.gs-stop-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; align-items: center; gap: 10px; padding: 4px 6px; border-radius: 8px; }
+.gs-stop-row.is-on { background: rgba(61, 220, 132, 0.08); }
+.gs-stop-row input[type="color"] { width: 40px; height: 30px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: none; }
+.gs-stop-row input[type="range"] { width: 100%; min-width: 0; accent-color: #3ddc84; }
+.gs-stop-num { display: inline-flex; align-items: center; gap: 4px; color: #a7b8cd; font-size: 13px; }
+.gs-stop-num input { width: 58px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: inherit; border-radius: 6px; padding: 4px 6px; font: inherit; }
+.gs-stops .gs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

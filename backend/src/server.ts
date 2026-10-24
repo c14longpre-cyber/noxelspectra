@@ -43,7 +43,7 @@ import dotenv from "dotenv";
 import archiver = require("archiver");
 import toIco from "to-ico";
 import { Potrace } from "potrace";
-import { parseRecipe, runRecipe, mapWithLimit, shadowLayer } from "./ops";
+import { parseRecipe, runRecipe, mapWithLimit, shadowLayer, parseShadowStops } from "./ops";
 import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
 import { parseRights, hasRights, readRights, missingAfterExport, applyRights } from "./rights";
 import { renderTextOverlay } from "./textOverlay";
@@ -1470,6 +1470,8 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
 //   opacity     optional 0-100 (default 60)
 //   color       optional #rrggbb (default #000000)
 //   color2      optional #rrggbb — ombre en dégradé de color vers color2
+//   stops       optional JSON [{ at: 0-1, color: "#rrggbb" }, …] — dégradé de 2 à 10 couleurs
+//   gradient    optional "linear" (défaut) | "radial" (du centre vers l'extérieur)
 //   angle       optional, degrés du dégradé (0 = gauche → droite, 90 = haut → bas)
 // Works best on images with transparency (logos, vectorized icons);
 // on fully-opaque images it shadows the whole rectangle.
@@ -1504,6 +1506,8 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
     const shadowWithOpacity = await shadowLayer(sourceWithAlpha, width, height, blurAmount, opacity, {
       color: hex(req.body.color),
       color2: hex(req.body.color2),
+      stops: parseShadowStops(req.body.stops),
+      gradient: req.body.gradient === "radial" ? "radial" : "linear",
       angle: num(req.body.angle, -360, 360, 0),
     });
 
