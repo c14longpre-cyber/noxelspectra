@@ -18,9 +18,19 @@ export const CATEGORY_LABELS: Record<FontCategory, string> = {
 };
 const CODES: Record<string, FontCategory> = { s: "sans-serif", e: "serif", d: "display", h: "handwriting", m: "monospace" };
 
-// Polices déjà fournies par @fontsource (src/fonts.ts) : disponibles sans passer par /fonts.
-const BUNDLED = new Set(["Inter", "Manrope", "Space Grotesk", "Anton", "Bebas Neue", "Oswald", "Playfair Display", "Lora",
-  "Merriweather", "JetBrains Mono", "Space Mono", "Fira Code", "Caveat", "Pacifico", "Dancing Script", "Fredoka", "Quicksand", "Baloo 2"]);
+// Polices déjà déclarées par la page en CSS (@font-face), par exemple les 18 polices @fontsource
+// de Spectra image (src/fonts.ts). On les détecte dans document.fonts plutôt que par une liste fixe :
+// Spectra Vidéo n'importe pas ces fichiers, il doit donc les prendre dans /fonts comme les autres.
+const declared = new Map<string, boolean>();
+function hasCssFace(family: string): boolean {
+  let v = declared.get(family);
+  if (v === undefined) {
+    v = false;
+    document.fonts.forEach((f) => { if (!v && !(f as FontFace & { __nx?: boolean }).__nx && f.family.replace(/^["']|["']$/g, "") === family) v = true; });
+    declared.set(family, v);
+  }
+  return v;
+}
 
 // Adresse des fichiers. Spectra image : /fonts (frontend/public/fonts). Spectra Vidéo copie le
 // même dossier dans son build (video/vite.config.ts), donc /fonts aussi par défaut.
@@ -57,14 +67,14 @@ const loading = new Map<string, Promise<void>>();
 
 /** Vrai si la police est utilisable tout de suite sur le canevas. */
 export function isFontReady(family: string): boolean {
-  if (BUNDLED.has(family)) return true;
+  if (hasCssFace(family)) return true;
   const p = loading.get(family);
   return !!p && (p as Promise<void> & { done?: boolean }).done === true;
 }
 
 /** Charge la police (400 et, si elle existe, 700) depuis /fonts. Sans effet pour une police inconnue. */
 export function ensureFont(family: string): Promise<void> {
-  if (BUNDLED.has(family)) return document.fonts.load(`16px "${family}"`).then(() => undefined);
+  if (hasCssFace(family)) return document.fonts.load(`16px "${family}"`).then(() => undefined);
   let p = loading.get(family);
   if (p) return p;
   p = loadCatalogue().then(async () => {
@@ -72,6 +82,7 @@ export function ensureFont(family: string): Promise<void> {
     if (!entry) return;
     const faces = [new FontFace(family, `url(${BASE}/${entry.id}/400.woff2) format("woff2")`, { weight: "400", display: "swap" })];
     if (entry.bold) faces.push(new FontFace(family, `url(${BASE}/${entry.id}/700.woff2) format("woff2")`, { weight: "700", display: "swap" }));
+    faces.forEach((f) => { (f as FontFace & { __nx?: boolean }).__nx = true; });
     await Promise.all(faces.map((f) => f.load().then(() => document.fonts.add(f))));
   });
   const tracked = p.then(
@@ -91,7 +102,7 @@ function loadPreview(entry: FontEntry): void {
   face.load().then((f) => document.fonts.add(f)).catch(() => previews.delete(entry.id));
 }
 // Guillemets échappés : la valeur est placée dans un attribut style="…"
-const previewFamily = (e: FontEntry) => (BUNDLED.has(e.family) ? `&quot;${esc(e.family)}&quot;` : `&quot;nxp-${e.id}&quot;`);
+const previewFamily = (e: FontEntry) => (hasCssFace(e.family) ? `&quot;${esc(e.family)}&quot;` : `&quot;nxp-${e.id}&quot;`);
 
 // ── Sélecteur ───────────────────────────────────────────────────────────
 const RECENT_KEY = "spectra.fonts.recent";

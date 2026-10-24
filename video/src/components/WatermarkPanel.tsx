@@ -6,6 +6,7 @@ import { HudButton, HudLink } from "@hud/HudButton";
 import { loadLogo } from "../lib/overlay";
 import type { OverlayItem } from "../lib/overlay";
 import { PLACES, containerFor, layoutMark } from "../lib/rights";
+import { FontPicker } from "./FontPicker";
 import type { Mark } from "../lib/rights";
 import { burnOverlays } from "../lib/textlogo";
 import type { BurnResult } from "../lib/textlogo";
@@ -52,11 +53,14 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
   // Les fichiers produits ne sont libérés qu'en quittant l'outil
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 
+  // Incrémenté quand une police de la bibliothèque finit de charger : le filigrane est remesuré
+  // (sa place exacte dépend de la largeur du texte dans sa vraie police)
+  const [fontTick, setFontTick] = useState(0);
   const frameW = info.video?.width || 0, frameH = info.video?.height || 0;
   const layout = useMemo(
     () => layoutMark(mark, 0, Math.max(duration, range[1]), frameW, frameH),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, duration, range[1], frameW, frameH]
+    [mark.kind, mark.text, mark.logo, mark.place, mark.size, mark.opacity, mark.rotation, mark.color, mark.font, fontTick, duration, range[1], frameW, frameH]
   );
   const overlays = layout.items;
   useEffect(() => { onPreview(overlays); }, [overlays, onPreview]);
@@ -124,6 +128,9 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
             <label>Texte
               <input type="text" value={mark.text} maxLength={200} placeholder="© 2026 Ton nom" onChange={(e) => setMark((m) => ({ ...m, text: e.target.value }))} />
             </label>
+            <div className="vx-font-field"><span>Police</span>
+              <FontPicker value={mark.font || "sans"} onChange={(font) => setMark((m) => ({ ...m, font }))} onReady={() => setFontTick((n) => n + 1)} />
+            </div>
             <label>Couleur
               <input type="color" value={mark.color || "#ffffff"} onChange={(e) => setMark((m) => ({ ...m, color: e.target.value }))} />
             </label>

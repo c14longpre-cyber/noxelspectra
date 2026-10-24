@@ -1,4 +1,5 @@
 // NOXEL Spectra Vidéo — images tirées de la vidéo : capture, suggestions, miniature.
+import { fontStack } from "./overlay";
 
 export type ThumbAspect = "original" | "16:9" | "1:1" | "9:16";
 export const THUMB_SIZES: Record<Exclude<ThumbAspect, "original">, { width: number; height: number; label: string }> = {
@@ -13,6 +14,7 @@ export type TitleStyle = {
   size: number; // % de la hauteur de l'image
   color: string;
   band: boolean; // bande sombre derrière le texte
+  font: string; // police : id d'appareil ou famille de la bibliothèque (Inter par défaut)
 };
 
 /** Dessine une image de la vidéo en mode « couvrir » (recadrage centré) dans les dimensions voulues. */
@@ -36,7 +38,7 @@ export function renderThumbnail(video: HTMLVideoElement, aspect: ThumbAspect, ti
 
 function drawTitle(ctx: CanvasRenderingContext2D, w: number, h: number, t: TitleStyle) {
   const fontSize = Math.round((h * t.size) / 100);
-  ctx.font = `800 ${fontSize}px Inter, "Segoe UI", system-ui, sans-serif`;
+  ctx.font = `800 ${fontSize}px ${fontStack(t.font || "Inter")}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   // Retour à la ligne automatique (au plus 3 lignes)
