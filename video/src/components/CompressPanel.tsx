@@ -53,12 +53,16 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
   const urls = useRef<string[]>([]);
   const [audioReal, setAudioReal] = useState<number | null>(null); // débit audio que l'encodeur utilisera vraiment
 
+  const reencodesAudio = src.hasAudio && !removeAudio;
   useEffect(() => {
-    formatSupport().then((s) => {
+    let current = true;
+    formatSupport(reencodesAudio).then((s) => {
+      if (!current) return;
       setSupport(s);
       if (!s.mp4 && s.webm) setFormat("webm");
     });
-  }, []);
+    return () => { current = false; };
+  }, [reencodesAudio]);
   useEffect(() => {
     if (initialTargetMb) {
       setMode("target");
@@ -260,7 +264,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
         )}
         <label>Format
           <select value={format} onChange={(e) => setFormat(e.target.value as CompressFormat)}>
-            <option value="mp4" disabled={support ? !support.mp4 : false}>MP4 (H.264) — compatible partout{support && !support.mp4 ? " — non disponible ici" : ""}</option>
+            <option value="mp4" disabled={support ? !support.mp4 : false}>MP4 (H.264) — compatible partout{support && !support.mp4 ? (reencodesAudio ? " — son AAC non disponible ici (coche « Retirer le son »)" : " — non disponible ici") : ""}</option>
             <option value="webm" disabled={support ? !support.webm : false}>WebM (VP9) — plus léger, pour le web</option>
           </select>
         </label>

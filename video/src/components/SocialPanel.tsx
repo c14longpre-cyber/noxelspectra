@@ -33,11 +33,11 @@ export function SocialPanel({ file, info, range, video }: Props) {
   const job = useCancel();
 
   useEffect(() => {
-    formatSupport().then((s) => {
+    formatSupport(!!info.audio).then((s) => {
       setSupport(s);
       if (!s.mp4 && s.webm) setFormat("webm");
     });
-  }, []);
+  }, [info.audio]);
   // Libère les fichiers seulement en quittant l'outil (pas à chaque nouvelle version :
   // les versions déjà créées doivent rester téléchargeables)
   const doneRef = useRef<Done[]>([]);

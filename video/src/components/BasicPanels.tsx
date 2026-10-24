@@ -157,7 +157,13 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
   const [target, setTarget] = useState<ContainerId>("mp4");
   const job = useJob();
   const [support, setSupport] = useState<{ m4a: boolean; ogg: boolean } | null>(null);
-  useEffect(() => { audioFormatSupport().then(setSupport); }, []);
+  // Sans encodeur AAC (Firefox, Chrome sous Linux), WebM par défaut, comme dans les autres outils
+  useEffect(() => {
+    audioFormatSupport().then((s) => {
+      setSupport(s);
+      if (info.audio && !s.m4a && s.ogg) setTarget("webm");
+    });
+  }, [info.audio]);
   const dur = range[1] - range[0];
   // Le son gardé est réencodé en Opus (WebM) ou en AAC (MP4, MOV) : le navigateur doit savoir le faire
   const outCodec = target === "webm" ? "Opus" : "AAC";
