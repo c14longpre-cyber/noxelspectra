@@ -11,3 +11,8 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 - **Ouverture à l'arrivée** (1.4.0, `openOnArrival: true` dans `sites.js`) : la même fenêtre de préférences s'ouvre sur tous les sites NOXEL tant qu'aucun choix n'existe. Catégories et outils du réseau définis une seule fois dans `NOXEL_CONSENT_NETWORK` (`sites.js`) — ne pas redéclarer de `providers` dans les pages. « Fermer sans modifier » (ou Échap) = continuer sans accepter. Interface en `translate="no"` (déjà fr/en).
 - Le kit (README, tests `core`, `relay`, `consent`) et le plan d'exécution sont la référence ; le kit ne gère que fr/en.
 - `video/` (outil vidéo, video.noxelspectra.com) a le kit dans `video/public/consent/` (mêmes fichiers que les autres sites, `policyVersion` `spectra-video-1`), chargé dans `video/index.html` ; bouton « Préférences de confidentialité » et lien « Confidentialité » en bas de la barre latérale.
+
+## Polices de l'éditeur de calques
+
+- Toutes les familles Google Fonts latines (environ 1 900) sont auto-hébergées dans `frontend/public/fonts/` (générées par `tools/fonts-gen/`). Ne jamais charger une police depuis fonts.googleapis.com ou fonts.gstatic.com : l'IP du visiteur partirait chez Google.
+- Code : `font-library.ts` (catalogue, chargement à la demande avec `FontFace`, sélecteur avec aperçu, recherche et filtres par style). Un projet sauvegardé avec n'importe quelle police la recharge automatiquement, et l'export PNG attend que toutes les polices soient prêtes.
