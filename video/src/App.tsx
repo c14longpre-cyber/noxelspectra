@@ -22,6 +22,7 @@ const SpeedPanel = lazyTool(() => import("./components/BasicPanels").then((m) =>
 const AudioPanel = lazyTool(() => import("./components/AudioPanel").then((m) => m.AudioPanel));
 const TextLogoPanel = lazyTool(() => import("./components/TextLogoPanel").then((m) => m.TextLogoPanel));
 const RightsPanel = lazyTool(() => import("./components/RightsPanel").then((m) => m.RightsPanel));
+const WatermarkPanel = lazyTool(() => import("./components/WatermarkPanel").then((m) => m.WatermarkPanel));
 
 type Tool = { id: string; label: string; icon: string; ready: boolean; plan: string };
 
@@ -38,6 +39,7 @@ const TOOLS: Tool[] = [
   { id: "speed", label: "Vitesse", icon: "»", ready: true, plan: "Ralenti, accélération, lecture inversée." },
   { id: "audio", label: "Audio", icon: "♪", ready: true, plan: "Couper le son, volume, remplacer la piste, musique, fondus." },
   { id: "text", label: "Texte & logo", icon: "T", ready: true, plan: "Titres, filigrane, position, opacité, apparition/disparition." },
+  { id: "watermark", label: "Filigrane", icon: "⛆", ready: true, plan: "Texte ou logo sur toute la vidéo : position, mosaïque, couleur, opacité, taille." },
   { id: "rights", label: "Copyright", icon: "©", ready: true, plan: "Droits inscrits dans le fichier, filigrane visible, vérification du fichier produit." },
   { id: "thumb", label: "Miniature", icon: "▢", ready: true, plan: "Choisir une image de la vidéo, ajouter du texte, exporter une couverture." },
   { id: "export", label: "Exporter", icon: "⇩", ready: false, plan: "Résolution, FPS, qualité, format et préréglages selon l'usage." },
@@ -66,7 +68,7 @@ export default function App() {
   // Texte & logo : les éléments vivent ici, car l'aperçu, les pistes et le panneau les partagent
   const [overlays, setOverlays] = useState<OverlayItem[]>([]);
   const [overlaySel, setOverlaySel] = useState<string | null>(null);
-  // Copyright : filigrane à montrer sur l'aperçu (calculé par le panneau)
+  // Copyright et Filigrane : filigrane à montrer sur l'aperçu (calculé par le panneau)
   const [markPreview, setMarkPreview] = useState<OverlayItem[]>([]);
   const patchOverlay = (id: string, patch: Partial<OverlayItem>) =>
     setOverlays((list) => list.map((i) => (i.id === id ? ({ ...i, ...patch } as OverlayItem) : i)));
@@ -176,7 +178,7 @@ export default function App() {
 
   // Compresser a besoin de l'analyse (résolution, débit, images/s) : lancée automatiquement
   useEffect(() => {
-    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed" || tool === "audio" || tool === "text" || tool === "rights") && file && !info && !busy) runAnalyze();
+    if ((tool === "compress" || tool === "under25" || tool === "crop" || tool === "social" || tool === "web" || tool === "convert" || tool === "rotate" || tool === "speed" || tool === "audio" || tool === "text" || tool === "rights" || tool === "watermark") && file && !info && !busy) runAnalyze();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tool, file, info]);
 
@@ -245,7 +247,7 @@ export default function App() {
                   setRange([0, d]);
                 }}
               />
-              {tool === "rights" && videoEl && markPreview.length > 0 && (
+              {(tool === "rights" || tool === "watermark") && videoEl && markPreview.length > 0 && (
                 <OverlayStage video={videoEl} items={markPreview} selectedId={null} readOnly />
               )}
               {tool === "text" && videoEl && (
@@ -266,6 +268,12 @@ export default function App() {
           {tool === "rights" ? (
             file && info ? (
               <RightsPanel file={file} info={info} range={range} duration={duration} onPreview={setMarkPreview} onContinue={continueWith} />
+            ) : (
+              <p className="vx-muted">{waitText}</p>
+            )
+          ) : tool === "watermark" ? (
+            file && info ? (
+              <WatermarkPanel file={file} info={info} range={range} duration={duration} onPreview={setMarkPreview} onContinue={continueWith} />
             ) : (
               <p className="vx-muted">{waitText}</p>
             )
