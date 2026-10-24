@@ -46,6 +46,7 @@ import { Potrace } from "potrace";
 import { parseRecipe, runRecipe, mapWithLimit } from "./ops";
 import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
 import { parseRights, hasRights, readRights, missingAfterExport, applyRights } from "./rights";
+import { renderTextOverlay } from "./textOverlay";
 
 dotenv.config();
 
@@ -1653,21 +1654,15 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
       const text = (req.body.text || "NOXEL").slice(0, 200);
       const color = req.body.color || "#ffffff";
       const fontSize = sizeParam > 0 ? sizeParam : Math.max(18, Math.round(width * 0.04));
-      const escaped = text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      const padding = Math.round(fontSize * 0.6);
-      const textWidth = Math.round(escaped.length * fontSize * 0.6) + padding * 2;
-      const textHeight = Math.round(fontSize * 1.5) + padding;
-      const svg =
-        '<svg width="' + textWidth + '" height="' + textHeight + '" xmlns="http://www.w3.org/2000/svg">' +
-        '<text x="' + padding + '" y="' + Math.round(textHeight * 0.68) + '" font-family="Arial, sans-serif" font-size="' + fontSize + '" font-weight="700" fill="' + color + '" fill-opacity="' + opacity + '">' + escaped + "</text>" +
-        "</svg>";
-      overlayBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
-      const ometa = await sharp(overlayBuffer).metadata();
-      overlayWidth = ometa.width || textWidth;
-      overlayHeight = ometa.height || textHeight;
+      overlayBuffer = await renderTextOverlay({ text, color, opacity, fontSize });
+      let ometa = await sharp(overlayBuffer).metadata();
+      // Un filigrane plus grand que l'image ferait planter composite()
+      if ((ometa.width || 0) > width || (ometa.height || 0) > height) {
+        overlayBuffer = await sharp(overlayBuffer).resize({ width, height, fit: "inside" }).png().toBuffer();
+        ometa = await sharp(overlayBuffer).metadata();
+      }
+      overlayWidth = ometa.width || 1;
+      overlayHeight = ometa.height || 1;
     } else {
       const logoFile = files?.logo?.[0];
       if (!logoFile) {
