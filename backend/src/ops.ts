@@ -115,9 +115,9 @@ export function parseRecipe(raw: unknown): Recipe {
       case "shadow":
         return {
           op: "shadow",
-          offsetX: Math.round(clamp(s.offsetX, -50, 50, 15)),
-          offsetY: Math.round(clamp(s.offsetY, -50, 50, 15)),
-          blur: clamp(s.blur, 0.3, 30, 8),
+          offsetX: Math.round(clamp(s.offsetX, -500, 500, 15)),
+          offsetY: Math.round(clamp(s.offsetY, -500, 500, 15)),
+          blur: clamp(s.blur, 0, 100, 8),
           opacity: clamp(s.opacity, 0, 100, 60),
         };
       case "removeBg":
@@ -168,6 +168,18 @@ export function parseRecipe(raw: unknown): Recipe {
 // compressionLevel 0 : les buffers intermédiaires ne sortent jamais du
 // serveur, inutile de dépenser du CPU à les compresser.
 const lossless = (p: ReturnType<typeof sharp>) => p.png({ compressionLevel: 0 }).toBuffer();
+
+/**
+ * Ombre d'une image RGBA : noir, à la forme de sa transparence, floutée et à l'opacité voulue.
+ * Le noir doit être opaque avant de prendre la forme de l'image : un calque transparent
+ * « découpé » à la forme du logo reste transparent (l'ombre était invisible).
+ */
+export async function shadowLayer(sourceRgba: Buffer, width: number, height: number, blur: number, opacity: number): Promise<Buffer> {
+  const alpha = await sharp(sourceRgba).extractChannel(3).linear(opacity, 0).png().toBuffer();
+  const shadow = sharp({ create: { width, height, channels: 3, background: { r: 0, g: 0, b: 0 } } }).joinChannel(alpha);
+  // blur() n'accepte pas de sigma sous 0,3 : en dessous, ombre nette
+  return (blur >= 0.3 ? sharp(await shadow.png().toBuffer()).blur(blur) : shadow).png().toBuffer();
+}
 
 async function dims(buf: Buffer) {
   const m = await sharp(buf).metadata();
@@ -238,22 +250,7 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
       const opacity = step.opacity / 100;
       const padding = Math.ceil(step.blur * 3) + Math.max(Math.abs(step.offsetX), Math.abs(step.offsetY));
       const source = await sharp(buf).ensureAlpha().png().toBuffer();
-      const mask = await sharp(source).extractChannel(3).png().toBuffer();
-      const layer = await sharp({ create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
-        .composite([{ input: mask, blend: "dest-in" }])
-        .ensureAlpha()
-        .png()
-        .toBuffer();
-      const blurred = await sharp(layer).blur(step.blur).png().toBuffer();
-      const faded = await sharp(blurred)
-        .composite([
-          {
-            input: { create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: opacity } } },
-            blend: "dest-in",
-          },
-        ])
-        .png()
-        .toBuffer();
+      const faded = await shadowLayer(source, width, height, step.blur, opacity);
       return lossless(
         sharp({
           create: {

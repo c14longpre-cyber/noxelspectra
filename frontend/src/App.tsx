@@ -5,6 +5,7 @@ import { GradientTool } from "./components/spectra-gradient/GradientTool";
 import { HudButton, HudLink } from "./components/hud/HudButton";
 import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
+import { NumberInput } from "./components/NumberInput";
 import { RightsTool } from "./components/spectra-rights/RightsTool";
 import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import { ExifNotice } from "./components/spectra-exif/ExifNotice";
@@ -3147,7 +3148,7 @@ export default function App() {
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Décalage X : {shadowOffsetX}px
+          Décalage X : <NumberInput label="Décalage X" value={shadowOffsetX} onChange={setShadowOffsetX} min={-500} max={500} unit="px" />
           <input
             type="range"
             min={-50}
@@ -3158,7 +3159,7 @@ export default function App() {
           />
         </label>
         <label>
-          Décalage Y : {shadowOffsetY}px
+          Décalage Y : <NumberInput label="Décalage Y" value={shadowOffsetY} onChange={setShadowOffsetY} min={-500} max={500} unit="px" />
           <input
             type="range"
             min={-50}
@@ -3169,7 +3170,7 @@ export default function App() {
           />
         </label>
         <label>
-          Flou : {shadowBlur}
+          Flou : <NumberInput label="Flou" value={shadowBlur} onChange={setShadowBlur} min={0} max={100} />
           <input
             type="range"
             min={0}
@@ -3180,7 +3181,7 @@ export default function App() {
           />
         </label>
         <label>
-          Opacité : {shadowOpacity}%
+          Opacité : <NumberInput label="Opacité de l'ombre" value={shadowOpacity} onChange={setShadowOpacity} min={0} max={100} unit="%" />
           <input
             type="range"
             min={0}
