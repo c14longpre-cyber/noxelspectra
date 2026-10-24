@@ -2,7 +2,7 @@
 // Le texte tapé reste libre pendant la frappe (« - », champ vide…) ; la valeur
 // n'est transmise que si c'est un nombre, et elle est ramenée dans [min, max]
 // quand on quitte le champ ou qu'on appuie sur Entrée.
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type Props = {
   value: number;
@@ -16,8 +16,13 @@ type Props = {
 
 export function NumberInput({ value, onChange, min, max, step = 1, unit, label }: Props) {
   const [text, setText] = useState(String(value));
-  // Le curseur a bougé : le champ suit
-  useEffect(() => { setText(String(value)); }, [value]);
+  // Le curseur a bougé : le champ suit (mis à jour pendant le rendu, sans effet)
+  const [shown, setShown] = useState(value);
+  // (sauf si c'est la frappe en cours qui l'a changée : « 1. » ne doit pas redevenir « 1 »)
+  if (value !== shown) {
+    setShown(value);
+    if (Number(text.replace(",", ".")) !== value) setText(String(value));
+  }
 
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   function commit() {

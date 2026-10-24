@@ -9,6 +9,7 @@ import type { BlendMode, GeoType, GradientDoc, Layer, RepeatMode, Stop } from ".
 import { composeDoc, layerDataUrl, loadLibrary, saveLibrary } from "./gradient-render";
 import "./gradient-hud.css";
 import { HudButton } from "../hud/HudButton";
+import { NumberInput } from "../NumberInput";
 
 const PREVIEW_MAX = 640;
 const PREVIEW_DRAG = 300; // aperçu allégé pendant un glisser, pleine qualité au relâchement
@@ -401,8 +402,8 @@ export function GradientTool() {
                 {BLEND_MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select>
             </label>
-            <label>Opacité : {layer.opacity}%<input type="range" min={0} max={100} value={layer.opacity} onChange={(e) => update({ opacity: Number(e.target.value) })} style={{ width: "100%" }} /></label>
-            <label>Grain : {layer.grain === 0 ? "aucun" : `${layer.grain}%`}<input type="range" min={0} max={100} value={layer.grain} onChange={(e) => update({ grain: Number(e.target.value) })} style={{ width: "100%" }} /></label>
+            <label>Opacité : <NumberInput label="Opacité du calque" value={layer.opacity} onChange={(v) => update({ opacity: v })} min={0} max={100} unit="%" /><input type="range" min={0} max={100} value={layer.opacity} onChange={(e) => update({ opacity: Number(e.target.value) })} style={{ width: "100%" }} /></label>
+            <label>Grain : <NumberInput label="Grain" value={layer.grain} onChange={(v) => update({ grain: v })} min={0} max={100} unit="%" />{layer.grain === 0 && " (aucun)"}<input type="range" min={0} max={100} value={layer.grain} onChange={(e) => update({ grain: Number(e.target.value) })} style={{ width: "100%" }} /></label>
           </div>
 
           <div className="controls-grid" style={{ marginTop: 12 }}>

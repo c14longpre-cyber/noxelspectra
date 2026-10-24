@@ -2168,7 +2168,7 @@ export default function App() {
         {mode === "quality" && (
           <div style={{ marginTop: 12 }}>
             <label>
-              Qualité : {quality}
+              Qualité : <NumberInput label="Qualité" value={quality} onChange={setQuality} min={1} max={100} />
               <input
                 type="range"
                 min={1}
@@ -2624,7 +2624,7 @@ export default function App() {
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Luminosité : {brightness.toFixed(2)}
+          Luminosité : <NumberInput label="Luminosité" value={brightness} onChange={(v) => { setBrightness(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
           <input
             type="range"
             min={0.3}
@@ -2636,7 +2636,7 @@ export default function App() {
           />
         </label>
         <label>
-          Contraste : {contrast.toFixed(2)}
+          Contraste : <NumberInput label="Contraste" value={contrast} onChange={(v) => { setContrast(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
           <input
             type="range"
             min={0.3}
@@ -2648,7 +2648,7 @@ export default function App() {
           />
         </label>
         <label>
-          Saturation : {saturation.toFixed(2)}
+          Saturation : <NumberInput label="Saturation" value={saturation} onChange={(v) => { setSaturation(v); setFiltersTouched(true); }} min={0} max={2} step={0.05} />
           <input
             type="range"
             min={0}
@@ -2660,7 +2660,7 @@ export default function App() {
           />
         </label>
         <label>
-          Netteté : {sharpenAmount.toFixed(1)}
+          Netteté : <NumberInput label="Netteté" value={sharpenAmount} onChange={(v) => { setSharpenAmount(v); setFiltersTouched(true); }} min={0} max={10} step={0.5} />
           <input
             type="range"
             min={0}
@@ -2672,7 +2672,7 @@ export default function App() {
           />
         </label>
         <label>
-          Flou : {blurAmount.toFixed(1)}
+          Flou : <NumberInput label="Flou" value={blurAmount} onChange={(v) => { setBlurAmount(v); setFiltersTouched(true); }} min={0} max={20} step={0.5} />
           <input
             type="range"
             min={0}
@@ -2684,7 +2684,7 @@ export default function App() {
           />
         </label>
         <label>
-          Pixeliser : {pixelateSize === 0 ? "Désactivé" : pixelateSize}
+          Pixeliser : <NumberInput label="Pixeliser" value={pixelateSize} onChange={(v) => { setPixelateSize(v); setFiltersTouched(true); }} min={0} max={50} />{pixelateSize === 0 && " (désactivé)"}
           <input
             type="range"
             min={0}
@@ -2696,7 +2696,7 @@ export default function App() {
           />
         </label>
         <label>
-          Vignette : {vignetteIntensity === 0 ? "Désactivée" : `${vignetteIntensity}%`}
+          Vignette : <NumberInput label="Vignette" value={vignetteIntensity} onChange={(v) => { setVignetteIntensity(v); setFiltersTouched(true); }} min={0} max={100} unit="%" />{vignetteIntensity === 0 && " (désactivée)"}
           <input
             type="range"
             min={0}
@@ -2720,7 +2720,7 @@ export default function App() {
           </select>
         </label>
         <label>
-          Quantize (nb de couleurs) : {quantizeColors === 0 ? "Désactivé" : quantizeColors}
+          Quantize (nb de couleurs) : <NumberInput label="Nombre de couleurs (quantize)" value={quantizeColors} onChange={(v) => { setQuantizeColors(v); setFiltersTouched(true); }} min={0} max={256} />{quantizeColors === 0 && " (désactivé)"}
           <input
             type="range"
             min={0}
@@ -2800,7 +2800,7 @@ export default function App() {
           </select>
         </label>
         <label>
-          Qualité : {responsiveQuality}
+          Qualité : <NumberInput label="Qualité des tailles responsives" value={responsiveQuality} onChange={setResponsiveQuality} min={1} max={100} />
           <input
             type="range"
             min={1}
@@ -2863,7 +2863,7 @@ export default function App() {
 
       <div style={{ marginTop: 12 }}>
         <label>
-          Nombre de couleurs : {paletteCount}
+          Nombre de couleurs : <NumberInput label="Nombre de couleurs de la palette" value={paletteCount} onChange={setPaletteCount} min={3} max={10} />
           <input
             type="range"
             min={3}
@@ -2943,7 +2943,7 @@ export default function App() {
 
       <div style={{ marginTop: 12 }}>
         <label>
-          Nombre de couleurs : {vectorizeColors}
+          Nombre de couleurs : <NumberInput label="Nombre de couleurs à vectoriser" value={vectorizeColors} onChange={(v) => { setVectorizeColors(v); setDetectedColors(null); setEditedColors([]); }} min={2} max={16} />
           <input
             type="range"
             min={2}
@@ -3230,7 +3230,7 @@ export default function App() {
       </p>
 
       <label>
-        Intensité : {glowIntensity}
+        Intensité : <NumberInput label="Intensité de la lueur" value={glowIntensity} onChange={setGlowIntensity} min={0} max={30} />
         <input
           type="range"
           min={0}
@@ -3444,7 +3444,7 @@ export default function App() {
           </select>
         </label>
         <label>
-          Opacité : {watermarkOpacity}%
+          Opacité : <NumberInput label="Opacité du filigrane" value={watermarkOpacity} onChange={setWatermarkOpacity} min={0} max={100} unit="%" />
           <input
             type="range"
             min={0}
@@ -3455,7 +3455,7 @@ export default function App() {
           />
         </label>
         <label>
-          Taille : {watermarkSize === 0 ? "Auto" : watermarkSize}
+          Taille : <NumberInput label="Taille du filigrane" value={watermarkSize} onChange={setWatermarkSize} min={0} max={watermarkType === "text" ? 200 : 60} />{watermarkSize === 0 && " (auto)"}
           <input
             type="range"
             min={0}
