@@ -34,7 +34,12 @@ export function WebReadyPanel({ file, info, range, video }: Props) {
   const outsRef = useRef<Out[]>([]);
   outsRef.current = outs;
 
-  useEffect(() => { formatSupport().then(setSupport); }, []);
+  const reencodesAudio = !!info.audio && usage !== "background";
+  useEffect(() => {
+    let current = true;
+    formatSupport(reencodesAudio).then((s) => { if (current) setSupport(s); });
+    return () => { current = false; };
+  }, [reencodesAudio]);
   useEffect(() => () => outsRef.current.forEach((o) => URL.revokeObjectURL(o.url)), []);
 
   const dims = outputSize(src, shortSide);

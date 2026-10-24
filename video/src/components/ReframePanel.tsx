@@ -35,11 +35,11 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
   const urls = useRef<string[]>([]);
 
   useEffect(() => {
-    formatSupport().then((s) => {
+    formatSupport(!!info.audio).then((s) => {
       setSupport(s);
       if (!s.mp4 && s.webm) setFormat("webm");
     });
-  }, []);
+  }, [info.audio]);
   // Les fichiers produits ne sont libérés qu'en quittant l'outil
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
 

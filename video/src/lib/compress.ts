@@ -1,5 +1,5 @@
 // NOXEL Spectra Vidéo — compression dans le navigateur (WebCodecs via Mediabunny).
-import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat, canEncodeVideo } from "mediabunny";
+import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat, canEncodeAudio, canEncodeVideo } from "mediabunny";
 import { audioEncoding, audioOptions } from "./audio";
 import { referenceBitrate } from "./probe";
 import { assertNoLostTrack } from "./tracks";
@@ -74,9 +74,16 @@ export function nextLowerResolution(src: SourceInfo, o: CompressOptions): Compre
 
 export const estimateBytes = (o: CompressOptions) => Math.round(((o.videoBitrate + o.audioBitrate) * (o.end - o.start)) / 8 / 0.97);
 
-export async function formatSupport(): Promise<Record<CompressFormat, boolean>> {
-  const [mp4, webm] = await Promise.all([canEncodeVideo("avc").catch(() => false), canEncodeVideo("vp9").catch(() => false)]);
-  return { mp4, webm };
+/** Formats que ce navigateur sait produire. `withAudio` : le son sera réencodé (AAC en MP4, Opus en
+ *  WebM). Firefox et Chrome sous Linux n'ont pas d'encodeur AAC : sans cette vérification, le MP4
+ *  était proposé par défaut puis échouait en cours de traitement. */
+export async function formatSupport(withAudio = false): Promise<Record<CompressFormat, boolean>> {
+  const ok = (p: Promise<boolean>) => p.catch(() => false);
+  const [avc, vp9, aac, opus] = await Promise.all([
+    ok(canEncodeVideo("avc")), ok(canEncodeVideo("vp9")),
+    withAudio ? ok(canEncodeAudio("aac")) : true, withAudio ? ok(canEncodeAudio("opus")) : true,
+  ]);
+  return { mp4: avc && aac, webm: vp9 && opus };
 }
 
 export async function compressVideo(

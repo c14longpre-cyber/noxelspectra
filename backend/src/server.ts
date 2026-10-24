@@ -38,7 +38,7 @@ Sentry.init({
 import express from "express";
 import cors from "cors";
 import multer from "multer";
-import sharp from "sharp";
+import sharp, { type Metadata } from "sharp";
 import dotenv from "dotenv";
 import archiver = require("archiver");
 import toIco from "to-ico";
@@ -66,6 +66,33 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 function detectFormat(meta: { format?: string; compression?: string }, fallback: string): string {
   if (meta.format === "heif" && meta.compression === "av1") return "avif";
   return meta.format || fallback;
+}
+
+// Photos de téléphone : l'orientation est une étiquette EXIF que les navigateurs
+// appliquent à l'affichage. Sharp ne recopie pas l'EXIF, donc sans autoOrient
+// l'image produite sortait couchée. Toutes les routes travaillent sur l'image
+// redressée, et ses dimensions sont celles que l'utilisateur voit.
+const oriented = (buf: Buffer) => sharp(buf, { autoOrient: true });
+function orientedSize(meta: Metadata): { width: number; height: number } {
+  return meta.autoOrient || { width: meta.width || 0, height: meta.height || 0 };
+}
+
+// Nombre d'un champ de formulaire, borné. Contrairement à `parseFloat(v) || défaut`,
+// un 0 envoyé par l'interface reste 0 (saturation 0, décalage 0, opacité 0…).
+function num(v: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+// Au-delà, une seule requête pourrait réclamer des gigaoctets de mémoire
+const MAX_OUTPUT_SIDE = 12000;
+
+// Fichier qui n'est pas une image (ou image abîmée) : erreur de l'utilisateur, pas du serveur
+const UNREADABLE = /unsupported image format|input buffer|corrupt|premature end|not a known file format|bad seek|vipsjpeg|pngload|webpload|heifload/i;
+function sendFailure(res: express.Response, err: unknown, message: string) {
+  if (err instanceof Error && UNREADABLE.test(err.message)) {
+    return res.status(400).json({ ok: false, error: "Ce fichier n'est pas une image lisible (JPEG, PNG, WebP, AVIF, GIF, TIFF ou SVG)" });
+  }
+  return res.status(500).json({ ok: false, error: message });
 }
 
 const app = express();
@@ -115,7 +142,7 @@ function encodeAtQuality(
   format: SupportedFormat,
   quality: number
 ): Promise<Buffer> {
-  let pipeline = sharp(buffer);
+  let pipeline = oriented(buffer);
   switch (format) {
     case "jpeg":
       pipeline = pipeline.jpeg({ quality });
@@ -179,13 +206,13 @@ async function encodeToTargetSize(
 app.post("/api/convert", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
     const format = (req.body.format || "webp") as SupportedFormat;
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     if (!allowedFormats.includes(format)) {
-      return res.status(400).json({ ok: false, error: `Unsupported format: ${format}` });
+      return res.status(400).json({ ok: false, error: `Format non pris en charge : ${format}` });
     }
 
     const originalSize = req.file.size;
@@ -228,7 +255,7 @@ app.post("/api/convert", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Conversion error:", err);
-    return res.status(500).json({ ok: false, error: "Conversion failed" });
+    return sendFailure(res, err, "Conversion échouée");
   }
 });
 
@@ -237,14 +264,14 @@ app.post("/api/convert", upload.single("file"), async (req, res) => {
 app.post("/api/palette", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
     const count = Math.min(10, Math.max(3, parseInt(req.body.count) || 6));
 
     // Downscale first — palette extraction doesn't need full resolution,
     // and it keeps this fast even on large uploads.
-    const { data, info } = await sharp(req.file.buffer)
+    const { data, info } = await oriented(req.file.buffer)
       .resize(200, 200, { fit: "inside", withoutEnlargement: true })
       .removeAlpha()
       .raw()
@@ -324,7 +351,7 @@ app.post("/api/palette", upload.single("file"), async (req, res) => {
     return res.json({ ok: true, totalPixels, palette });
   } catch (err) {
     console.error("Palette extraction error:", err);
-    return res.status(500).json({ ok: false, error: "Palette extraction failed" });
+    return sendFailure(res, err, "Extraction de la palette échouée");
   }
 });
 // POST /api/resize — multipart form:
@@ -336,18 +363,20 @@ app.post("/api/palette", upload.single("file"), async (req, res) => {
 app.post("/api/resize", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
-    const originalWidth = meta.width || 0;
-    const originalHeight = meta.height || 0;
+    const meta = await oriented(req.file.buffer).metadata();
+    const { width: originalWidth, height: originalHeight } = orientedSize(meta);
 
     const width = req.body.width ? parseInt(req.body.width) : undefined;
     const height = req.body.height ? parseInt(req.body.height) : undefined;
 
     if (!width && !height) {
-      return res.status(400).json({ ok: false, error: "Provide width and/or height" });
+      return res.status(400).json({ ok: false, error: "Indique une largeur ou une hauteur" });
+    }
+    if ((width && (width < 1 || width > MAX_OUTPUT_SIDE)) || (height && (height < 1 || height > MAX_OUTPUT_SIDE))) {
+      return res.status(400).json({ ok: false, error: "La largeur et la hauteur doivent être entre 1 et " + MAX_OUTPUT_SIDE + " px" });
     }
 
     const maintainAspect = req.body.maintainAspect !== "false";
@@ -359,12 +388,12 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     if (!allowedFormats.includes(format)) {
-      return res.status(400).json({ ok: false, error: "Unsupported format: " + format });
+      return res.status(400).json({ ok: false, error: "Format non pris en charge : " + format });
     }
 
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 85));
 
-    let pipeline = sharp(req.file.buffer).resize({
+    let pipeline = oriented(req.file.buffer).resize({
       width,
       height,
       fit: maintainAspect ? "inside" : "fill",
@@ -408,7 +437,7 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Resize error:", err);
-    return res.status(500).json({ ok: false, error: "Resize failed" });
+    return sendFailure(res, err, "Redimensionnement échoué");
   }
 });
 // POST /api/favicon — multipart form: file
@@ -416,14 +445,14 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
 app.post("/api/favicon", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
     const sizes = [16, 32, 48, 180, 192, 512];
     const buffers = {};
 
     for (const size of sizes) {
-      buffers[size] = await sharp(req.file.buffer)
+      buffers[size] = await oriented(req.file.buffer)
         .resize(size, size, {
           fit: "contain",
           background: { r: 0, g: 0, b: 0, alpha: 0 },
@@ -439,7 +468,8 @@ app.post("/api/favicon", upload.single("file"), async (req, res) => {
 
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.on("error", (err) => {
-      throw err;
+      console.error("Zip error:", err);
+      res.destroy(err);
     });
     archive.pipe(res);
     archive.append(icoBuffer, { name: "favicon.ico" });
@@ -453,7 +483,7 @@ app.post("/api/favicon", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("Favicon generation error:", err);
     if (!res.headersSent) {
-      return res.status(500).json({ ok: false, error: "Favicon generation failed" });
+      return sendFailure(res, err, "Création des favicons échouée");
     }
   }
 });
@@ -489,7 +519,7 @@ function traceMaskToPathTag(maskPngBuffer: Buffer, fillColor: string): Promise<s
 app.post("/api/vectorize", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
     const colorCount = Math.min(16, Math.max(2, parseInt(req.body.colors) || 6));
@@ -498,7 +528,7 @@ app.post("/api/vectorize", upload.single("file"), async (req, res) => {
     // Downscale before tracing — potrace cost and output complexity both grow
     // fast with resolution, and this feature targets logos/simple graphics.
     const MAX_DIM = 900;
-    const { data, info } = await sharp(req.file.buffer)
+    const { data, info } = await oriented(req.file.buffer)
       .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
       .ensureAlpha()
       .raw()
@@ -686,7 +716,7 @@ app.post("/api/vectorize", upload.single("file"), async (req, res) => {
     return res.json({ ok: true, width, height, colorsUsed: palette.length, svg });
   } catch (err) {
     console.error("Vectorize error:", err);
-    return res.status(500).json({ ok: false, error: "Vectorization failed" });
+    return sendFailure(res, err, "Vectorisation échouée");
   }
 });
 // POST /api/vectorize-colors — multipart form: file, colors (2-16, default 6)
@@ -696,13 +726,13 @@ app.post("/api/vectorize", upload.single("file"), async (req, res) => {
 app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
     const colorCount = Math.min(16, Math.max(2, parseInt(req.body.colors) || 6));
 
     const MAX_DIM = 900;
-    const { data, info } = await sharp(req.file.buffer)
+    const { data, info } = await oriented(req.file.buffer)
       .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
       .ensureAlpha()
       .raw()
@@ -806,7 +836,7 @@ app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
     return res.json({ ok: true, width, height, palette: result });
   } catch (err) {
     console.error("Vectorize color-preview error:", err);
-    return res.status(500).json({ ok: false, error: "Color detection failed" });
+    return sendFailure(res, err, "Détection des couleurs échouée");
   }
 });
 // POST /api/analyze — multipart form: file
@@ -818,14 +848,13 @@ app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
 app.post("/api/analyze", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const originalSize = req.file.size;
     const hasAlpha = !!meta.hasAlpha;
-    const width = meta.width || 0;
-    const height = meta.height || 0;
+    const { width, height } = orientedSize(meta);
     const sourceFormat = detectFormat(meta, "unknown");
     const isAnimated = (meta.pages || 1) > 1;
 
@@ -837,7 +866,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
 
     // Downscaled working copy for fast color-complexity analysis.
     const ANALYZE_MAX_DIM = 400;
-    const { data, info } = await sharp(req.file.buffer)
+    const { data, info } = await oriented(req.file.buffer)
       .resize(ANALYZE_MAX_DIM, ANALYZE_MAX_DIM, { fit: "inside", withoutEnlargement: true })
       .ensureAlpha()
       .raw()
@@ -888,23 +917,23 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     const notes: string[] = [];
     if (isAnimated) {
       notes.push(
-        "This image is animated (" + (meta.pages || 1) + " frames) — every format below is a static re-encode and would lose the animation. Use Convertir with care, or keep the original if the animation matters."
+        "Cette image est animée (" + (meta.pages || 1) + " images) : chaque format ci-dessous est une conversion fixe qui perdrait l'animation. Utilise Convertir avec prudence, ou garde l'original si l'animation compte."
       );
     }
     if (metadataOverheadBytes > 5000) {
       notes.push(
         Math.round(metadataOverheadBytes / 1024) +
-          " KB of embedded metadata (EXIF/ICC/etc.) could be stripped."
+          " Ko de métadonnées intégrées (EXIF, ICC…) pourraient être retirés."
       );
     }
     if (isSimpleGraphic && hasAlpha) {
       notes.push(
-        "This looks like a simple graphic or logo — vectorizing to SVG may give an even smaller, infinitely scalable result. Try the Vectorizer."
+        "Cette image ressemble à un graphique simple ou à un logo : la vectoriser en SVG pourrait donner un fichier encore plus léger, agrandissable sans perte. Essaie Vectoriser."
       );
     }
     if (sourceFormat === "png" && imageType === "photo") {
       notes.push(
-        "This PNG looks photographic — PNG's lossless compression is likely making the file much larger than necessary."
+        "Ce PNG ressemble à une photo : la compression sans perte du PNG rend probablement le fichier bien plus lourd que nécessaire."
       );
     }
 
@@ -924,7 +953,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
     });
   } catch (err) {
     console.error("Analyze error:", err);
-    return res.status(500).json({ ok: false, error: "Analysis failed" });
+    return sendFailure(res, err, "Analyse échouée");
   }
 });
 // POST /api/responsive — multipart form:
@@ -937,11 +966,11 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
 app.post("/api/responsive", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
-    const originalWidth = meta.width || 0;
+    const meta = await oriented(req.file.buffer).metadata();
+    const originalWidth = orientedSize(meta).width;
 
     const DEFAULT_WIDTHS = [320, 640, 768, 1024, 1280, 1600, 1920];
     let requestedWidths: number[] = DEFAULT_WIDTHS;
@@ -972,7 +1001,7 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
 
     const buffers: { width: number; buffer: Buffer }[] = [];
     for (const w of widths) {
-      let pipeline = sharp(req.file.buffer).resize({ width: w, withoutEnlargement: true });
+      let pipeline = oriented(req.file.buffer).resize({ width: w, withoutEnlargement: true });
       switch (format) {
         case "jpeg":
           pipeline = pipeline.jpeg({ quality });
@@ -1015,7 +1044,8 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
 
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.on("error", (err) => {
-      throw err;
+      console.error("Zip error:", err);
+      res.destroy(err);
     });
     archive.pipe(res);
     for (const b of buffers) {
@@ -1030,7 +1060,7 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
   } catch (err) {
     console.error("Responsive sizes error:", err);
     if (!res.headersSent) {
-      return res.status(500).json({ ok: false, error: "Responsive size generation failed" });
+      return sendFailure(res, err, "Création des tailles responsives échouée");
     }
   }
 });
@@ -1041,10 +1071,10 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
 app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const metadataBytesRemoved =
       (meta.exif ? meta.exif.length : 0) +
       (meta.icc ? meta.icc.length : 0) +
@@ -1058,7 +1088,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     // Sharp only carries over metadata when withMetadata() is called, so a
     // plain re-encode already strips it — a high quality keeps this
     // effectively lossless to the eye for a "clean my file" action.
-    let pipeline = sharp(req.file.buffer);
+    let pipeline = oriented(req.file.buffer);
     switch (format) {
       case "jpeg":
         pipeline = pipeline.jpeg({ quality: 92 });
@@ -1118,7 +1148,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Strip metadata error:", err);
-    return res.status(500).json({ ok: false, error: "Metadata cleanup failed" });
+    return sendFailure(res, err, "Nettoyage des métadonnées échoué");
   }
 });
 
@@ -1132,10 +1162,10 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
 app.post("/api/rotate", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const hasAlpha = !!meta.hasAlpha;
 
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
@@ -1150,7 +1180,7 @@ app.post("/api/rotate", upload.single("file"), async (req, res) => {
     const flipHorizontal = req.body.flipHorizontal === "true";
     const flipVertical = req.body.flipVertical === "true";
 
-    let pipeline = sharp(req.file.buffer);
+    let pipeline = oriented(req.file.buffer);
     if (angle !== 0) {
       pipeline = pipeline.rotate(angle, {
         background: hasAlpha
@@ -1196,7 +1226,7 @@ app.post("/api/rotate", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Rotate error:", err);
-    return res.status(500).json({ ok: false, error: "Rotate/flip failed" });
+    return sendFailure(res, err, "Rotation échouée");
   }
 });
 // Standard sepia color matrix — a well-known, public-domain color
@@ -1222,10 +1252,10 @@ const SEPIA_MATRIX: [[number, number, number], [number, number, number], [number
 app.post("/api/adjust", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
@@ -1236,7 +1266,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
 
     const brightness = Math.min(2, Math.max(0.3, parseFloat(req.body.brightness) || 1));
     const contrast = Math.min(2, Math.max(0.3, parseFloat(req.body.contrast) || 1));
-    const saturation = Math.min(2, Math.max(0, parseFloat(req.body.saturation) || 1));
+    const saturation = num(req.body.saturation, 0, 2, 1);
     const sharpenAmount = Math.min(10, Math.max(0, parseFloat(req.body.sharpen) || 0));
     const blurAmount = Math.min(20, Math.max(0, parseFloat(req.body.blurAmount) || 0));
     const effect = req.body.effect === "grayscale" || req.body.effect === "sepia" ? req.body.effect : "none";
@@ -1247,14 +1277,13 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
     const vignetteIntensity = Math.min(100, Math.max(0, parseInt(req.body.vignetteIntensity) || 0));
     const quantizeColors = Math.min(256, Math.max(0, parseInt(req.body.quantizeColors) || 0));
 
-    const originalWidth = meta.width || 0;
-    const originalHeight = meta.height || 0;
+    const { width: originalWidth, height: originalHeight } = orientedSize(meta);
 
-    let pipeline = sharp(req.file.buffer);
+    let pipeline = oriented(req.file.buffer);
     if (pixelateSize > 1 && originalWidth > 0 && originalHeight > 0) {
       const downW = Math.max(1, Math.round(originalWidth / pixelateSize));
       const downH = Math.max(1, Math.round(originalHeight / pixelateSize));
-      const smallBuf = await sharp(req.file.buffer)
+      const smallBuf = await oriented(req.file.buffer)
         .resize(downW, downH, { kernel: "nearest" })
         .toBuffer();
       pipeline = sharp(smallBuf).resize(originalWidth, originalHeight, {
@@ -1340,7 +1369,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Adjust error:", err);
-    return res.status(500).json({ ok: false, error: "Adjustment failed" });
+    return sendFailure(res, err, "Réglages échoués");
   }
 });
 
@@ -1354,12 +1383,11 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
 app.post("/api/crop", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
-    const originalWidth = meta.width || 0;
-    const originalHeight = meta.height || 0;
+    const meta = await oriented(req.file.buffer).metadata();
+    const { width: originalWidth, height: originalHeight } = orientedSize(meta);
 
     const x = parseInt(req.body.x);
     const y = parseInt(req.body.y);
@@ -1377,7 +1405,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
     ) {
       return res.status(400).json({
         ok: false,
-        error: "Invalid crop region for a " + originalWidth + "x" + originalHeight + " image",
+        error: "Zone de rognage invalide pour une image de " + originalWidth + " × " + originalHeight + " px",
       });
     }
 
@@ -1389,7 +1417,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
 
-    let pipeline = sharp(req.file.buffer).extract({
+    let pipeline = oriented(req.file.buffer).extract({
       left: x,
       top: y,
       width: cropWidth,
@@ -1431,7 +1459,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Crop error:", err);
-    return res.status(500).json({ ok: false, error: "Crop failed" });
+    return sendFailure(res, err, "Rognage échoué");
   }
 });
 // POST /api/drop-shadow — multipart form:
@@ -1445,17 +1473,17 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
 app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
-    const width = meta.width || 0;
-    const height = meta.height || 0;
+    const meta = await oriented(req.file.buffer).metadata();
+    const { width, height } = orientedSize(meta);
 
-    const offsetX = parseInt(req.body.offsetX) || 15;
-    const offsetY = parseInt(req.body.offsetY) || 15;
-    const blurAmount = Math.max(0.3, parseFloat(req.body.blur) || 8);
-    const opacity = Math.min(100, Math.max(0, parseInt(req.body.opacity) || 60)) / 100;
+    const offsetX = Math.round(num(req.body.offsetX, -500, 500, 15));
+    const offsetY = Math.round(num(req.body.offsetY, -500, 500, 15));
+    // blur() n'accepte pas de sigma sous 0,3 : 0 = ombre nette
+    const blurAmount = num(req.body.blur, 0, 100, 8);
+    const opacity = num(req.body.opacity, 0, 100, 60) / 100;
 
     const padding = Math.ceil(blurAmount * 3) + Math.max(Math.abs(offsetX), Math.abs(offsetY));
     const canvasWidth = width + padding * 2;
@@ -1464,7 +1492,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
     // Force PNG at every intermediate step — the original upload's format
     // (e.g. JPEG) may not support alpha at all, which otherwise silently
     // breaks the alpha-channel extraction a few lines below.
-    const sourceWithAlpha = await sharp(req.file.buffer)
+    const sourceWithAlpha = await oriented(req.file.buffer)
       .ensureAlpha()
       .png()
       .toBuffer();
@@ -1488,10 +1516,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
       .png()
       .toBuffer();
 
-    const blurredShadow = await sharp(shadowLayer)
-      .blur(blurAmount)
-      .png()
-      .toBuffer();
+    const blurredShadow = blurAmount >= 0.3 ? await sharp(shadowLayer).blur(blurAmount).png().toBuffer() : shadowLayer;
 
     const shadowWithOpacity = await sharp(blurredShadow)
       .composite([
@@ -1543,7 +1568,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Drop shadow error:", err);
-    return res.status(500).json({ ok: false, error: "Drop shadow failed" });
+    return sendFailure(res, err, "Ombre portée échouée");
   }
 });
 // POST /api/glow — multipart form:
@@ -1555,10 +1580,10 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
 app.post("/api/glow", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
@@ -1566,17 +1591,16 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
       format = allowedFormats.includes(sourceFormat) ? sourceFormat : "png";
     }
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 90));
-    const intensity = Math.min(30, Math.max(0, parseFloat(req.body.intensity) || 12));
+    const intensity = num(req.body.intensity, 0, 30, 12);
 
     const sigma = Math.max(0.3, intensity * 0.3);
-    const glowLayer = await sharp(req.file.buffer)
+    const glowLayer = await oriented(req.file.buffer)
       .blur(sigma)
       .modulate({ brightness: 1 + intensity / 30 })
       .toBuffer();
 
-    let pipeline = sharp(req.file.buffer).composite([
-      { input: glowLayer, blend: "screen" },
-    ]);
+    // Intensité 0 : aucune lueur (le mode screen éclaircirait quand même l'image)
+    let pipeline = intensity > 0 ? oriented(req.file.buffer).composite([{ input: glowLayer, blend: "screen" }]) : oriented(req.file.buffer);
 
     switch (format) {
       case "jpeg":
@@ -1607,7 +1631,7 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Glow error:", err);
-    return res.status(500).json({ ok: false, error: "Glow failed" });
+    return sendFailure(res, err, "Effet lumineux échoué");
   }
 });
 // POST /api/watermark — multipart form:
@@ -1626,16 +1650,15 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
     const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
     const mainFile = files?.file?.[0];
     if (!mainFile) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
 
-    const meta = await sharp(mainFile.buffer).metadata();
-    const width = meta.width || 0;
-    const height = meta.height || 0;
+    const meta = await oriented(mainFile.buffer).metadata();
+    const { width, height } = orientedSize(meta);
 
     const type = req.body.type === "logo" ? "logo" : "text";
     const position = req.body.position || "bottom-right";
-    const opacity = Math.min(100, Math.max(0, parseInt(req.body.opacity) || 60)) / 100;
+    const opacity = num(req.body.opacity, 0, 100, 60) / 100;
     const sizeParam = parseInt(req.body.size) || 0;
 
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
@@ -1666,10 +1689,10 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
     } else {
       const logoFile = files?.logo?.[0];
       if (!logoFile) {
-        return res.status(400).json({ ok: false, error: "No logo uploaded" });
+        return res.status(400).json({ ok: false, error: "Aucun logo reçu" });
       }
       const targetWidth = sizeParam > 0 ? Math.round(width * (sizeParam / 100)) : Math.round(width * 0.2);
-      const resizedLogo = await sharp(logoFile.buffer)
+      const resizedLogo = await oriented(logoFile.buffer)
         .resize({ width: Math.max(1, targetWidth) })
         .ensureAlpha()
         .png()
@@ -1742,7 +1765,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
       });
     }
 
-    let pipeline = sharp(mainFile.buffer).composite(composites);
+    let pipeline = oriented(mainFile.buffer).composite(composites);
     switch (format) {
       case "jpeg":
         pipeline = pipeline.jpeg({ quality });
@@ -1772,7 +1795,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Watermark error:", err);
-    return res.status(500).json({ ok: false, error: "Watermark failed" });
+    return sendFailure(res, err, "Filigrane échoué");
   }
 });
 
@@ -1793,7 +1816,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
 app.post("/api/copyright", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
     let rights;
     try {
@@ -1807,7 +1830,7 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
       return res.status(400).json({ ok: false, error: "Renseigne au moins un champ (auteur, titulaire, mention…)" });
     }
 
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
     if (!format || !allowedFormats.includes(format)) {
@@ -1858,7 +1881,7 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Rights metadata error:", err);
-    return res.status(500).json({ ok: false, error: "Intégration des droits échouée" });
+    return sendFailure(res, err, "Intégration des droits échouée");
   }
 });
 
@@ -1866,14 +1889,14 @@ app.post("/api/copyright", upload.single("file"), async (req, res) => {
 app.post("/api/read-rights", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
-    const meta = await sharp(req.file.buffer).metadata();
+    const meta = await oriented(req.file.buffer).metadata();
     const rights = readRights(meta.xmp ? meta.xmp.toString("utf8") : undefined);
     return res.json({ ok: true, rights, count: Object.keys(rights).length });
   } catch (err) {
     console.error("Read rights error:", err);
-    return res.status(500).json({ ok: false, error: "Lecture des droits échouée" });
+    return sendFailure(res, err, "Lecture des droits échouée");
   }
 });
 // POST /api/remove-background — multipart form:
@@ -1884,7 +1907,7 @@ app.post("/api/read-rights", upload.single("file"), async (req, res) => {
 app.post("/api/remove-background", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ ok: false, error: "No file uploaded" });
+      return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
     }
     if (!bgModelAvailable()) {
       return res.status(503).json({ ok: false, error: "Suppression d'arrière-plan temporairement indisponible" });
@@ -1913,7 +1936,7 @@ app.post("/api/remove-background", upload.single("file"), async (req, res) => {
     return res.send(outputBuffer);
   } catch (err) {
     console.error("Remove background error:", err);
-    return res.status(500).json({ ok: false, error: "Suppression d'arrière-plan échouée" });
+    return sendFailure(res, err, "Suppression d'arrière-plan échouée");
   }
 });
 
@@ -2017,7 +2040,7 @@ app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, 
   } catch (err) {
     console.error("Batch error:", err);
     if (!res.headersSent) {
-      return res.status(500).json({ ok: false, error: "Traitement par lots échoué" });
+      return sendFailure(res, err, "Traitement par lots échoué");
     }
   }
 });
@@ -2046,7 +2069,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   }
   console.error("Unhandled error:", err);
   if (!res.headersSent) {
-    return res.status(500).json({ ok: false, error: "Erreur serveur" });
+    return sendFailure(res, err, "Erreur serveur");
   }
 });
 app.listen(PORT, () => {

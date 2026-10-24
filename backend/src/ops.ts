@@ -273,6 +273,7 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
       return removeBackground(buf, { background: step.background, trim: step.trim });
 
     case "glow": {
+      if (step.intensity <= 0) return buf;
       const sigma = Math.max(0.3, step.intensity * 0.3);
       const glowLayer = await sharp(buf)
         .blur(sigma)
