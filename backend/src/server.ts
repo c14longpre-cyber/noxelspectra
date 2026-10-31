@@ -358,6 +358,7 @@ app.post("/api/palette", upload.single("file"), async (req, res) => {
 //   file             required
 //   width, height    at least one required (pixels)
 //   maintainAspect   "true" (default) fits inside width/height keeping ratio; "false" stretches to exact size
+//   fit              optional "cover": fills width×height exactly by cropping the centre, never stretches (overrides maintainAspect)
 //   format           optional — if omitted, keeps the original format
 //   quality          1-100 (default 85, ignored for png/gif)
 app.post("/api/resize", upload.single("file"), async (req, res) => {
@@ -380,6 +381,7 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
     }
 
     const maintainAspect = req.body.maintainAspect !== "false";
+    const cover = req.body.fit === "cover" && !!width && !!height;
 
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     let format = req.body.format;
@@ -396,7 +398,8 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
     let pipeline = oriented(req.file.buffer).resize({
       width,
       height,
-      fit: maintainAspect ? "inside" : "fill",
+      fit: cover ? "cover" : maintainAspect ? "inside" : "fill",
+      position: "centre",
       withoutEnlargement: false,
     });
 
