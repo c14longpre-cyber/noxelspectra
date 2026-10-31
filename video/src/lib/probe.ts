@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — analyse d'une vidéo, entièrement dans le navigateur.
+// NOXEL SPECTRA Vidéo — analyse d'une vidéo, entièrement dans le navigateur.
 // Mediabunny lit seulement les en-têtes des paquets (pas les images) : même une
 // grosse vidéo s'analyse vite, sans téléversement. Le débit est mesuré sur toute la durée.
 

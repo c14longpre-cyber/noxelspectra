@@ -1,4 +1,4 @@
-// NOXEL Spectra — pictogrammes de la sidebar (extraits du kit HUD, sans les anneaux).
+// NOXEL SPECTRA — pictogrammes de la sidebar (extraits du kit HUD, sans les anneaux).
 // Dessins internes du kit uniquement : jamais de contenu utilisateur.
 export const NAV_ICONS: Record<string, string> = {
   "projects": "<path d=\"M5 3h9l5 5v13H5V3Zm9 0v5h5M8 12h8M8 16h6\"/>",

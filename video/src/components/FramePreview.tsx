@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — aperçu en direct d'un cadrage (partagé : Recadrer, Décliner pour les réseaux)
+// NOXEL SPECTRA Vidéo — aperçu en direct d'un cadrage (partagé : Recadrer, Décliner pour les réseaux)
 import { useCallback, useEffect, useRef } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { cropRect, targetDims } from "../lib/reframe";

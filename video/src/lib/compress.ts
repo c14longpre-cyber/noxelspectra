@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — compression dans le navigateur (WebCodecs via Mediabunny).
+// NOXEL SPECTRA Vidéo — compression dans le navigateur (WebCodecs via Mediabunny).
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat, canEncodeAudio, canEncodeVideo } from "mediabunny";
 import { audioEncoding, audioOptions } from "./audio";
 import { referenceBitrate } from "./probe";

@@ -1,4 +1,4 @@
-// NOXEL Spectra — rendu navigateur des dégradés (partagé : outil Dégradé + Éditeur)
+// NOXEL SPECTRA — rendu navigateur des dégradés (partagé : outil Dégradé + Éditeur)
 // Chaque calque est calculé par le moteur, puis composé avec son opacité et son
 // mode de fusion (les modes CSS standards sont pris en charge par le canevas).
 

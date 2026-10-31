@@ -1925,7 +1925,7 @@ export default function App() {
       />
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
         <h1 className="sidebar-logo">
-          <img src="/noxel_spectra_logo.svg" alt="NOXEL Spectra" className="sidebar-logo-img" />
+          <img src="/noxel_spectra_logo.svg" alt="NOXEL SPECTRA" className="sidebar-logo-img" />
         </h1>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
@@ -1943,7 +1943,18 @@ export default function App() {
 
       <main className="app-main">
         <div style={{ width: "100%", fontFamily: "sans-serif" }}>
-      <p style={{ color: "var(--muted)" }}>Conversion d'images — v0.1</p>
+      {/* Barre du haut commune NOXEL (noxel-shell.css), sur le modèle de NOXEL SEO */}
+      <div className="nx-page-header" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+          <h2 className="nx-page-title" style={{ margin: 0 }}>{NAV_ITEMS.find((n) => n.id === activeSection)?.label ?? "NOXEL SPECTRA"}</h2>
+          <span className="nx-page-subtitle">NOXEL SPECTRA · images</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>Vidéo <span className="nx-pill__muted" style={{ display: "inline" }}>(test)</span></a>
+          <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> Aide</a>
+          <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>NOXEL360</a>
+        </div>
+      </div>
 
       {activeSection !== "batch" && activeSection !== "gradient" && activeSection !== "projects" && (
       <>
@@ -3125,7 +3136,7 @@ export default function App() {
                 <>
                   Ce fichier {metaCleanStats.format.toUpperCase()} était déjà très compressé :
                   même en baissant la qualité, le réencodage n'a pas pu repasser sous son poids
-                  d'origine. Astuce : chaque outil de NOXEL Spectra retire déjà les métadonnées,
+                  d'origine. Astuce : chaque outil de NOXEL SPECTRA retire déjà les métadonnées,
                   ce nettoyage est inutile après une conversion.
                 </>
               )}

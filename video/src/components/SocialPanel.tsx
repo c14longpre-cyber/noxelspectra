@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Décliner pour les réseaux : plusieurs formats en un clic,
+// NOXEL SPECTRA Vidéo — Décliner pour les réseaux : plusieurs formats en un clic,
 // chacun avec son propre cadrage (aperçu en direct, cadre déplaçable).
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";

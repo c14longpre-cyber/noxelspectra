@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Texte & logo : éléments, réglages, incrustation
+// NOXEL SPECTRA Vidéo — Texte & logo : éléments, réglages, incrustation
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { ANIMS, TEXT_TEMPLATES, loadLogo, makeLogo, makeText, newOverlayId } from "../lib/overlay";

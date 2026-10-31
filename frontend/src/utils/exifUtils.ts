@@ -1,4 +1,4 @@
-// NOXEL Spectra — lecture et retrait des métadonnées d'une image, sans dépendance.
+// NOXEL SPECTRA — lecture et retrait des métadonnées d'une image, sans dépendance.
 //
 // readMetadata() repère ce qu'un fichier JPEG, PNG, WebP ou AVIF révèle (position GPS,
 // date de prise de vue, appareil, logiciel, blocs XMP/IPTC/texte).

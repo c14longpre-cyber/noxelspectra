@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — découpe d'une sélection, dans le navigateur.
+// NOXEL SPECTRA Vidéo — découpe d'une sélection, dans le navigateur.
 // Mediabunny copie les images sans réencoder quand c'est possible (rapide, sans
 // perte) et ne réencode que le nécessaire pour couper précisément à l'image près.
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";

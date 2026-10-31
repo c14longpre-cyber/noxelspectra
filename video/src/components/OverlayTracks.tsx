@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Texte & logo : une piste par élément sous la timeline.
+// NOXEL SPECTRA Vidéo — Texte & logo : une piste par élément sous la timeline.
 // La barre se glisse pour déplacer l'élément dans le temps ; ses bords règlent le début et la fin.
 import { useEffect, useRef } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";

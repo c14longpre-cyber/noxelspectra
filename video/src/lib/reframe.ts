@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — recadrage pour les réseaux (9:16, 1:1, 4:5, 16:9)
+// NOXEL SPECTRA Vidéo — recadrage pour les réseaux (9:16, 1:1, 4:5, 16:9)
 // crop  : on garde la zone choisie (cadrage déplaçable), sans bandes
 // bars  : toute l'image, avec des bandes noires
 // blur  : toute l'image, sur un fond flouté de la vidéo elle-même

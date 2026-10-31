@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Audio : volume, fondus, musique, retrait, extraction
+// NOXEL SPECTRA Vidéo — Audio : volume, fondus, musique, retrait, extraction
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { AUDIO_FORMATS, audioFormatSupport, decodeMusic, editAudio, extractAudio, planAudio, videoStaysIntact } from "../lib/audio";

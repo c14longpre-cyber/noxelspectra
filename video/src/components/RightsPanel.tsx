@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Copyright : droits inscrits dans le fichier, filigrane visible, vérification
+// NOXEL SPECTRA Vidéo — Copyright : droits inscrits dans le fichier, filigrane visible, vérification
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { loadLogo } from "../lib/overlay";

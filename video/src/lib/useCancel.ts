@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — annulation d'un traitement, partagée par les panneaux.
+// NOXEL SPECTRA Vidéo — annulation d'un traitement, partagée par les panneaux.
 import { useEffect, useRef } from "react";
 
 /**

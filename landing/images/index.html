@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Outils pour les images — NOXEL Spectra</title>
-<meta name="description" content="Les outils de NOXEL Spectra pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
+<title>Outils pour les images — NOXEL SPECTRA</title>
+<meta name="description" content="Les outils de NOXEL SPECTRA pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="NOXEL Spectra">
+<meta property="og:site_name" content="NOXEL SPECTRA">
 <meta property="og:locale" content="fr_CA">
-<meta property="og:title" content="Outils pour les images — NOXEL Spectra">
-<meta property="og:description" content="Les outils de NOXEL Spectra pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
+<meta property="og:title" content="Outils pour les images — NOXEL SPECTRA">
+<meta property="og:description" content="Les outils de NOXEL SPECTRA pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
 <meta property="og:url" content="https://www.noxelspectra.com/images/">
 <meta property="og:image" content="https://www.noxelspectra.com/logo.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Outils pour les images — NOXEL Spectra">
-<meta name="twitter:description" content="Les outils de NOXEL Spectra pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
+<meta name="twitter:title" content="Outils pour les images — NOXEL SPECTRA">
+<meta name="twitter:description" content="Les outils de NOXEL SPECTRA pour les images : convertir, compresser, redimensionner, rogner, supprimer l'arrière-plan, vectoriser en SVG, générer des favicons et plus.">
 <meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
 <link rel="canonical" href="https://www.noxelspectra.com/images/">
 <script type="application/ld+json">
@@ -27,7 +27,7 @@
     {
       "@type": "Organization",
       "@id": "https://www.noxelspectra.com/#org",
-      "name": "NOXEL Spectra",
+      "name": "NOXEL SPECTRA",
       "url": "https://www.noxelspectra.com/",
       "logo": "https://www.noxelspectra.com/logo.png",
       "parentOrganization": {
@@ -39,7 +39,7 @@
     {
       "@type": "WebSite",
       "@id": "https://www.noxelspectra.com/#site",
-      "name": "NOXEL Spectra",
+      "name": "NOXEL SPECTRA",
       "url": "https://www.noxelspectra.com/",
       "inLanguage": "fr",
       "publisher": {
@@ -72,8 +72,7 @@
   html, body { margin: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.65; }
   .glow { position: fixed; top: -20%; left: 50%; transform: translateX(-50%); width: 900px; max-width: 100%; height: 900px; background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%); pointer-events: none; }
-  header, main, footer { position: relative; max-width: 760px; margin: 0 auto; padding: 0 20px; }
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; padding-bottom: 20px; }
+  main { position: relative; max-width: 760px; margin: 0 auto; padding: 0 20px; }
   .brand { color: var(--text); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; }
   .brand span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   nav { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
@@ -94,11 +93,11 @@
   .cta.alt { border-color: var(--purple); color: #e3ccff; }
   .cta:hover { background: rgba(255,255,255,0.06); }
   .note { color: var(--muted); font-size: 14px; }
-  footer { margin-top: 56px; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid rgba(255,255,255,0.1); color: var(--muted); font-size: 13px; }
-  footer nav { margin-bottom: 8px; }
 </style>
 <!-- NOXEL Consent 1.4.0 : aucun outil facultatif sur la vitrine ; préférences + relais du choix entre les sites NOXEL -->
 <link rel="stylesheet" href="/consent/noxel-consent.css">
+<!-- NOXEL Shell 1.0 : même en-tête et même pied de page que NOXEL360, NOXEL SEO et NOXEL FORGE -->
+<link rel="stylesheet" href="/noxel-shell.css">
 <script src="/consent/sites.js"></script>
 <script src="/consent/noxel-consent.js"></script>
 </head>
@@ -106,20 +105,23 @@
 
 <div class="glow"></div>
 
-<header>
-  <a class="brand" href="/"><span>NOXEL</span> Spectra</a>
-  <nav aria-label="Navigation principale">
-    <a href="/images/">Images</a>
-    <a href="/video/">Vidéo</a>
-    <a href="/#confidentialite">Confidentialité</a>
-    <a href="/#questions">Questions</a>
+<header class="nx-bar">
+  <a class="nx-bar__brand" href="/" aria-label="NOXEL SPECTRA"><img src="/NOXEL_SPECTRA_LOGO.svg" alt="NOXEL SPECTRA" class="nx-bar__logo" width="70" height="58"></a>
+  <nav class="nx-bar__nav nx-bar__nav--static" aria-label="Navigation principale" style="display:flex;position:static;flex-direction:row;padding:0;background:none;border:0;margin-left:12px">
+    <a class="nx-nav" href="/images/" aria-current="page">Images</a>
+    <a class="nx-nav" href="/video/">Vidéo</a>
+    <a class="nx-nav" href="/#confidentialite">Confidentialité</a>
+    <a class="nx-nav" href="/#questions">Questions</a>
   </nav>
+  <div class="nx-bar__right">
+    <a class="nx-pill" href="https://app.noxelspectra.com/" rel="noopener" style="text-decoration:none"><span class="nx-pill__code">→</span> Ouvrir l'app</a>
+  </div>
 </header>
 
 <main>
   <p class="crumbs"><a href="/">Accueil</a> › Images</p>
-  <h1>NOXEL Spectra pour les images</h1>
-  <p>NOXEL Spectra pour les images regroupe une vingtaine d'outils dans une seule page. Tu choisis une image, tu enchaînes les opérations et tu télécharges le résultat.</p>
+  <h1>NOXEL SPECTRA pour les images</h1>
+  <p>NOXEL SPECTRA pour les images regroupe une vingtaine d'outils dans une seule page. Tu choisis une image, tu enchaînes les opérations et tu télécharges le résultat.</p>
   <p><a class="cta" href="https://app.noxelspectra.com/">Ouvrir Spectra pour les images</a></p>
 
   <h2>Formats et poids</h2>
@@ -156,15 +158,18 @@
   <p class="note">Tu travailles aussi avec des vidéos ? Vois <a href="/video/">les outils pour la vidéo</a>.</p>
 </main>
 
-<footer>
-  <nav aria-label="Pied de page">
-    <a href="/">Accueil</a>
-    <a href="/images/">Outils pour les images</a>
-    <a href="/video/">Outils pour la vidéo</a>
-    <a href="https://noxel360.com">NOXEL360</a>
-    <button type="button" data-noxel-consent-settings style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline">Préférences de confidentialité</button>
+<footer class="nx-foot">
+  <nav class="nx-foot__links" aria-label="Pied de page">
+    <a href="/images/">Images</a>
+    <a href="/video/">Vidéo</a>
+    <a href="https://noxelseo.com" rel="noopener">NOXEL SEO</a>
+    <a href="https://noxelforge.com" rel="noopener">NOXEL FORGE</a>
+    <a href="https://noxel360.com/" rel="noopener">NOXEL360</a>
+    <a href="/#confidentialite">Confidentialité</a>
+    <a href="mailto:legal@noxel360.com">Contact</a>
+    <button type="button" data-noxel-consent-settings>Préférences de confidentialité</button>
   </nav>
-  NOXEL Spectra fait partie de l'écosystème NOXEL.
+  <div class="nx-foot__copy">© 2026 NOXEL360 Inc. Tous droits réservés.</div>
 </footer>
 
 </body>

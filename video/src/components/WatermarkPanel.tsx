@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Filigrane : texte ou logo incrusté pendant toute la sélection
+// NOXEL SPECTRA Vidéo — Filigrane : texte ou logo incrusté pendant toute la sélection
 // Même section que dans Spectra image. Le dessin est celui du filigrane de Copyright (layoutMark) :
 // ce qu'on voit sur l'aperçu est ce qui est incrusté.
 import { useEffect, useMemo, useRef, useState } from "react";

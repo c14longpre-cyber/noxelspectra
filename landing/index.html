@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NOXEL Spectra — Vos images et vidéos, prêtes pour le web</title>
+<title>NOXEL SPECTRA — Vos images et vidéos, prêtes pour le web</title>
 <meta name="description" content="Outils simples et rapides pour vos images et vos vidéos : conversion, compression, redimensionnement, détourage, vectorisation. Tout en ligne, sans installation.">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="NOXEL Spectra">
+<meta property="og:site_name" content="NOXEL SPECTRA">
 <meta property="og:locale" content="fr_CA">
-<meta property="og:title" content="NOXEL Spectra — Vos images et vidéos, prêtes pour le web">
+<meta property="og:title" content="NOXEL SPECTRA — Vos images et vidéos, prêtes pour le web">
 <meta property="og:description" content="Outils simples et rapides pour vos images et vos vidéos : conversion, compression, redimensionnement, détourage, vectorisation. Tout en ligne, sans installation.">
 <meta property="og:url" content="https://www.noxelspectra.com/">
 <meta property="og:image" content="https://www.noxelspectra.com/logo.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="NOXEL Spectra — Vos images et vidéos, prêtes pour le web">
+<meta name="twitter:title" content="NOXEL SPECTRA — Vos images et vidéos, prêtes pour le web">
 <meta name="twitter:description" content="Outils simples et rapides pour vos images et vos vidéos : conversion, compression, redimensionnement, détourage, vectorisation. Tout en ligne, sans installation.">
 <meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
 <link rel="canonical" href="https://www.noxelspectra.com/">
@@ -27,7 +27,7 @@
     {
       "@type": "Organization",
       "@id": "https://www.noxelspectra.com/#org",
-      "name": "NOXEL Spectra",
+      "name": "NOXEL SPECTRA",
       "url": "https://www.noxelspectra.com/",
       "logo": "https://www.noxelspectra.com/logo.png",
       "parentOrganization": {
@@ -39,7 +39,7 @@
     {
       "@type": "WebSite",
       "@id": "https://www.noxelspectra.com/#site",
-      "name": "NOXEL Spectra",
+      "name": "NOXEL SPECTRA",
       "url": "https://www.noxelspectra.com/",
       "inLanguage": "fr",
       "publisher": {
@@ -63,7 +63,7 @@
           "name": "Mes vidéos sont-elles téléversées ?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Non. NOXEL Spectra Vidéo traite tout dans votre navigateur. Votre vidéo ne quitte jamais votre appareil."
+            "text": "Non. NOXEL SPECTRA Vidéo traite tout dans votre navigateur. Votre vidéo ne quitte jamais votre appareil."
           }
         },
         {
@@ -125,8 +125,7 @@
   html, body { margin: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.65; }
   .glow { position: fixed; top: -20%; left: 50%; transform: translateX(-50%); width: 900px; max-width: 100%; height: 900px; background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%); pointer-events: none; }
-  header, main, footer { position: relative; max-width: 960px; margin: 0 auto; padding: 0 20px; }
-  header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 20px; padding-bottom: 20px; }
+  main { position: relative; max-width: 960px; margin: 0 auto; padding: 0 20px; }
   .brand { color: var(--text); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; }
   .brand span, h1 span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   nav { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
@@ -163,13 +162,13 @@
   .faq { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--green); border-radius: 12px; padding: 14px 18px; margin: 10px 0; }
   .faq summary { cursor: pointer; font-weight: 700; color: var(--text); }
   .faq p { margin: 10px 0 0; }
-  footer { margin-top: 64px; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
-  footer nav { margin-bottom: 8px; }
   footer p { color: var(--muted); font-size: 13px; margin: 4px 0; }
   @media (max-width: 600px) { h1 { font-size: 30px; } h2 { font-size: 22px; } }
 </style>
 <!-- NOXEL Consent 1.4.0 : aucun outil facultatif sur la vitrine ; préférences + relais du choix entre les sites NOXEL -->
 <link rel="stylesheet" href="/consent/noxel-consent.css">
+<!-- NOXEL Shell 1.0 : même en-tête et même pied de page que NOXEL360, NOXEL SEO et NOXEL FORGE -->
+<link rel="stylesheet" href="/noxel-shell.css">
 <script src="/consent/sites.js"></script>
 <script src="/consent/noxel-consent.js"></script>
 </head>
@@ -177,20 +176,23 @@
 
 <div class="glow"></div>
 
-<header>
-  <a class="brand" href="/"><span>NOXEL</span> Spectra</a>
-  <nav aria-label="Navigation principale">
-    <a href="/images/">Images</a>
-    <a href="/video/">Vidéo</a>
-    <a href="/#confidentialite">Confidentialité</a>
-    <a href="/#questions">Questions</a>
+<header class="nx-bar">
+  <a class="nx-bar__brand" href="/" aria-label="NOXEL SPECTRA"><img src="/NOXEL_SPECTRA_LOGO.svg" alt="NOXEL SPECTRA" class="nx-bar__logo" width="70" height="58"></a>
+  <nav class="nx-bar__nav nx-bar__nav--static" aria-label="Navigation principale" style="display:flex;position:static;flex-direction:row;padding:0;background:none;border:0;margin-left:12px">
+    <a class="nx-nav" href="/images/">Images</a>
+    <a class="nx-nav" href="/video/">Vidéo</a>
+    <a class="nx-nav" href="/#confidentialite">Confidentialité</a>
+    <a class="nx-nav" href="/#questions">Questions</a>
   </nav>
+  <div class="nx-bar__right">
+    <a class="nx-pill" href="https://app.noxelspectra.com/" rel="noopener" style="text-decoration:none"><span class="nx-pill__code">→</span> Ouvrir l'app</a>
+  </div>
 </header>
 
 <main>
   <div class="hero">
-    <img class="logo" src="/logo.webp" alt="NOXEL Spectra" width="220" height="184">
-    <h1>NOXEL Spectra<br><span>Vos images et vos vidéos, prêtes pour le web</span></h1>
+    <img class="logo" src="/logo.webp" alt="NOXEL SPECTRA" width="220" height="184">
+    <h1>NOXEL SPECTRA<br><span>Vos images et vos vidéos, prêtes pour le web</span></h1>
     <p class="tagline">Outils simples et rapides pour transformer vos médias — conversion, compression, redimensionnement, détourage, vectorisation. Tout en ligne, sans installation. Vos fichiers restent vôtres.</p>
     <p>
       <a class="cta" href="https://app.noxelspectra.com/" rel="noopener">Ouvrir Spectra pour les images</a>
@@ -199,7 +201,7 @@
   </div>
 
   <h2 id="images">Outils pour les images</h2>
-  <p>NOXEL Spectra Images vous accompagne dans les travaux du quotidien : optimiser le poids d'une image pour le web, adapter vos visuels aux réseaux sociaux, préparer les icônes d'un site ou modifier rapidement un logo. Aucune installation, aucun compte à créer.</p>
+  <p>NOXEL SPECTRA Images vous accompagne dans les travaux du quotidien : optimiser le poids d'une image pour le web, adapter vos visuels aux réseaux sociaux, préparer les icônes d'un site ou modifier rapidement un logo. Aucune installation, aucun compte à créer.</p>
 
   <h3>Fonctionnalités principales</h3>
   <ul>
@@ -221,7 +223,7 @@
   <p><a class="more" href="/images/">Voir tous les outils pour les images →</a></p>
 
   <h2 id="video">Outils pour la vidéo</h2>
-  <p>NOXEL Spectra Vidéo travaille directement dans votre navigateur — aucun logiciel à télécharger, aucun compte requis. Votre vidéo reste sur votre appareil pendant toute l'édition.</p>
+  <p>NOXEL SPECTRA Vidéo travaille directement dans votre navigateur — aucun logiciel à télécharger, aucun compte requis. Votre vidéo reste sur votre appareil pendant toute l'édition.</p>
 
   <h3>Fonctionnalités en version test</h3>
   <ul>
@@ -304,7 +306,7 @@
     <ul>
       <li><strong>Spectra ne dépose aucun cookie publicitaire ni de réseau social.</strong> Votre choix de confidentialité est gardé dans votre navigateur (pas de cookie).</li>
       <li><strong>Mesure d'audience :</strong> facultative, dans l'application seulement, active uniquement si vous l'acceptez.</li>
-      <li><strong>Un seul choix pour les sites NOXEL :</strong> la fenêtre de consentement est commune à NOXEL360, NOXEL SEO, NOXEL Forge et NOXEL Spectra. Votre choix suit vos liens d'un site NOXEL à l'autre, sans identifiant. La catégorie « Marketing » concerne des outils utilisés sur NOXEL SEO, pas sur Spectra.</li>
+      <li><strong>Un seul choix pour les sites NOXEL :</strong> la fenêtre de consentement est commune à NOXEL360, NOXEL SEO, NOXEL FORGE et NOXEL SPECTRA. Votre choix suit vos liens d'un site NOXEL à l'autre, sans identifiant. La catégorie « Marketing » concerne des outils utilisés sur NOXEL SEO, pas sur Spectra.</li>
       <li><strong>Changer d'avis :</strong> bouton « Préférences de confidentialité » en bas de chaque page.</li>
     </ul>
   </div>
@@ -316,31 +318,33 @@
 
   <h2 id="questions">Questions fréquentes</h2>
     <details class="faq"><summary>Mes images sont-elles conservées après le traitement ?</summary><p>Non. Une image est envoyée à notre serveur le temps du traitement, en mémoire seulement : elle n&#x27;est jamais écrite sur disque ni sauvegardée, et le résultat vous est renvoyé directement.</p></details>
-    <details class="faq"><summary>Mes vidéos sont-elles téléversées ?</summary><p>Non. NOXEL Spectra Vidéo traite tout dans votre navigateur. Votre vidéo ne quitte jamais votre appareil.</p></details>
+    <details class="faq"><summary>Mes vidéos sont-elles téléversées ?</summary><p>Non. NOXEL SPECTRA Vidéo traite tout dans votre navigateur. Votre vidéo ne quitte jamais votre appareil.</p></details>
     <details class="faq"><summary>Mes fichiers sont-ils utilisés pour entraîner des modèles IA ?</summary><p>Non. Vos fichiers ne sont jamais utilisés à des fins d&#x27;entraînement. Le détourage utilise un modèle ouvert qui tourne sur notre propre serveur.</p></details>
     <details class="faq"><summary>Quels formats d&#x27;image sont pris en charge en sortie ?</summary><p>JPEG, PNG, WebP, AVIF et GIF. La vectorisation produit un SVG. L&#x27;outil Favicons génère un ensemble d&#x27;icônes pour le web et les mobiles.</p></details>
     <details class="faq"><summary>Quelle est la taille maximale d&#x27;une image ?</summary><p>25 Mo par image. Le traitement par lots accepte jusqu&#x27;à 20 images et 100 Mo au total.</p></details>
     <details class="faq"><summary>Spectra Vidéo est-il terminé ?</summary><p>Non, il est en version test. Les outils annoncés fonctionnent et de nouvelles fonctionnalités s&#x27;ajoutent régulièrement. Un navigateur récent (Chrome, Firefox, Safari, Edge) est recommandé.</p></details>
     <details class="faq"><summary>Collectez-vous des données de suivi ?</summary><p>Très peu. Nos serveurs gardent des journaux techniques pour la sécurité et le débogage. Dans l&#x27;application, une mesure d&#x27;audience sans cookie (Vercel Web Analytics) n&#x27;est active que si vous l&#x27;acceptez. Pas de Google Analytics, pas de publicité, pas de cookie de réseaux sociaux sur Spectra.</p></details>
     <details class="faq"><summary>Comment exercer mes droits ?</summary><p>Écrivez à legal@noxel360.com avec la mention « Exercice de droits » et votre demande (accès, rectification, suppression, portabilité). Nous répondons sous 30 jours.</p></details>
-  <h2>NOXEL Spectra dans l'écosystème</h2>
-  <p>NOXEL Spectra est un module de <strong><a href="https://noxel360.com/" rel="noopener">NOXEL360</a></strong>, une plateforme d'outils pour créer et faire connaître votre site web. Explorez aussi :</p>
+  <h2>NOXEL SPECTRA dans l'écosystème</h2>
+  <p>NOXEL SPECTRA est un module de <strong><a href="https://noxel360.com/" rel="noopener">NOXEL360</a></strong>, une plateforme d'outils pour créer et faire connaître votre site web. Explorez aussi :</p>
   <ul>
     <li><strong><a href="https://noxelseo.com/" rel="noopener">NOXEL SEO</a></strong> — audits de visibilité, scores de performance, recommandations d'optimisation</li>
-    <li><strong><a href="https://noxelforge.com/" rel="noopener">NOXEL Forge</a></strong> — échange de backlinks vérifiés avec Trust Score</li>
+    <li><strong><a href="https://noxelforge.com/" rel="noopener">NOXEL FORGE</a></strong> — échange de backlinks vérifiés avec Trust Score</li>
   </ul>
 </main>
 
-<footer>
-  <nav aria-label="Pied de page">
-    <a href="/">Accueil</a>
-    <a href="/images/">Outils pour les images</a>
-    <a href="/video/">Outils pour la vidéo</a>
-    <a href="/#confidentialite">Politique de confidentialité</a>
+<footer class="nx-foot">
+  <nav class="nx-foot__links" aria-label="Pied de page">
+    <a href="/images/">Images</a>
+    <a href="/video/">Vidéo</a>
+    <a href="https://noxelseo.com" rel="noopener">NOXEL SEO</a>
+    <a href="https://noxelforge.com" rel="noopener">NOXEL FORGE</a>
     <a href="https://noxel360.com/" rel="noopener">NOXEL360</a>
-    <button type="button" data-noxel-consent-settings style="background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline">Préférences de confidentialité</button>
+    <a href="/#confidentialite">Confidentialité</a>
+    <a href="mailto:legal@noxel360.com">Contact</a>
+    <button type="button" data-noxel-consent-settings>Préférences de confidentialité</button>
   </nav>
-  <p>© 2026 NOXEL360 Inc. Tous droits réservés. Dernière mise à jour : 14 octobre 2026.</p>
+  <div class="nx-foot__copy">© 2026 NOXEL360 Inc. Tous droits réservés. Dernière mise à jour : 14 octobre 2026.</div>
 </footer>
 
 </body>

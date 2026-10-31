@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — panneaux Convertir, Pivoter & retourner, Vitesse
+// NOXEL SPECTRA Vidéo — panneaux Convertir, Pivoter & retourner, Vitesse
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
