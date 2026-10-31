@@ -35,43 +35,126 @@ const TARGET_SIZE_FORMATS: Format[] = ["jpeg", "webp", "avif"];
 
 type SocialPreset = { label: string; width: number; height: number };
 
-const SOCIAL_PRESETS: Record<string, SocialPreset[]> = {
-  Facebook: [
-    { label: "Photo de profil", width: 320, height: 320 },
-    { label: "Photo de couverture", width: 820, height: 312 },
-    { label: "Image de publication", width: 1200, height: 630 },
-    { label: "Couverture d'événement", width: 1920, height: 1005 },
-  ],
-  Instagram: [
-    { label: "Photo de profil", width: 320, height: 320 },
-    { label: "Publication (carré)", width: 1080, height: 1080 },
-    { label: "Story / Reel", width: 1080, height: 1920 },
-  ],
-  YouTube: [
-    { label: "Icône de chaîne", width: 800, height: 800 },
-    { label: "Bannière de chaîne", width: 2560, height: 1440 },
-    { label: "Vignette de vidéo", width: 1280, height: 720 },
-  ],
-  TikTok: [
-    { label: "Photo de profil", width: 200, height: 200 },
-    { label: "Vidéo", width: 1080, height: 1920 },
-  ],
-  LinkedIn: [
-    { label: "Photo de profil (personnel)", width: 400, height: 400 },
-    { label: "Bannière (personnel)", width: 1584, height: 396 },
-    { label: "Logo d'entreprise", width: 300, height: 300 },
-    { label: "Bannière d'entreprise", width: 1128, height: 191 },
-  ],
-  "X (Twitter)": [
-    { label: "Photo de profil", width: 400, height: 400 },
-    { label: "Bannière d'en-tête", width: 1500, height: 500 },
-    { label: "Image de publication", width: 1200, height: 675 },
-  ],
-  Pinterest: [
-    { label: "Photo de profil", width: 165, height: 165 },
-    { label: "Épingle", width: 1000, height: 1500 },
-  ],
-};
+// Tailles recommandées par réseau (vérifiées en octobre 2026). Réseaux repris de la liste de NOXEL SEO
+// (backend/src/social/networks.ts) quand on y téléverse une photo de profil, un en-tête ou une image.
+const SOCIAL_GROUPS: { group: string; presets: Record<string, SocialPreset[]> }[] = [
+  { group: "Grands réseaux", presets: {
+    Facebook: [
+      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Photo de couverture", width: 820, height: 312 },
+      { label: "Image de publication", width: 1200, height: 630 },
+      { label: "Couverture d'événement", width: 1920, height: 1005 },
+    ],
+    Instagram: [
+      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Publication (carré)", width: 1080, height: 1080 },
+      { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
+      { label: "Story / Reel", width: 1080, height: 1920 },
+    ],
+    YouTube: [
+      { label: "Icône de chaîne", width: 800, height: 800 },
+      { label: "Bannière de chaîne", width: 2560, height: 1440 },
+      { label: "Vignette de vidéo", width: 1280, height: 720 },
+    ],
+    TikTok: [
+      { label: "Photo de profil", width: 200, height: 200 },
+      { label: "Vidéo / photo", width: 1080, height: 1920 },
+    ],
+    LinkedIn: [
+      { label: "Photo de profil (personnel)", width: 400, height: 400 },
+      { label: "Bannière (personnel)", width: 1584, height: 396 },
+      { label: "Logo d'entreprise", width: 300, height: 300 },
+      { label: "Bannière d'entreprise", width: 1128, height: 191 },
+      { label: "Image de publication", width: 1200, height: 627 },
+    ],
+    "X (Twitter)": [
+      { label: "Photo de profil", width: 400, height: 400 },
+      { label: "Bannière d'en-tête", width: 1500, height: 500 },
+      { label: "Image de publication", width: 1200, height: 675 },
+    ],
+    Pinterest: [
+      { label: "Photo de profil", width: 165, height: 165 },
+      { label: "Épingle", width: 1000, height: 1500 },
+    ],
+    Threads: [
+      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Publication (carré)", width: 1080, height: 1080 },
+      { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
+    ],
+    Bluesky: [
+      { label: "Photo de profil", width: 400, height: 400 },
+      { label: "Bannière", width: 1500, height: 500 },
+      { label: "Publication (paysage)", width: 1600, height: 900 },
+      { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
+    ],
+    Mastodon: [
+      { label: "Photo de profil", width: 400, height: 400 },
+      { label: "En-tête", width: 1500, height: 500 },
+    ],
+    Snapchat: [
+      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Story", width: 1080, height: 1920 },
+    ],
+  } },
+  { group: "Vidéo et diffusion", presets: {
+    Twitch: [
+      { label: "Photo de profil", width: 512, height: 512 },
+      { label: "Bannière de profil", width: 1920, height: 480 },
+      { label: "Écran hors ligne", width: 1920, height: 1080 },
+      { label: "Panneau", width: 320, height: 100 },
+    ],
+    Discord: [
+      { label: "Photo de profil", width: 512, height: 512 },
+      { label: "Bannière de profil", width: 600, height: 240 },
+      { label: "Icône de serveur", width: 512, height: 512 },
+      { label: "Bannière de serveur", width: 960, height: 540 },
+    ],
+  } },
+  { group: "Fiches et boutiques", presets: {
+    "Google Business Profile": [
+      { label: "Logo", width: 720, height: 720 },
+      { label: "Photo de l'établissement (4:3)", width: 1200, height: 900 },
+    ],
+    Etsy: [
+      { label: "Icône de boutique", width: 500, height: 500 },
+      { label: "Grande bannière", width: 3360, height: 840 },
+      { label: "Mini bannière", width: 1200, height: 160 },
+      { label: "Photo d'annonce", width: 2700, height: 2025 },
+    ],
+  } },
+  { group: "Musique et balados", presets: {
+    Spotify: [
+      { label: "Photo d'artiste", width: 750, height: 750 },
+      { label: "Pochette / couverture de balado", width: 3000, height: 3000 },
+    ],
+    "Apple Podcasts": [
+      { label: "Couverture de balado", width: 3000, height: 3000 },
+    ],
+    SoundCloud: [
+      { label: "Photo de profil", width: 1000, height: 1000 },
+      { label: "Bannière", width: 2480, height: 520 },
+      { label: "Pochette", width: 800, height: 800 },
+    ],
+  } },
+  { group: "Communautés et projets", presets: {
+    Reddit: [
+      { label: "Icône de communauté", width: 500, height: 500 },
+      { label: "Bannière de communauté", width: 1600, height: 480 },
+    ],
+    "Product Hunt": [
+      { label: "Vignette", width: 240, height: 240 },
+      { label: "Image de galerie", width: 1270, height: 760 },
+    ],
+    GitHub: [
+      { label: "Aperçu social du dépôt", width: 1280, height: 640 },
+    ],
+    Tumblr: [
+      { label: "En-tête", width: 3000, height: 1055 },
+    ],
+  } },
+];
+
+const SOCIAL_PRESETS: Record<string, SocialPreset[]> = Object.assign({}, ...SOCIAL_GROUPS.map((g) => g.presets));
 
 type ConversionStats = {
   originalSize: number;
@@ -642,6 +725,7 @@ export default function App() {
 
   const [socialPlatform, setSocialPlatform] = useState<string>(Object.keys(SOCIAL_PRESETS)[0]);
   const [socialPresetIndex, setSocialPresetIndex] = useState(0);
+  const [socialCover, setSocialCover] = useState(true);
   const [socialLoading, setSocialLoading] = useState(false);
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialResultUrl, setSocialResultUrl] = useState<string | null>(null);
@@ -1558,6 +1642,7 @@ export default function App() {
     formData.append("width", String(preset.width));
     formData.append("height", String(preset.height));
     formData.append("maintainAspect", "false");
+    if (socialCover) formData.append("fit", "cover");
 
     try {
       const res = await fetch(`${apiUrl}/api/resize`, {
@@ -3351,9 +3436,8 @@ export default function App() {
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tailles pour réseaux sociaux</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
         Redimensionne l'image sélectionnée aux dimensions exactes recommandées par
-        chaque réseau. Ajuste précisément la taille (donc peut légèrement déformer
-        une image dont le ratio diffère) — utilise Rogner avant si tu veux éviter
-        toute déformation.
+        chaque réseau ({Object.keys(SOCIAL_PRESETS).length} réseaux). Par défaut, l'image est
+        recadrée au centre pour remplir le format sans être déformée.
       </p>
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
@@ -3366,8 +3450,12 @@ export default function App() {
               setSocialPresetIndex(0);
             }}
           >
-            {Object.keys(SOCIAL_PRESETS).map((platform) => (
-              <option key={platform} value={platform}>{platform}</option>
+            {SOCIAL_GROUPS.map((g) => (
+              <optgroup key={g.group} label={g.group}>
+                {Object.keys(g.presets).map((platform) => (
+                  <option key={platform} value={platform}>{platform}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -3385,6 +3473,11 @@ export default function App() {
           </select>
         </label>
       </div>
+
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 13 }}>
+        <input type="checkbox" checked={socialCover} onChange={(e) => setSocialCover(e.target.checked)} />
+        Recadrer au centre (aucune déformation). Décoché : l'image est étirée aux dimensions exactes.
+      </label>
 
       <HudButton action="resize-social" disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
 
