@@ -7,7 +7,7 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 - Vitrine : en-tête `.nx-bar` et pied de page `.nx-foot` dans les 3 pages de `landing/`. App : barre latérale conservée, en-tête de page `.nx-page-header` avec pastilles (Vidéo, Aide, NOXEL360).
 - Noms des modules toujours en majuscules : NOXEL360, NOXEL SEO, NOXEL FORGE, NOXEL NEXUS, NOXEL SPECTRA. Pas de page de prix tant que les forfaits n'existent pas.
 
-## Consentement cookies — NOXEL Consent 1.4.0 (commun aux sites NOXEL)
+## Consentement cookies — NOXEL Consent 1.4.1 (commun aux sites NOXEL)
 
 - **Fichiers** : `landing/consent/` (vitrine) et `frontend/public/consent/` (app) (`noxel-consent.js`, `noxel-consent.css`, `sites.js`), chargés dans le `<head>` AVANT tout outil facultatif. Le même moteur est copié à l'identique dans noxel360, noxelseo, noxelforge et noxelspectra : toute modification se fait partout, version incrémentée dans l'en-tête du fichier.
 - **Tout traceur passe par le kit** : script facultatif écrit `<script type="text/plain" data-consent="analytics|marketing|preferences" data-src="…">`, SDK démarré par `NoxelConsent.register()` ou rendu seulement si `NoxelConsent.has(catégorie)` (hook `src/components/consent/useNoxelConsent.ts`, Vercel Analytics via `ConsentedAnalytics.tsx`). Jamais de GTM, gtag, pixel, `<noscript>` de suivi ou widget tiers actif en direct. Déclarer l'outil dans `providers` et, pour un composant React, sa catégorie dans `enabledCategories`.
