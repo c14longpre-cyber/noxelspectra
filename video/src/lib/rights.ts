@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Copyright : droits inscrits dans le fichier, filigrane visible, vérification.
+// NOXEL SPECTRA Vidéo — Copyright : droits inscrits dans le fichier, filigrane visible, vérification.
 //
 // Les métadonnées DÉCLARENT des droits : elles ne bloquent pas la copie et ne prouvent pas la
 // propriété à elles seules. Seuls les champs remplis sont écrits, puis le fichier produit est

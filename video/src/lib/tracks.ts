@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — vérification des pistes d'une conversion Mediabunny.
+// NOXEL SPECTRA Vidéo — vérification des pistes d'une conversion Mediabunny.
 import type { Conversion } from "mediabunny";
 
 // Écartées volontairement, ou en trop pour le format de sortie : ce ne sont pas des pertes

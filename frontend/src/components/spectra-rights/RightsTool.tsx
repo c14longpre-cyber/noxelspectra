@@ -1,4 +1,4 @@
-// NOXEL Spectra — Auteur, droits et licence
+// NOXEL SPECTRA — Auteur, droits et licence
 //
 // Intègre des métadonnées XMP (standards IPTC et PLUS) lisibles par Lightroom,
 // Bridge, les banques d'images et Google Images. Les métadonnées DÉCLARENT des

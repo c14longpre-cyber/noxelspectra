@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Miniature : meilleure image, titre, export
+// NOXEL SPECTRA Vidéo — Miniature : meilleure image, titre, export
 import { useCallback, useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { THUMB_SIZES, canvasToBlob, renderThumbnail, suggestFrames } from "../lib/frames";

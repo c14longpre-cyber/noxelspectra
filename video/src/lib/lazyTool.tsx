@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — outils téléchargés à la demande
+// NOXEL SPECTRA Vidéo — outils téléchargés à la demande
 // Les outils (et le moteur vidéo) ne sont pas téléchargés au premier affichage : ils le sont dès
 // qu'une vidéo est choisie (preloadTools), ou à l'ouverture de l'outil.
 // Si un téléchargement échoue (connexion coupée, nouvelle version mise en ligne), l'outil le dit sans

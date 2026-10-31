@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — traitement du son.
+// NOXEL SPECTRA Vidéo — traitement du son.
 // Seul l'audio est réencodé : la vidéo est recopiée telle quelle (rapide, aucune perte d'image).
 import {
   ALL_FORMATS, AudioSample, BlobSource, BufferSource, BufferTarget, Conversion, EncodedPacketSink, Input, Mp4OutputFormat, OggOutputFormat, Output, WavOutputFormat,

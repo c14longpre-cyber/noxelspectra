@@ -1,4 +1,4 @@
-// NOXEL Spectra — pont entre l'Éditeur (JS natif) et le moteur de dégradés.
+// NOXEL SPECTRA — pont entre l'Éditeur (JS natif) et le moteur de dégradés.
 // Textes et formes : motif de remplissage calculé par le moteur.
 // Stickers : le dégradé « spectrum » du SVG est remplacé par ce même motif,
 // ce qui garde les contours et détails d'origine du sticker.

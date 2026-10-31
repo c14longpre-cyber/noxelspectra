@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Convertir, Pivoter & retourner, Vitesse
+// NOXEL SPECTRA Vidéo — Convertir, Pivoter & retourner, Vitesse
 import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, MovOutputFormat, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";
 import type { AudioSample, ConversionOptions, VideoSample } from "mediabunny";
 import { audioEncoding, audioOptions, createSpeedResampler } from "./audio";

@@ -1,4 +1,4 @@
-// NOXEL Spectra — outil Dégradé (calques, 11 géométries, répétition, fusion)
+// NOXEL SPECTRA — outil Dégradé (calques, 11 géométries, répétition, fusion)
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {

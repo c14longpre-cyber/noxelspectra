@@ -1,6 +1,12 @@
 # NOXEL Spectra — notes pour les agents Claude Code
 
 NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxelspectra.com), outil vidéo `video/`, API `backend/`. Couleurs officielles NOXEL : vert #3ddc84, violet #A855F7. Boutons : kit HUD `frontend/src/components/hud/` (source du kit pour les autres sites NOXEL).
+## Look commun NOXEL Shell 1.0
+
+- `landing/noxel-shell.css` et `frontend/src/noxel-shell.css` : copies identiques du fichier de noxel360 et noxelforge (modèle NOXEL SEO) ; toute modification se fait partout, version incrémentée dans l'en-tête.
+- Vitrine : en-tête `.nx-bar` et pied de page `.nx-foot` dans les 3 pages de `landing/`. App : barre latérale conservée, en-tête de page `.nx-page-header` avec pastilles (Vidéo, Aide, NOXEL360).
+- Noms des modules toujours en majuscules : NOXEL360, NOXEL SEO, NOXEL FORGE, NOXEL NEXUS, NOXEL SPECTRA. Pas de page de prix tant que les forfaits n'existent pas.
+
 ## Consentement cookies — NOXEL Consent 1.4.0 (commun aux sites NOXEL)
 
 - **Fichiers** : `landing/consent/` (vitrine) et `frontend/public/consent/` (app) (`noxel-consent.js`, `noxel-consent.css`, `sites.js`), chargés dans le `<head>` AVANT tout outil facultatif. Le même moteur est copié à l'identique dans noxel360, noxelseo, noxelforge et noxelspectra : toute modification se fait partout, version incrémentée dans l'en-tête du fichier.

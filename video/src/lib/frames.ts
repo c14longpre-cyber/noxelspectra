@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — images tirées de la vidéo : capture, suggestions, miniature.
+// NOXEL SPECTRA Vidéo — images tirées de la vidéo : capture, suggestions, miniature.
 import { canvasGradient, fontStack } from "./overlay";
 import type { Fill } from "./overlay";
 

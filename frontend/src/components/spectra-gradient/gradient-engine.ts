@@ -1,4 +1,4 @@
-// NOXEL Spectra — moteur de dégradés partagé (outil Dégradé + Éditeur)
+// NOXEL SPECTRA — moteur de dégradés partagé (outil Dégradé + Éditeur)
 //
 // Chaque calque est calculé pixel par pixel : toutes les géométries passent par
 // le même chemin, ce qui garantit un rendu identique entre l'aperçu, le PNG et
@@ -438,7 +438,7 @@ export function docToCss(doc: GradientDoc): { css: string; skipped: string[] } {
     parts.push(css);
     blends.push(l.blend);
   }
-  const lines = [`/* NOXEL Spectra — ${doc.width} × ${doc.height} px */`];
+  const lines = [`/* NOXEL SPECTRA — ${doc.width} × ${doc.height} px */`];
   if (skipped.length) lines.push(`/* Non représentable en CSS natif (utilise l'export PNG) : ${skipped.join(" ; ")} */`);
   if (parts.length) {
     lines.push(`background: ${parts.join(",\n            ")};`);
@@ -514,7 +514,7 @@ export function docToSvg(doc: GradientDoc, rasterize: (l: Layer) => string): { s
     }
   });
   const note = rasterized.length
-    ? `<!-- NOXEL Spectra : calques intégrés en image (pas de géométrie SVG native) : ${esc(rasterized.join(", "))} -->`
+    ? `<!-- NOXEL SPECTRA : calques intégrés en image (pas de géométrie SVG native) : ${esc(rasterized.join(", "))} -->`
     : "";
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${note}<defs>${defs.join("")}</defs><g style="isolation:isolate">${body.join("")}</g></svg>`,

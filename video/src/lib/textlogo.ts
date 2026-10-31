@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Texte & logo : incrustation dans l'image.
+// NOXEL SPECTRA Vidéo — Texte & logo : incrustation dans l'image.
 // Chaque image est redessinée avec les éléments par-dessus, donc la vidéo est réencodée
 // (même famille de codec, au débit de la source). Le son est recopié tel quel.
 import { ALL_FORMATS, BlobSource, BufferSource, BufferTarget, Conversion, Input, Mp4OutputFormat, Output, WebMOutputFormat } from "mediabunny";

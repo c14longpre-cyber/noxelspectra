@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — timeline : tête de lecture, points de début et de fin.
+// NOXEL SPECTRA Vidéo — timeline : tête de lecture, points de début et de fin.
 // Raccourcis : Espace = lecture/pause, I = début, O = fin, ← → = ±1 s (Maj : ±0,1 s)
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";

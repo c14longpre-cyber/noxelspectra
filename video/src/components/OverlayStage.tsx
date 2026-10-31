@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Texte & logo : scène posée sur l'aperçu.
+// NOXEL SPECTRA Vidéo — Texte & logo : scène posée sur l'aperçu.
 // Dessine les éléments avec le même code que l'export, et permet de les déplacer
 // et de les redimensionner directement sur la vidéo.
 import { useEffect, useRef } from "react";

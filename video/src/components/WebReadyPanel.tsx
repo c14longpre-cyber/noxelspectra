@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — Prêt pour mon site : vidéo légère, image d'aperçu, code d'intégration, JSON-LD
+// NOXEL SPECTRA Vidéo — Prêt pour mon site : vidéo légère, image d'aperçu, code d'intégration, JSON-LD
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { RESOLUTIONS, bitrateForQuality, compressVideo, formatSupport, outputSize } from "../lib/compress";

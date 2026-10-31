@@ -1,4 +1,4 @@
-// NOXEL Spectra — sauvegarde de projets dans le navigateur (IndexedDB)
+// NOXEL SPECTRA — sauvegarde de projets dans le navigateur (IndexedDB)
 //
 // Les projets restent dans le navigateur de l'utilisateur : rien n'est
 // envoyé sur nos serveurs. Un projet peut être exporté en fichier
@@ -221,7 +221,7 @@ export async function importProject(source: File): Promise<Project> {
   try {
     zip = await JSZip.loadAsync(source);
   } catch {
-    throw new Error("Ce fichier n'est pas un projet NOXEL Spectra valide.");
+    throw new Error("Ce fichier n'est pas un projet NOXEL SPECTRA valide.");
   }
   const manifestFile = zip.file("project.json");
   if (!manifestFile) throw new Error("Projet invalide : project.json introuvable.");
@@ -233,7 +233,7 @@ export async function importProject(source: File): Promise<Project> {
     throw new Error("Projet invalide : project.json illisible.");
   }
   if (manifest?.format !== FILE_FORMAT || !Array.isArray(manifest.entries) || manifest.entries.length === 0) {
-    throw new Error("Ce fichier n'est pas un projet NOXEL Spectra valide.");
+    throw new Error("Ce fichier n'est pas un projet NOXEL SPECTRA valide.");
   }
 
   const entries: StoredEntry[] = [];

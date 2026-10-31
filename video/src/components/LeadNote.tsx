@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — avertissement partagé par les outils qui recopient l'image sans la réencoder.
+// NOXEL SPECTRA Vidéo — avertissement partagé par les outils qui recopient l'image sans la réencoder.
 // Une recopie ne peut commencer que sur une image clé : si la sélection commence après, les images
 // entre cette image clé et le début choisi restent dans le fichier, masquées à la lecture.
 

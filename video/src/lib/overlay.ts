@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — éléments incrustés (texte, logo) : modèle et dessin sur canevas.
+// NOXEL SPECTRA Vidéo — éléments incrustés (texte, logo) : modèle et dessin sur canevas.
 // Le même code dessine l'aperçu et l'export : ce qu'on voit est ce qui est produit.
 // Toutes les mesures sont relatives à l'image (0–1), donc indépendantes de la résolution.
 import { PRESETS } from "../../../frontend/src/components/spectra-gradient/gradient-engine";

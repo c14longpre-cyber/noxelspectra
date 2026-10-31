@@ -1,4 +1,4 @@
-// NOXEL Spectra — retouche du détourage au pinceau
+// NOXEL SPECTRA — retouche du détourage au pinceau
 //
 // Reçoit l'image d'origine et le détourage transparent brut renvoyé par le
 // serveur. Le masque (transparence) est modifiable au pinceau :

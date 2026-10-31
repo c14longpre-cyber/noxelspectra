@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — panneau Compresser / Moins de 25 Mo
+// NOXEL SPECTRA Vidéo — panneau Compresser / Moins de 25 Mo
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { RESOLUTIONS, bitrateForQuality, compressVideo, estimateBytes, formatSupport, nextLowerResolution, outputSize, planForTarget } from "../lib/compress";

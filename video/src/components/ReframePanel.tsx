@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — panneau Recadrer & redimensionner (aperçu en direct, cadre déplaçable)
+// NOXEL SPECTRA Vidéo — panneau Recadrer & redimensionner (aperçu en direct, cadre déplaçable)
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { ASPECTS, cropRect, reframeVideo, targetDims } from "../lib/reframe";

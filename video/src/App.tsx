@@ -1,4 +1,4 @@
-// NOXEL Spectra Vidéo — version de test (video.noxelspectra.com)
+// NOXEL SPECTRA Vidéo — version de test (video.noxelspectra.com)
 // Tout le traitement se fait dans le navigateur (WebCodecs) : aucune vidéo n'est téléversée.
 import { useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
