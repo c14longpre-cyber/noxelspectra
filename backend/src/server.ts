@@ -47,6 +47,14 @@ import { parseRecipe, runRecipe, mapWithLimit, shadowLayer, parseShadowStops } f
 import { removeBackground, bgModelAvailable, BG_MODEL_NAME } from "./bgremove";
 import { parseRights, hasRights, readRights, missingAfterExport, applyRights } from "./rights";
 import { renderTextOverlay } from "./textOverlay";
+import cookieParser from "cookie-parser";
+import authRoutes from "./account/auth.routes";
+import { billingRouter, stripeWebhook } from "./account/billing.routes";
+import { aiRouter } from "./account/ai.routes";
+import { quotaOutils } from "./account/middleware";
+import { rateLimit } from "express-rate-limit";
+import { PLANS } from "./account/plans";
+import { comptesActifs } from "./account/config";
 
 dotenv.config();
 
@@ -118,12 +126,31 @@ if (allowedOrigins.length === 0 && process.env.NODE_ENV === "production") {
   );
 }
 
+// Derrière le proxy de Railway : req.ip = adresse du visiteur (quotas et limites de connexion)
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,  // cookie de session SPECTRA
+    exposedHeaders: ["X-Original-Width", "X-Original-Height", "X-Output-Width", "X-Output-Height", "X-Original-Size", "X-Output-Size", "X-Quota-Limit", "X-Quota-Remaining", "X-Credits-Remaining", "X-Credits-Used"],
   })
 );
-app.use(express.json());
+app.use(cookieParser());
+// Webhook Stripe : corps brut (signature), donc AVANT express.json()
+app.post("/api/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+app.use(express.json({ limit: "100kb" }));
+
+// Filtres / réglages : l'app redemande un aperçu à chaque mouvement de curseur (après 500 ms) ;
+// ces aperçus ne comptent pas dans le quota du jour, seulement dans une limite de cadence par adresse.
+const apercuLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: "draft-6", legacyHeaders: false,
+  message: { ok: false, code: "rate_limited", error: "Trop d'aperçus d'affilée : attends quelques secondes." } });
+
+// Comptes, forfaits et dessin IA (facultatifs : sans configuration, les routes répondent 503)
+app.use("/api/auth", authRoutes);
+app.use("/api", billingRouter);
+app.use("/api", aiRouter);
+if (!comptesActifs()) console.warn("Comptes SPECTRA désactivés (SPECTRA_JWT_SECRET, SUPABASE_URL ou SUPABASE_SERVICE_KEY manquant) : outils gratuits seulement.");
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -203,7 +230,7 @@ async function encodeToTargetSize(
 //   quality         1-100 (manual mode, ignored if targetSizeKB is set)
 //   targetSizeKB    optional — auto-search for the best quality under this size
 //                   (jpeg/webp/avif only; ignored for png/gif)
-app.post("/api/convert", upload.single("file"), async (req, res) => {
+app.post("/api/convert", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -261,7 +288,7 @@ app.post("/api/convert", upload.single("file"), async (req, res) => {
 
 // POST /api/palette — multipart form: file, count (3-10, default 6)
 // Returns dominant colors as hex + percentage of image they cover.
-app.post("/api/palette", upload.single("file"), async (req, res) => {
+app.post("/api/palette", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -360,7 +387,7 @@ app.post("/api/palette", upload.single("file"), async (req, res) => {
 //   maintainAspect   "true" (default) fits inside width/height keeping ratio; "false" stretches to exact size
 //   format           optional — if omitted, keeps the original format
 //   quality          1-100 (default 85, ignored for png/gif)
-app.post("/api/resize", upload.single("file"), async (req, res) => {
+app.post("/api/resize", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -442,7 +469,7 @@ app.post("/api/resize", upload.single("file"), async (req, res) => {
 });
 // POST /api/favicon — multipart form: file
 // Returns a ZIP containing favicon.ico + the standard PNG sizes used across web/PWA/iOS.
-app.post("/api/favicon", upload.single("file"), async (req, res) => {
+app.post("/api/favicon", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -516,7 +543,7 @@ function traceMaskToPathTag(maskPngBuffer: Buffer, fillColor: string): Promise<s
 // Extracts the dominant colors, builds one black/white mask per color (pixels
 // nearest to that color become white / traceable foreground), traces each mask
 // with potrace, and combines the resulting paths into a single multi-color SVG.
-app.post("/api/vectorize", upload.single("file"), async (req, res) => {
+app.post("/api/vectorize", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -723,7 +750,7 @@ app.post("/api/vectorize", upload.single("file"), async (req, res) => {
 // Runs the same color-detection pipeline as /api/vectorize (bucket +
 // diversity selection + k-means refinement) but returns only the palette,
 // skipping the slow tracing step — lets the client review/edit colors first.
-app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
+app.post("/api/vectorize-colors", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -845,7 +872,7 @@ app.post("/api/vectorize-colors", upload.single("file"), async (req, res) => {
 // measures the real output size of each, and recommends the smallest.
 // Also flags simple-graphic images (good vectorize candidates) and
 // stripped-out-EXIF/ICC savings.
-app.post("/api/analyze", upload.single("file"), async (req, res) => {
+app.post("/api/analyze", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -963,7 +990,7 @@ app.post("/api/analyze", upload.single("file"), async (req, res) => {
 //   quality   optional 1-100, default 80 (ignored for png/gif)
 // Generates one resized file per width (never upscaling past the original),
 // zips them together, and returns a ready-to-use srcset string in a header.
-app.post("/api/responsive", upload.single("file"), async (req, res) => {
+app.post("/api/responsive", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1068,7 +1095,7 @@ app.post("/api/responsive", upload.single("file"), async (req, res) => {
 // Re-encodes the image in its original format at high fidelity, without
 // carrying over EXIF/GPS/ICC/IPTC/XMP data. Reports how many bytes of
 // metadata were actually removed.
-app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
+app.post("/api/strip-metadata", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1159,7 +1186,7 @@ app.post("/api/strip-metadata", upload.single("file"), async (req, res) => {
 //   flipVertical     optional "true" — mirror top-bottom
 //   format           optional, default keeps the original format
 //   quality          optional 1-100, default 90 (ignored for png/gif)
-app.post("/api/rotate", upload.single("file"), async (req, res) => {
+app.post("/api/rotate", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1249,7 +1276,7 @@ const SEPIA_MATRIX: [[number, number, number], [number, number, number], [number
 //   invert        optional "true" — inverts colors, preserves alpha
 //   format        optional, default keeps the original format
 //   quality       optional 1-100, default 90 (ignored for png/gif)
-app.post("/api/adjust", upload.single("file"), async (req, res) => {
+app.post("/api/adjust", upload.single("file"), apercuLimiter, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1380,7 +1407,7 @@ app.post("/api/adjust", upload.single("file"), async (req, res) => {
 //   height     required, crop height in pixels (> 0)
 //   format     optional, default keeps the original format
 //   quality    optional 1-100, default 90 (ignored for png/gif)
-app.post("/api/crop", upload.single("file"), async (req, res) => {
+app.post("/api/crop", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1475,7 +1502,7 @@ app.post("/api/crop", upload.single("file"), async (req, res) => {
 //   angle       optional, degrés du dégradé (0 = gauche → droite, 90 = haut → bas)
 // Works best on images with transparency (logos, vectorized icons);
 // on fully-opaque images it shadows the whole rectangle.
-app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
+app.post("/api/drop-shadow", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1553,7 +1580,7 @@ app.post("/api/drop-shadow", upload.single("file"), async (req, res) => {
 //               and brightness boost of the "screen"-blended glow layer
 //   format      optional, default keeps the original format
 //   quality     optional 1-100, default 90 (ignored for png/gif)
-app.post("/api/glow", upload.single("file"), async (req, res) => {
+app.post("/api/glow", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1621,7 +1648,7 @@ app.post("/api/glow", upload.single("file"), async (req, res) => {
 //   color       text watermark color (default #ffffff)
 //   format      optional, default keeps the original format
 //   quality     optional 1-100, default 90 (ignored for png/gif)
-app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name: "logo", maxCount: 1 }]), async (req, res) => {
+app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name: "logo", maxCount: 1 }]), quotaOutils(), async (req, res) => {
   try {
     const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
     const mainFile = files?.file?.[0];
@@ -1789,7 +1816,7 @@ app.post("/api/watermark", upload.fields([{ name: "file", maxCount: 1 }, { name:
 // Seuls les champs remplis sont écrits ; GPS, appareil et autres données de
 // l'original ne sont PAS recopiés. Le fichier exporté est relu pour vérifier
 // chaque champ (en-têtes X-Rights-*).
-app.post("/api/copyright", upload.single("file"), async (req, res) => {
+app.post("/api/copyright", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1880,7 +1907,7 @@ app.post("/api/read-rights", upload.single("file"), async (req, res) => {
 //   background  optionnel #rrggbb — remplit le fond (sinon transparent)
 //   trim        optionnel "true" — recadre au sujet
 //   format      optionnel "png" (défaut, sans perte) | "webp"
-app.post("/api/remove-background", upload.single("file"), async (req, res) => {
+app.post("/api/remove-background", upload.single("file"), quotaOutils(), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ ok: false, error: "Aucun fichier reçu" });
@@ -1936,7 +1963,7 @@ function batchSafeName(name: string): string {
   return base.replace(/[^A-Za-z0-9À-ÖØ-öø-ÿ_\-. ()]+/g, "_").trim().slice(0, 80) || "image";
 }
 
-app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, res) => {
+app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), quotaOutils((req) => ((req as any).files?.length ?? 1)), async (req, res) => {
   const files = (req.files as Express.Multer.File[]) || [];
   // Multer décode les noms UTF-8 comme du Latin-1 (« été » → « Ã©tÃ© »)
   files.forEach((f) => {
@@ -1945,6 +1972,10 @@ app.post("/api/batch", batchUpload.array("files", BATCH_MAX_FILES), async (req, 
   });
   if (files.length === 0) {
     return res.status(400).json({ ok: false, error: "Aucune image reçue" });
+  }
+  const maxLot = PLANS[((req as any).demandeur?.tier ?? "bronze") as keyof typeof PLANS].batchFiles;
+  if (files.length > maxLot) {
+    return res.status(403).json({ ok: false, code: "batch_limit", error: `Ton forfait traite ${maxLot} fichiers par lot au plus.` });
   }
   const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
   if (totalBytes > BATCH_MAX_TOTAL_BYTES) {

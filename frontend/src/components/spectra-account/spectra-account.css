@@ -1,0 +1,54 @@
+/* NOXEL SPECTRA — connexion, bandeau de compte et dessin IA (charte NOXEL : vert #3ddc84, violet #A855F7) */
+.sp-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000; background: rgba(3, 5, 10, 0.72);
+  display: grid; place-items: center; padding: 16px;
+}
+.sp-modal {
+  position: relative; width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: #0c0f1a; border: 1px solid rgba(61, 220, 132, 0.28); border-radius: 16px; padding: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); color: #f5f5f5;
+}
+.sp-modal__close { position: absolute; top: 12px; right: 12px; background: none; border: 0; color: #888; font-size: 16px; cursor: pointer; }
+.sp-modal__close:hover { color: #fff; }
+.sp-modal__title { font-size: 19px; font-weight: 900; margin: 0 0 6px; }
+.sp-modal__sub { font-size: 12px; color: rgba(255, 255, 255, 0.58); margin: 0 0 18px; line-height: 1.5; }
+.sp-google { display: flex; justify-content: center; min-height: 44px; }
+.sp-sep { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: #666; font-size: 12px; }
+.sp-sep::before, .sp-sep::after { content: ""; flex: 1; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.sp-tabs { justify-content: center; margin-bottom: 14px; flex-wrap: wrap; }
+.sp-tabs .nx-cycle__btn { padding: 7px 12px; font-size: 12px; }
+.sp-form { display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.sp-form label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, 0.75); }
+.sp-form input[type="email"], .sp-form input[type="password"] {
+  padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04); color: #fff; font: inherit; font-size: 14px;
+}
+.sp-form input:focus { outline: 2px solid rgba(61, 220, 132, 0.5); outline-offset: 1px; }
+.sp-form .sp-check { flex-direction: row; align-items: center; font-weight: 500; }
+.sp-form .noxel-hud { align-self: center; }
+.sp-error { color: #ff7a8f; font-size: 13px; margin: 6px 0; }
+.sp-info { color: #3ddc84; font-size: 13px; margin: 6px 0; }
+
+.sp-banner {
+  margin-top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px; font-size: 13px;
+  background: rgba(61, 220, 132, 0.08); border: 1px solid rgba(61, 220, 132, 0.28); color: #d6ffe6;
+}
+.sp-banner--error { background: rgba(255, 92, 122, 0.08); border-color: rgba(255, 92, 122, 0.3); color: #ffd6de; }
+.sp-banner button { background: none; border: 0; color: inherit; cursor: pointer; opacity: 0.7; }
+
+.sp-ai { margin-top: 8px; max-width: 760px; }
+.sp-ai__label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.sp-ai__prompt {
+  width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; resize: vertical;
+  border: 1px solid rgba(61, 220, 132, 0.25); background: rgba(255, 255, 255, 0.04); color: #fff; font: inherit; font-size: 14px; line-height: 1.5;
+}
+.sp-ai__prompt:focus { outline: 2px solid rgba(168, 85, 247, 0.5); }
+.sp-ai__cost {
+  margin-top: 12px; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;
+  background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.3); color: rgba(255, 255, 255, 0.85);
+}
+.sp-ai__cost strong { color: #c9a2ff; }
+.sp-ai__result { margin-top: 18px; }
+.sp-ai__result img { max-width: 100%; max-height: 70vh; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); display: block; }
+.sp-ai__legal { font-size: 11px; color: #888; margin-top: 8px; }

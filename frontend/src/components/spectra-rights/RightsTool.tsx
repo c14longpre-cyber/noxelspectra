@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { HudButton, HudLink } from "../hud/HudButton";
+import { apiFetch } from "../spectra-account/account";
 
 type Fields = Record<string, string>;
 
@@ -91,7 +92,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
     let cancelled = false;
     const fd = new FormData();
     fd.append("file", file);
-    fetch(`${apiUrl}/api/read-rights`, { method: "POST", body: fd })
+    apiFetch(`${apiUrl}/api/read-rights`, { method: "POST", body: fd })
       .then((r) => r.json())
       .then((data) => {
         if (cancelled || !data?.ok || !data.count) return;
@@ -140,7 +141,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
       const fd = new FormData();
       fd.append("file", file);
       fd.append("rights", JSON.stringify(rights));
-      const res = await fetch(`${apiUrl}/api/copyright`, { method: "POST", body: fd });
+      const res = await apiFetch(`${apiUrl}/api/copyright`, { method: "POST", body: fd });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Erreur ${res.status}`);
