@@ -5,7 +5,16 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 
 - `landing/noxel-shell.css` et `frontend/src/noxel-shell.css` : copies identiques du fichier de noxel360 et noxelforge (modèle NOXEL SEO) ; toute modification se fait partout, version incrémentée dans l'en-tête.
 - Vitrine : en-tête `.nx-bar` et pied de page `.nx-foot` dans les 3 pages de `landing/`. App : barre latérale conservée, en-tête de page `.nx-page-header` avec pastilles (Vidéo, Aide, NOXEL360).
-- Noms des modules toujours en majuscules : NOXEL360, NOXEL SEO, NOXEL FORGE, NOXEL NEXUS, NOXEL SPECTRA. Pas de page de prix tant que les forfaits n'existent pas.
+- Noms des modules toujours en majuscules : NOXEL360, NOXEL SEO, NOXEL FORGE, NOXEL NEXUS, NOXEL SPECTRA. Page de prix : section « Forfaits » de l'app (cartes `.nx-pcard`, chiffres lus sur GET /api/plans).
+
+## Comptes, forfaits et dessin IA (backend/src/account/)
+
+- **Comptes** : copie des règles de connexion de NOXEL FORGE (Google, lien magique, courriel + mot de passe confirmé par courriel, passkeys RP `noxelspectra.com`), même projet Supabase et même table `users` que SEO et FORGE. `users.tier` reste le forfait de NOXEL SEO : le forfait SPECTRA est dans `spectra_members.tier`. Migration : `backend/supabase/20261031_spectra_comptes.sql`. Session : cookie `spectra_session` (JWT `SPECTRA_JWT_SECRET`), posé sur `.noxelspectra.com` ; l'API doit être servie sur `api.noxelspectra.com` (un cookie tiers serait bloqué par Safari).
+- **Facultatif** : sans `SPECTRA_JWT_SECRET` + Supabase, les routes de compte répondent 503 et les outils restent gratuits (jamais de plantage au démarrage). Côté navigateur, tout appel à l'API passe par `apiFetch()` (`credentials: "include"`, `components/spectra-account/account.ts`), sinon le quota compte l'adresse IP au lieu du compte.
+- **Forfaits** (`plans.ts`, source unique, lue par la page de prix via GET /api/plans) : Bronze 0 $ (sans compte, 50 opérations/jour par adresse IP), Silver 5 $, Gold 15 $, Platinum 40 $, Diamond 80 $ CAD par mois (annuel = 10 mois) ; images et vidéo incluses. Quota quotidien en mémoire (`quotaOutils`, middleware.ts) sur toutes les routes d'images ; les aperçus de filtres (/api/adjust) ne comptent pas (limite de cadence seulement). Lots : 10 fichiers en Bronze, 20 ensuite (plafond `BATCH_MAX_FILES`).
+- **Stripe** : compte possiblement partagé avec SEO et FORGE. Tout ce que SPECTRA crée porte `metadata.product = "spectra"` et des clés propres (`spectraUserId`, `spectraTier`) ; le webhook SPECTRA (`/api/billing/webhook`, `SPECTRA_STRIPE_WEBHOOK_SECRET`) ignore le reste. Prix : `SPECTRA_PRICE_<TIER>_<MONTHLY|ANNUAL>`, paquet de crédits `SPECTRA_PRICE_CREDITS` (50 crédits, 5 $).
+- **Dessin IA** (`ai.routes.ts`) : FLUX.2 [pro] de Black Forest Labs (`BFL_API_KEY`), 1 crédit par image d'environ 1 mégapixel, coût affiché avant chaque génération. Crédits inclus par mois (0/20/100/300/800) remis à zéro le 1er (UTC) + crédits achetés sans date limite ; dépense et remise atomiques par les fonctions SQL `spectra_depenser_credit` / `spectra_rendre_credit` (crédit rendu si la génération échoue). L'image est téléchargée par le serveur et renvoyée, jamais conservée.
+- Tests : `npm test` dans backend/.
 
 ## Consentement cookies — NOXEL Consent 1.4.1 (commun aux sites NOXEL)
 

@@ -10,6 +10,12 @@ import { GradientStops, type Stop } from "./components/GradientStops";
 import { RightsTool } from "./components/spectra-rights/RightsTool";
 import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import { ExifNotice } from "./components/spectra-exif/ExifNotice";
+import { AccountPill } from "./components/spectra-account/AccountPill";
+import { LoginModal } from "./components/spectra-account/LoginModal";
+import { PricingPage } from "./components/spectra-account/PricingPage";
+import { AiDrawTool } from "./components/spectra-account/AiDrawTool";
+import { apiFetch, rafraichirCompte, LOGIN_EVENT, PRICING_EVENT } from "./components/spectra-account/account";
+import "./components/spectra-account/spectra-account.css";
 import { readMetadata, stripMetadata, type ImageMetadata } from "./utils/exifUtils";
 import {
   deleteProject,
@@ -541,6 +547,8 @@ export default function App() {
   const gradientSectionRef = useRef<HTMLDivElement | null>(null);
   const watermarkSectionRef = useRef<HTMLDivElement | null>(null);
   const copyrightSectionRef = useRef<HTMLDivElement | null>(null);
+  const aiSectionRef = useRef<HTMLDivElement | null>(null);
+  const pricingSectionRef = useRef<HTMLDivElement | null>(null);
   const batchSectionRef = useRef<HTMLDivElement | null>(null);
   const projectsSectionRef = useRef<HTMLDivElement | null>(null);
   const mainFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -549,6 +557,40 @@ export default function App() {
   const bgSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [activeSection, setActiveSection] = useState("analyze");
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [avisCompte, setAvisCompte] = useState<{ texte: string; erreur?: boolean } | null>(null);
+
+  // Fenêtre de connexion et page des forfaits ouvertes depuis n'importe quel composant
+  useEffect(() => {
+    const ouvrirLogin = () => setLoginOpen(true);
+    const ouvrirPrix = () => { setActiveSection("pricing"); setSidebarOpen(false); };
+    window.addEventListener(LOGIN_EVENT, ouvrirLogin);
+    window.addEventListener(PRICING_EVENT, ouvrirPrix);
+    return () => { window.removeEventListener(LOGIN_EVENT, ouvrirLogin); window.removeEventListener(PRICING_EVENT, ouvrirPrix); };
+  }, []);
+
+  // Retour d'un lien de connexion (?auth_success / ?auth_error) ou de Stripe (?billing=…)
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const auth = q.get("auth_success"), err = q.get("auth_error"), billing = q.get("billing");
+    if (!auth && !err && !billing) return;
+    const ERREURS: Record<string, string> = {
+      invalid_token: "Ce lien n'est plus valide. Demande-en un nouveau.",
+      token_expired: "Ce lien a expiré (15 minutes). Demande-en un nouveau.",
+      email_in_use: "Un compte NOXEL existe déjà pour ce courriel avec une autre méthode de connexion. Utilise celle-ci.",
+      missing_token: "Lien incomplet.",
+      server_error: "Connexion impossible pour le moment. Réessaie.",
+    };
+    if (auth) setAvisCompte({ texte: "Tu es connecté à NOXEL SPECTRA." });
+    else if (err) setAvisCompte({ texte: ERREURS[err] ?? "Connexion impossible.", erreur: true });
+    else if (billing === "success") { setAvisCompte({ texte: "Merci ! Ton forfait est actif (il peut falloir quelques secondes)." }); setActiveSection("pricing"); }
+    else if (billing === "credits") { setAvisCompte({ texte: "Merci ! Tes crédits de dessin IA sont ajoutés." }); setActiveSection("ai"); }
+    else if (billing === "cancelled") setAvisCompte({ texte: "Paiement annulé : rien n'a été facturé." });
+    void rafraichirCompte();
+    // Le webhook Stripe peut arriver après le retour : une deuxième lecture quelques secondes plus tard
+    if (billing === "success" || billing === "credits") setTimeout(() => void rafraichirCompte(), 4000);
+    window.history.replaceState(null, "", window.location.pathname + window.location.hash);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -594,6 +636,7 @@ export default function App() {
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
     { id: "projects", label: "Mes projets", icon: "❏", ref: projectsSectionRef },
+    { id: "ai", label: "Dessin IA", icon: "✦", ref: aiSectionRef },
     { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
     { id: "convert", label: "Convertir", icon: "↔", ref: convertSectionRef },
     { id: "batch", label: "Traitement par lots", icon: "▦", ref: batchSectionRef },
@@ -614,6 +657,7 @@ export default function App() {
     { id: "gradient", label: "Dégradé", icon: "◐", ref: gradientSectionRef },
     { id: "watermark", label: "Filigrane", icon: "⛆", ref: watermarkSectionRef },
     { id: "copyright", label: "Auteur et droits", icon: "©", ref: copyrightSectionRef },
+    { id: "pricing", label: "Forfaits", icon: "$", ref: pricingSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -1242,7 +1286,7 @@ export default function App() {
     formData.append("recipe", JSON.stringify(selected.recipe));
 
     try {
-      const res = await fetch(`${apiUrl}/api/batch`, { method: "POST", body: formData });
+      const res = await apiFetch(`${apiUrl}/api/batch`, { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Erreur ${res.status}`);
@@ -1276,7 +1320,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${apiUrl}/api/analyze`, {
+      const res = await apiFetch(`${apiUrl}/api/analyze`, {
         method: "POST",
         body: formData,
       });
@@ -1321,7 +1365,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${apiUrl}/api/convert`, {
+      const res = await apiFetch(`${apiUrl}/api/convert`, {
         method: "POST",
         body: formData,
       });
@@ -1361,7 +1405,7 @@ export default function App() {
     formData.append("count", String(paletteCount));
 
     try {
-      const res = await fetch(`${apiUrl}/api/palette`, {
+      const res = await apiFetch(`${apiUrl}/api/palette`, {
         method: "POST",
         body: formData,
       });
@@ -1397,7 +1441,7 @@ export default function App() {
     if (resizeFormat !== "original") formData.append("format", resizeFormat);
 
     try {
-      const res = await fetch(`${apiUrl}/api/resize`, {
+      const res = await apiFetch(`${apiUrl}/api/resize`, {
         method: "POST",
         body: formData,
       });
@@ -1447,7 +1491,7 @@ export default function App() {
     formData.append("quality", String(responsiveQuality));
 
     try {
-      const res = await fetch(`${apiUrl}/api/responsive`, {
+      const res = await apiFetch(`${apiUrl}/api/responsive`, {
         method: "POST",
         body: formData,
       });
@@ -1489,7 +1533,7 @@ export default function App() {
     formData.append("colors", String(vectorizeColors));
 
     try {
-      const res = await fetch(`${apiUrl}/api/vectorize-colors`, {
+      const res = await apiFetch(`${apiUrl}/api/vectorize-colors`, {
         method: "POST",
         body: formData,
       });
@@ -1534,7 +1578,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${apiUrl}/api/vectorize`, {
+      const res = await apiFetch(`${apiUrl}/api/vectorize`, {
         method: "POST",
         body: formData,
       });
@@ -1572,7 +1616,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${apiUrl}/api/favicon`, {
+      const res = await apiFetch(`${apiUrl}/api/favicon`, {
         method: "POST",
         body: formData,
       });
@@ -1600,7 +1644,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${apiUrl}/api/strip-metadata`, {
+      const res = await apiFetch(`${apiUrl}/api/strip-metadata`, {
         method: "POST",
         body: formData,
       });
@@ -1645,7 +1689,7 @@ export default function App() {
     if (socialCover) formData.append("fit", "cover");
 
     try {
-      const res = await fetch(`${apiUrl}/api/resize`, {
+      const res = await apiFetch(`${apiUrl}/api/resize`, {
         method: "POST",
         body: formData,
       });
@@ -1684,7 +1728,7 @@ export default function App() {
     formData.append("intensity", String(glowIntensity));
 
     try {
-      const res = await fetch(`${apiUrl}/api/glow`, {
+      const res = await apiFetch(`${apiUrl}/api/glow`, {
         method: "POST",
         body: formData,
       });
@@ -1728,7 +1772,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${apiUrl}/api/watermark`, {
+      const res = await apiFetch(`${apiUrl}/api/watermark`, {
         method: "POST",
         body: formData,
       });
@@ -1772,7 +1816,7 @@ export default function App() {
     }
 
     try {
-      const res = await fetch(`${apiUrl}/api/drop-shadow`, {
+      const res = await apiFetch(`${apiUrl}/api/drop-shadow`, {
         method: "POST",
         body: formData,
       });
@@ -1821,7 +1865,7 @@ export default function App() {
     formData.append("quantizeColors", String(quantizeColors));
 
     try {
-      const res = await fetch(`${apiUrl}/api/adjust`, {
+      const res = await apiFetch(`${apiUrl}/api/adjust`, {
         method: "POST",
         body: formData,
       });
@@ -1860,7 +1904,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${apiUrl}/api/remove-background`, { method: "POST", body: formData });
+      const res = await apiFetch(`${apiUrl}/api/remove-background`, { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Erreur ${res.status}`);
@@ -1922,7 +1966,7 @@ export default function App() {
     formData.append("height", String(cropHeight));
 
     try {
-      const res = await fetch(`${apiUrl}/api/crop`, {
+      const res = await apiFetch(`${apiUrl}/api/crop`, {
         method: "POST",
         body: formData,
       });
@@ -1964,7 +2008,7 @@ export default function App() {
     formData.append("flipVertical", String(flipVertical));
 
     try {
-      const res = await fetch(`${apiUrl}/api/rotate`, {
+      const res = await apiFetch(`${apiUrl}/api/rotate`, {
         method: "POST",
         body: formData,
       });
@@ -2038,10 +2082,18 @@ export default function App() {
           <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>Vidéo <span className="nx-pill__muted" style={{ display: "inline" }}>(test)</span></a>
           <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> Aide</a>
           <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>NOXEL360</a>
+          <AccountPill />
         </div>
       </div>
 
-      {activeSection !== "batch" && activeSection !== "gradient" && activeSection !== "projects" && (
+      {avisCompte && (
+        <div className={`sp-banner${avisCompte.erreur ? " sp-banner--error" : ""}`} role="status">
+          <span>{avisCompte.texte}</span>
+          <button type="button" aria-label="Fermer" onClick={() => setAvisCompte(null)}>✕</button>
+        </div>
+      )}
+
+      {activeSection !== "batch" && activeSection !== "gradient" && activeSection !== "projects" && activeSection !== "ai" && activeSection !== "pricing" && (
       <>
       <div
         className={`dropzone${isDraggingOver ? " dropzone-active" : ""}`}
@@ -3890,6 +3942,25 @@ export default function App() {
       </>
       )}
 
+      {activeSection === "ai" && (
+      <>
+      {/* ── Dessin IA (FLUX.2 [pro], crédits) ── */}
+      <div ref={aiSectionRef} />
+      <p style={{ color: "#888", fontSize: 13, marginTop: 16 }}>
+        Décris une image et l'IA la dessine. Tu peux ensuite la retoucher, la redimensionner pour les réseaux
+        ou la convertir avec les autres outils de NOXEL SPECTRA.
+      </p>
+      <AiDrawTool onUseImage={(f) => { void loadMainFile(f); goToSection("adjust"); }} />
+      </>
+      )}
+
+      {activeSection === "pricing" && (
+      <>
+      <div ref={pricingSectionRef} />
+      <PricingPage />
+      </>
+      )}
+
       {activeSection === "copyright" && (
       <>
       {/* ── Auteur, droits et licence ── */}
@@ -3907,6 +3978,7 @@ export default function App() {
       )}
         </div>
       </main>
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
       {exifPrompt && (
         <ExifNotice
           items={exifPrompt.files.flatMap((f, i) => {

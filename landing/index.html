@@ -261,6 +261,10 @@
       <tr><td>Rapports d'erreurs (Sentry) : message et trace technique, sans IP, corps de requête, cookies ni fichiers</td><td>Corriger les pannes</td><td>Intérêt légitime</td><td>Selon la durée de conservation de Sentry</td></tr>
       <tr><td>Mesure d'audience de l'application (Vercel Web Analytics, sans cookie)</td><td>Compter les visites</td><td>Consentement</td><td>Seulement si vous l'acceptez</td></tr>
       <tr><td>Votre choix de confidentialité</td><td>Respecter ce choix</td><td>Obligation légale</td><td>180 jours, sur votre appareil</td></tr>
+      <tr><td>Compte (facultatif) : courriel, nom, photo de profil Google, méthode de connexion, mot de passe chiffré (jamais lisible), clés publiques de passkey</td><td>Vous connecter, appliquer votre forfait</td><td>Contrat</td><td>Tant que le compte existe (compte NOXEL partagé avec NOXEL SEO et NOXEL FORGE)</td></tr>
+      <tr><td>Forfait, abonnement et crédits de dessin IA (identifiants Stripe, solde de crédits, historique des achats et dépenses)</td><td>Facturer, appliquer les quotas</td><td>Contrat, obligations comptables</td><td>Durée du compte ; factures 6 ans (obligation fiscale)</td></tr>
+      <tr><td>Description d'une image demandée au dessin IA</td><td>Dessiner l'image demandée</td><td>Service que vous demandez</td><td>Envoyée à Black Forest Labs pour la génération ; l'image produite n'est pas gardée par NOXEL SPECTRA</td></tr>
+      <tr><td>Compteur d'utilisation du jour (par compte ou par adresse IP)</td><td>Appliquer la limite quotidienne gratuite</td><td>Intérêt légitime</td><td>En mémoire, remis à zéro chaque jour</td></tr>
       <tr><td>Courriels que vous nous envoyez</td><td>Vous répondre</td><td>Consentement</td><td>Durée de l'échange + 1 an</td></tr>
     </table></div>
   </div>
@@ -291,6 +295,11 @@
       <li><strong>Railway</strong> : hébergement du serveur qui traite les images.</li>
       <li><strong>Vercel</strong> : hébergement des pages et mesure d'audience sans cookie (si acceptée).</li>
       <li><strong>Sentry</strong> : rapports d'erreurs techniques, sans données personnelles.</li>
+      <li><strong>Supabase</strong> : base de données des comptes NOXEL et des forfaits (seulement si vous créez un compte).</li>
+      <li><strong>Stripe</strong> : paiement des forfaits et des crédits ; vos données de carte ne nous parviennent jamais.</li>
+      <li><strong>Resend</strong> : envoi des courriels de connexion et de confirmation.</li>
+      <li><strong>Google</strong> : connexion avec un compte Google, seulement si vous la choisissez.</li>
+      <li><strong>Black Forest Labs</strong> (FLUX.2) : reçoit le texte de vos demandes de dessin IA, jamais vos images.</li>
     </ul>
     <p>Ces services peuvent traiter des données aux États-Unis ou au Canada. Vos données ne sont jamais vendues, louées ni partagées à des fins publicitaires.</p>
   </div>
@@ -305,6 +314,7 @@
     <h4>7. Cookies et consentement</h4>
     <ul>
       <li><strong>Spectra ne dépose aucun cookie publicitaire ni de réseau social.</strong> Votre choix de confidentialité est gardé dans votre navigateur (pas de cookie).</li>
+      <li><strong>Cookie de session</strong> (<code>spectra_session</code>, nécessaire) : déposé seulement si vous vous connectez, pour 7 jours, et effacé à la déconnexion.</li>
       <li><strong>Mesure d'audience :</strong> facultative, dans l'application seulement, active uniquement si vous l'acceptez.</li>
       <li><strong>Un seul choix pour les sites NOXEL :</strong> la fenêtre de consentement est commune à NOXEL360, NOXEL SEO, NOXEL FORGE et NOXEL SPECTRA. Votre choix suit vos liens d'un site NOXEL à l'autre, sans identifiant. La catégorie « Marketing » concerne des outils utilisés sur NOXEL SEO, pas sur Spectra.</li>
       <li><strong>Changer d'avis :</strong> bouton « Préférences de confidentialité » en bas de chaque page.</li>
@@ -313,7 +323,7 @@
 
   <div class="policy">
     <h4>8. Modifications</h4>
-    <p>Cette politique a été mise à jour le <strong>14 octobre 2026</strong>. Toute modification importante sera annoncée sur cette page.</p>
+    <p>Cette politique a été mise à jour le <strong>31 octobre 2026</strong>. Toute modification importante sera annoncée sur cette page.</p>
   </div>
 
   <h2 id="questions">Questions fréquentes</h2>
@@ -344,7 +354,7 @@
     <a href="mailto:legal@noxel360.com">Contact</a>
     <button type="button" data-noxel-consent-settings>Préférences de confidentialité</button>
   </nav>
-  <div class="nx-foot__copy">© 2026 NOXEL360 Inc. Tous droits réservés. Dernière mise à jour : 14 octobre 2026.</div>
+  <div class="nx-foot__copy">© 2026 NOXEL360 Inc. Tous droits réservés. Dernière mise à jour : 31 octobre 2026.</div>
 </footer>
 
 </body>

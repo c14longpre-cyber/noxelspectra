@@ -21,6 +21,8 @@ export const NAV_ICONS: Record<string, string> = {
   "editor": "<path d=\"m4 15 12-12 5 5L9 20l-6 1 1-6Zm9-9 5 5\"/>",
   "gradient": "<rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"3\"/><path d=\"M7 6v12m5-12v12m5-12v12\" opacity=\".5\"/>",
   "watermark": "<path d=\"M5 21h14M4 16h16l-1-3h-4V6a3 3 0 0 0-6 0v7H5l-1 3Z\"/>",
+  "ai": "<path d=\"M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z\"/><path d=\"M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15ZM5 16l.6 1.4L7 18l-1.4.6L5 20l-.6-1.4L3 18l1.4-.6L5 16Z\"/>",
+  "pricing": "<path d=\"M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z\"/><circle cx=\"8\" cy=\"8\" r=\"1.5\"/>",
   "copyright": "<path d=\"M12 2 3 6v7c0 5 9 9 9 9s9-4 9-9V6l-9-4Z\"/><path d=\"M15 9a4 4 0 1 0 0 6\"/>"
 };
 
