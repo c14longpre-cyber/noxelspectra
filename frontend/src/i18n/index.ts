@@ -66,5 +66,8 @@ export function onLangChange(fn: () => void): () => void {
   return () => { abonnes.delete(fn); };
 }
 
+/** « s » du pluriel : français au-delà de 1 (0 crédit, 2 crédits), anglais sauf pour 1 (0 credits, 1 credit) */
+export const pl = (n: number): string => (shownLang() === "fr" ? (n > 1 ? "s" : "") : (n === 1 ? "" : "s"));
+
 /** Nombres et dates dans la langue affichée */
 export const locale = () => (shownLang() === "fr" ? "fr-CA" : "en-CA");

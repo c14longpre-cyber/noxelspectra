@@ -1545,6 +1545,7 @@ const en: Record<string, string> = {
  "Erreur {a}": "Error {a}",
  "Choisir {a}": "Choose {a}",
  "Paysage 16:9": "Landscape 16:9",
- "Bannière 3:1": "Banner 3:1"
+ "Bannière 3:1": "Banner 3:1",
+ "{a} police{b}": "{a} font{b}"
 };
 export default en;

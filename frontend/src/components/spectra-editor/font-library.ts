@@ -6,7 +6,7 @@
 // Généré par tools/fonts-gen (catalogue.json + fichiers).
 import "./font-picker.css";
 
-import { tr } from "../../i18n";
+import { tr, pl } from "../../i18n";
 export type FontCategory = "sans-serif" | "serif" | "display" | "handwriting" | "monospace";
 export interface FontEntry { id: string; family: string; category: FontCategory; bold: boolean; accents: boolean }
 
@@ -204,7 +204,7 @@ export function openFontPicker(anchor: HTMLElement, current: string, onPick: (va
     list.innerHTML = html;
     rows = [...list.querySelectorAll<HTMLElement>("[role=option]")];
     rows.forEach((r) => io.observe(r));
-    count.textContent = `${match.length} police${match.length > 1 ? "s" : ""}`;
+    count.textContent = tr("{a} police{b}", { a: match.length, b: pl(match.length) });
     active = rows.findIndex((r) => r.dataset.family === current);
     if (active >= 0 && !q) { rows[active].classList.add("is-active"); rows[active].scrollIntoView({ block: "center" }); }
     else active = -1;
