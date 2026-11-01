@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 import { GradientTool } from "./components/spectra-gradient/GradientTool";
@@ -16,6 +16,8 @@ import { PricingPage } from "./components/spectra-account/PricingPage";
 import { AiDrawTool } from "./components/spectra-account/AiDrawTool";
 import { apiFetch, rafraichirCompte, LOGIN_EVENT, PRICING_EVENT } from "./components/spectra-account/account";
 import "./components/spectra-account/spectra-account.css";
+import { SocialCropper, type Zone } from "./components/spectra-social/SocialCropper";
+import "./components/spectra-social/spectra-social.css";
 import { readMetadata, stripMetadata, type ImageMetadata } from "./utils/exifUtils";
 import {
   deleteProject,
@@ -39,57 +41,59 @@ type Format = (typeof FORMATS)[number];
 
 const TARGET_SIZE_FORMATS: Format[] = ["jpeg", "webp", "avif"];
 
-type SocialPreset = { label: string; width: number; height: number };
+// shape : affiché en rond par le réseau ; safe : zone toujours visible (fraction du cadre, centrée) ;
+// note : ce que le réseau coupe ou recouvre
+type SocialPreset = { label: string; width: number; height: number; shape?: "circle"; safe?: { w: number; h: number }; note?: string };
 
 // Tailles recommandées par réseau (vérifiées en octobre 2026). Réseaux repris de la liste de NOXEL SEO
 // (backend/src/social/networks.ts) quand on y téléverse une photo de profil, un en-tête ou une image.
 const SOCIAL_GROUPS: { group: string; presets: Record<string, SocialPreset[]> }[] = [
   { group: "Grands réseaux", presets: {
     Facebook: [
-      { label: "Photo de profil", width: 320, height: 320 },
-      { label: "Photo de couverture", width: 820, height: 312 },
+      { label: "Photo de profil", width: 320, height: 320, shape: "circle" },
+      { label: "Photo de couverture", width: 820, height: 312, note: "Sur un téléphone, Facebook coupe les côtés : garde l'essentiel au centre." },
       { label: "Image de publication", width: 1200, height: 630 },
       { label: "Couverture d'événement", width: 1920, height: 1005 },
     ],
     Instagram: [
-      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Photo de profil", width: 320, height: 320, shape: "circle" },
       { label: "Publication (carré)", width: 1080, height: 1080 },
       { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
       { label: "Story / Reel", width: 1080, height: 1920 },
     ],
     YouTube: [
-      { label: "Icône de chaîne", width: 800, height: 800 },
-      { label: "Bannière de chaîne", width: 2560, height: 1440 },
+      { label: "Icône de chaîne", width: 800, height: 800, shape: "circle" },
+      { label: "Bannière de chaîne", width: 2560, height: 1440, safe: { w: 1546 / 2560, h: 423 / 1440 }, note: "Sur un téléphone, YouTube ne montre que le centre (1 546 × 423) : garde le texte et le logo dans le cadre pointillé." },
       { label: "Vignette de vidéo", width: 1280, height: 720 },
     ],
     TikTok: [
-      { label: "Photo de profil", width: 200, height: 200 },
+      { label: "Photo de profil", width: 200, height: 200, shape: "circle" },
       { label: "Vidéo / photo", width: 1080, height: 1920 },
     ],
     LinkedIn: [
-      { label: "Photo de profil (personnel)", width: 400, height: 400 },
-      { label: "Bannière (personnel)", width: 1584, height: 396 },
+      { label: "Photo de profil (personnel)", width: 400, height: 400, shape: "circle" },
+      { label: "Bannière (personnel)", width: 1584, height: 396, note: "Ta photo de profil recouvre la partie gauche du bas de la bannière." },
       { label: "Logo d'entreprise", width: 300, height: 300 },
       { label: "Bannière d'entreprise", width: 1128, height: 191 },
       { label: "Image de publication", width: 1200, height: 627 },
     ],
     "X (Twitter)": [
-      { label: "Photo de profil", width: 400, height: 400 },
-      { label: "Bannière d'en-tête", width: 1500, height: 500 },
+      { label: "Photo de profil", width: 400, height: 400, shape: "circle" },
+      { label: "Bannière d'en-tête", width: 1500, height: 500, note: "Ta photo de profil recouvre le bas à gauche, et le haut et le bas peuvent être rognés selon l'écran." },
       { label: "Image de publication", width: 1200, height: 675 },
     ],
     Pinterest: [
-      { label: "Photo de profil", width: 165, height: 165 },
+      { label: "Photo de profil", width: 165, height: 165, shape: "circle" },
       { label: "Épingle", width: 1000, height: 1500 },
     ],
     Threads: [
-      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Photo de profil", width: 320, height: 320, shape: "circle" },
       { label: "Publication (carré)", width: 1080, height: 1080 },
       { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
     ],
     Bluesky: [
-      { label: "Photo de profil", width: 400, height: 400 },
-      { label: "Bannière", width: 1500, height: 500 },
+      { label: "Photo de profil", width: 400, height: 400, shape: "circle" },
+      { label: "Bannière", width: 1500, height: 500, note: "Sur un téléphone, Bluesky montre la bannière plus étroite (environ 4:1) : garde l'essentiel au centre." },
       { label: "Publication (paysage)", width: 1600, height: 900 },
       { label: "Publication (portrait 4:5)", width: 1080, height: 1350 },
     ],
@@ -98,21 +102,21 @@ const SOCIAL_GROUPS: { group: string; presets: Record<string, SocialPreset[]> }[
       { label: "En-tête", width: 1500, height: 500 },
     ],
     Snapchat: [
-      { label: "Photo de profil", width: 320, height: 320 },
+      { label: "Photo de profil", width: 320, height: 320, shape: "circle" },
       { label: "Story", width: 1080, height: 1920 },
     ],
   } },
   { group: "Vidéo et diffusion", presets: {
     Twitch: [
-      { label: "Photo de profil", width: 512, height: 512 },
+      { label: "Photo de profil", width: 512, height: 512, shape: "circle" },
       { label: "Bannière de profil", width: 1920, height: 480 },
       { label: "Écran hors ligne", width: 1920, height: 1080 },
       { label: "Panneau", width: 320, height: 100 },
     ],
     Discord: [
-      { label: "Photo de profil", width: 512, height: 512 },
+      { label: "Photo de profil", width: 512, height: 512, shape: "circle" },
       { label: "Bannière de profil", width: 600, height: 240 },
-      { label: "Icône de serveur", width: 512, height: 512 },
+      { label: "Icône de serveur", width: 512, height: 512, shape: "circle" },
       { label: "Bannière de serveur", width: 960, height: 540 },
     ],
   } },
@@ -130,21 +134,21 @@ const SOCIAL_GROUPS: { group: string; presets: Record<string, SocialPreset[]> }[
   } },
   { group: "Musique et balados", presets: {
     Spotify: [
-      { label: "Photo d'artiste", width: 750, height: 750 },
+      { label: "Photo d'artiste", width: 750, height: 750, shape: "circle" },
       { label: "Pochette / couverture de balado", width: 3000, height: 3000 },
     ],
     "Apple Podcasts": [
       { label: "Couverture de balado", width: 3000, height: 3000 },
     ],
     SoundCloud: [
-      { label: "Photo de profil", width: 1000, height: 1000 },
+      { label: "Photo de profil", width: 1000, height: 1000, shape: "circle" },
       { label: "Bannière", width: 2480, height: 520 },
       { label: "Pochette", width: 800, height: 800 },
     ],
   } },
   { group: "Communautés et projets", presets: {
     Reddit: [
-      { label: "Icône de communauté", width: 500, height: 500 },
+      { label: "Icône de communauté", width: 500, height: 500, shape: "circle" },
       { label: "Bannière de communauté", width: 1600, height: 480 },
     ],
     "Product Hunt": [
@@ -161,6 +165,15 @@ const SOCIAL_GROUPS: { group: string; presets: Record<string, SocialPreset[]> }[
 ];
 
 const SOCIAL_PRESETS: Record<string, SocialPreset[]> = Object.assign({}, ...SOCIAL_GROUPS.map((g) => g.presets));
+
+// « 16:9 », « 3:1 »… (proportions réduites ; arrondies quand elles ne tombent pas juste)
+function ratioLabel(w: number, h: number): string {
+  const pgcd = (a: number, b: number): number => (b ? pgcd(b, a % b) : a);
+  const g = pgcd(w, h);
+  if (w / g <= 21 && h / g <= 21) return `${w / g}:${h / g}`;
+  const r = w / h;
+  return r >= 1 ? `${(Math.round(r * 100) / 100).toLocaleString("fr-CA")}:1` : `1:${(Math.round((1 / r) * 100) / 100).toLocaleString("fr-CA")}`;
+}
 
 type ConversionStats = {
   originalSize: number;
@@ -769,7 +782,13 @@ export default function App() {
 
   const [socialPlatform, setSocialPlatform] = useState<string>(Object.keys(SOCIAL_PRESETS)[0]);
   const [socialPresetIndex, setSocialPresetIndex] = useState(0);
-  const [socialCover, setSocialCover] = useState(true);
+  // Zone choisie dans le cadre de recadrage (pixels de l'image redressée) et taille de l'image
+  const socialZone = useRef<Zone | null>(null);
+  const [socialNatural, setSocialNatural] = useState<{ width: number; height: number } | null>(null);
+  const onSocialZone = useCallback((z: Zone, nat: { width: number; height: number }) => {
+    socialZone.current = z;
+    setSocialNatural((p) => (p && p.width === nat.width && p.height === nat.height ? p : nat));
+  }, []);
   const [socialLoading, setSocialLoading] = useState(false);
   const [socialError, setSocialError] = useState<string | null>(null);
   const [socialResultUrl, setSocialResultUrl] = useState<string | null>(null);
@@ -1686,7 +1705,8 @@ export default function App() {
     formData.append("width", String(preset.width));
     formData.append("height", String(preset.height));
     formData.append("maintainAspect", "false");
-    if (socialCover) formData.append("fit", "cover");
+    formData.append("fit", "cover");
+    if (socialZone.current) formData.append("extract", JSON.stringify(socialZone.current));
 
     try {
       const res = await apiFetch(`${apiUrl}/api/resize`, {
@@ -1707,7 +1727,7 @@ export default function App() {
 
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = { steps: [{ op: "resize", width: preset.width, height: preset.height, maintainAspect: false, allowEnlarge: true }] };
+      recipeParts.current[outUrl] = { steps: [{ op: "resize", width: preset.width, height: preset.height, maintainAspect: false, allowEnlarge: true, cover: true }] };
       setSocialResultUrl(outUrl);
       setSocialStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
     } catch (err) {
@@ -3485,11 +3505,12 @@ export default function App() {
       <>
       {/* ── Réseaux sociaux ── */}
       <div ref={socialSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tailles pour réseaux sociaux</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Formats pour réseaux sociaux</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Redimensionne l'image sélectionnée aux dimensions exactes recommandées par
-        chaque réseau ({Object.keys(SOCIAL_PRESETS).length} réseaux). Par défaut, l'image est
-        recadrée au centre pour remplir le format sans être déformée.
+        Chaque réseau demande ses propres proportions : une bannière YouTube n'a pas la forme d'une
+        couverture Facebook. Choisis le réseau et le type d'image, puis place le cadre sur la partie
+        de ta photo à garder. L'image est recadrée puis mise aux dimensions exactes, jamais étirée
+        ({Object.keys(SOCIAL_PRESETS).length} réseaux).
       </p>
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
@@ -3526,12 +3547,54 @@ export default function App() {
         </label>
       </div>
 
-      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 13 }}>
-        <input type="checkbox" checked={socialCover} onChange={(e) => setSocialCover(e.target.checked)} />
-        Recadrer au centre (aucune déformation). Décoché : l'image est étirée aux dimensions exactes.
-      </label>
+      {(() => {
+        const preset = SOCIAL_PRESETS[socialPlatform][socialPresetIndex];
+        if (!preset) return null;
+        const ratio = preset.width / preset.height;
+        const nat = socialNatural;
+        const natRatio = nat ? nat.width / nat.height : 0;
+        return (
+          <>
+            <div className="sp-social-info">
+              <div><strong>{socialPlatform} · {preset.label}</strong></div>
+              <div>
+                Format demandé : <strong>{preset.width} × {preset.height} px</strong> ({ratioLabel(preset.width, preset.height)})
+                {preset.shape === "circle" ? " · affichée en rond" : ""}
+              </div>
+              {nat && (
+                <div>
+                  Ton image : {nat.width} × {nat.height} px ({ratioLabel(nat.width, nat.height)})
+                  {Math.abs(natRatio - ratio) / ratio < 0.01
+                    ? " · déjà au bon format, rien ne sera coupé"
+                    : natRatio > ratio ? " · plus large que le format : on coupe à gauche et à droite"
+                    : " · plus haute que le format : on coupe en haut et en bas"}
+                </div>
+              )}
+              {preset.note && <div className="sp-social-info__note">{preset.note}</div>}
+            </div>
+            {originalPreviewUrl ? (
+              <SocialCropper
+                key={`${originalPreviewUrl}|${ratio}`}
+                src={originalPreviewUrl}
+                ratio={ratio}
+                shape={preset.shape}
+                safe={preset.safe}
+                onChange={onSocialZone}
+                labels={{
+                  frameSize: "Taille du cadre",
+                  moveHint: "Glisse le cadre (ou utilise les flèches du clavier) pour choisir la partie à garder.",
+                  safeZone: "Toujours visible",
+                  circle: "Affichée en rond",
+                }}
+              />
+            ) : (
+              <p style={{ color: "#888", fontSize: 13 }}>Choisis une image en haut pour placer le cadre.</p>
+            )}
+          </>
+        );
+      })()}
 
-      <HudButton action="resize-social" disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
+      <HudButton action="resize-social" label="Recadrer au format" busyLabel="Recadrage…" disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
 
       {socialError && <p style={{ color: "red", marginTop: 16 }}>{socialError}</p>}
 
@@ -3556,10 +3619,10 @@ export default function App() {
 
       {socialResultUrl && (
         <div style={{ marginTop: 20 }}>
-          {originalPreviewUrl ? (
-            <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={socialResultUrl} />
-          ) : (
-            <img src={socialResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+          <img src={socialResultUrl} alt={`Résultat pour ${socialPlatform}`}
+            className={SOCIAL_PRESETS[socialPlatform][socialPresetIndex]?.shape === "circle" ? "sp-social-result sp-social-result--circle" : "sp-social-result"} />
+          {SOCIAL_PRESETS[socialPlatform][socialPresetIndex]?.shape === "circle" && (
+            <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>Aperçu en rond comme sur le réseau ; le fichier reste carré, c'est le réseau qui l'arrondit.</p>
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={socialResultUrl} download="social-image" />

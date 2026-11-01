@@ -1,0 +1,33 @@
+/* NOXEL SPECTRA — recadrage pour les réseaux sociaux */
+.sp-social-info {
+  margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6;
+  background: rgba(61, 220, 132, 0.06); border: 1px solid rgba(61, 220, 132, 0.22); color: rgba(255, 255, 255, 0.82);
+}
+.sp-social-info strong { color: #fff; }
+.sp-social-info__note { margin-top: 6px; color: #c9a2ff; }
+
+.sp-crop { margin-top: 14px; max-width: 760px; }
+.sp-crop__box { position: relative; display: inline-block; max-width: 100%; border-radius: 8px; overflow: hidden; touch-action: none; user-select: none; }
+.sp-crop__box img { display: block; max-width: 100%; max-height: 65vh; height: auto; }
+.sp-crop__frame {
+  position: absolute; box-sizing: border-box; cursor: move;
+  border: 2px solid #3ddc84; box-shadow: 0 0 0 9999px rgba(3, 5, 10, 0.62);
+}
+.sp-crop__frame:focus-visible { outline: 2px solid #a855f7; outline-offset: 2px; }
+.sp-crop__frame--circle::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.85); pointer-events: none;
+}
+.sp-crop__safe {
+  position: absolute; box-sizing: border-box; border: 2px dashed #a855f7; pointer-events: none;
+}
+.sp-crop__safe span, .sp-crop__tag {
+  position: absolute; left: 4px; top: 4px; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 99px;
+  background: rgba(3, 5, 10, 0.75); color: #fff; pointer-events: none; white-space: nowrap;
+}
+.sp-crop__size { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; }
+.sp-crop__size input { flex: 1; max-width: 280px; }
+.sp-crop__hint { font-size: 12px; color: #888; margin: 6px 0 0; }
+
+.sp-social-result { display: block; max-width: 100%; max-height: 60vh; border-radius: 8px; }
+.sp-social-result--circle { border-radius: 50%; max-width: 320px; }

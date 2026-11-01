@@ -23,7 +23,7 @@ const SEPIA: [[number, number, number], [number, number, number], [number, numbe
 
 export type RecipeStep =
   | { op: "removeBg"; background?: string; trim: boolean }
-  | { op: "resize"; width?: number; height?: number; maintainAspect: boolean; allowEnlarge: boolean }
+  | { op: "resize"; width?: number; height?: number; maintainAspect: boolean; allowEnlarge: boolean; cover?: boolean }
   | { op: "rotate"; angle: number; flipHorizontal: boolean; flipVertical: boolean }
   | {
       op: "adjust";
@@ -89,7 +89,7 @@ export function parseRecipe(raw: unknown): Recipe {
         const height = s.height ? Math.round(clamp(s.height, 1, 10000, 0)) : undefined;
         if (!width && !height) throw new Error(`Étape ${i + 1} : largeur ou hauteur requise`);
         // Dans une recette, une taille est un maximum : on n'agrandit pas sauf demande explicite
-        return { op: "resize", width, height, maintainAspect: s.maintainAspect !== false, allowEnlarge: s.allowEnlarge === true };
+        return { op: "resize", width, height, maintainAspect: s.maintainAspect !== false, allowEnlarge: s.allowEnlarge === true, cover: s.cover === true && !!width && !!height };
       }
       case "rotate":
         return {
@@ -238,7 +238,8 @@ async function applyStep(buf: Buffer, step: RecipeStep): Promise<Buffer> {
         sharp(buf).resize({
           width: step.width,
           height: step.height,
-          fit: step.maintainAspect ? "inside" : "fill",
+          // cover : format d'un réseau social en lot, recadré au centre (jamais étiré)
+          fit: step.cover ? "cover" : step.maintainAspect ? "inside" : "fill",
           withoutEnlargement: !step.allowEnlarge,
         })
       );
