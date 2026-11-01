@@ -52,10 +52,14 @@ function remplir(s: string, vars?: Record<string, unknown>): string {
   return s.replace(/\{(\w+)\}/g, (all, k) => (k in vars ? String(vars[k]) : all));
 }
 
+// Un même mot français peut avoir deux sens : « Annuler@@défaire » s'affiche « Annuler » en français
+// et se traduit à part (Undo), sans toucher à « Annuler » (Cancel).
 export function tr(fr: string, vars?: Record<string, unknown>): string {
-  if (lang.startsWith("fr")) return remplir(fr, vars);
+  const i = fr.indexOf("@@");
+  const texte = i >= 0 ? fr.slice(0, i) : fr;
+  if (lang.startsWith("fr")) return remplir(texte, vars);
   const base = lang.split("-")[0];
-  const s = DICTS[lang]?.[fr] ?? DICTS[base]?.[fr] ?? en[fr] ?? fr;
+  const s = DICTS[lang]?.[fr] ?? DICTS[base]?.[fr] ?? en[fr] ?? texte;
   return remplir(s, vars);
 }
 
@@ -65,6 +69,9 @@ export function onLangChange(fn: () => void): () => void {
   abonnes.add(fn);
   return () => { abonnes.delete(fn); };
 }
+
+/** « s » du pluriel : français au-delà de 1 (0 crédit, 2 crédits), anglais sauf pour 1 (0 credits, 1 credit) */
+export const pl = (n: number): string => (shownLang() === "fr" ? (n > 1 ? "s" : "") : (n === 1 ? "" : "s"));
 
 /** Nombres et dates dans la langue affichée */
 export const locale = () => (shownLang() === "fr" ? "fr-CA" : "en-CA");

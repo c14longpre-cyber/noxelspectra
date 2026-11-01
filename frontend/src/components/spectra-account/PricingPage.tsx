@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { API_URL, TIER_COLORS, TIER_MEDAL, allerVers, apiFetch, openLogin, useAccount, type PlanInfo } from "./account";
 
-import { tr, locale, shownLang } from "../../i18n";
+import { tr, locale, shownLang, pl } from "../../i18n";
 interface PlansReponse { plans: PlanInfo[]; creditPack: { credits: number; priceCad: number; available: boolean } }
 
 const prix = (n: number) => n.toLocaleString(locale(), { style: "currency", currency: "CAD", maximumFractionDigits: n % 1 ? 2 : 0 });
@@ -90,7 +90,7 @@ export function PricingPage() {
           <div className="nx-info__title">{tr("Crédits de dessin IA")}</div>
           <div className="nx-info__desc">
             {tr("Une image dessinée par l'IA (FLUX.2 [pro]) coûte 1 crédit. Les crédits inclus reviennent le 1er de chaque mois ; les crédits achetés n'expirent pas.")}{" "}{data?.creditPack ? tr("Paquet de {a} crédits : {b}.", { a: data.creditPack.credits, b: prix(data.creditPack.priceCad) }) : ""}
-            {account ? tr(" Il te reste {a} crédit{b}.", { a: account.credits.total, b: account.credits.total > 1 ? "s" : "" }) : ""}
+            {account ? tr(" Il te reste {a} crédit{b}.", { a: account.credits.total, b: pl(account.credits.total) }) : ""}
           </div>
         </div>
         <HudButton action="continue" compact busy={busy === "credits"} disabled={!data?.creditPack.available}

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { API_URL, apiFetch, lireErreur, openLogin, openPricing, rafraichirCompte, useAccount } from "./account";
 
-import { tr } from "../../i18n";
+import { tr, pl } from "../../i18n";
 interface AiInfo { enabled: boolean; costPerImage: number; formats: Record<string, { label: string; width: number; height: number }> }
 
 export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void }) {
@@ -73,15 +73,15 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
       </div>
 
       <div className="sp-ai__cost" role="note">
-        <strong>{tr("Coût :")}{" "}{cout} {tr("crédit")}{cout > 1 ? "s" : ""} {tr("par image.")}</strong>{" "}
+        <strong>{tr("Coût :")}{" "}{cout} {tr("crédit")}{pl(cout)} {tr("par image.")}</strong>{" "}
         {account
-          ? <>{tr("Il te reste")}{" "}{reste} {tr("crédit")}{reste > 1 ? "s" : ""} ({account.credits.inclus} {tr("inclus ce mois-ci,")}{" "}{account.credits.achetes} {tr("achetés). Un crédit est rendu si la génération échoue.")}</>
+          ? <>{tr("Il te reste")}{" "}{reste} {tr("crédit")}{pl(reste)} ({account.credits.inclus} {tr("inclus ce mois-ci,")}{" "}{account.credits.achetes} {tr("achetés). Un crédit est rendu si la génération échoue.")}</>
           : <>{tr("Connecte-toi pour utiliser tes crédits : le dessin IA est inclus à partir du forfait Silver.")}</>}
       </div>
 
       <HudButton action="suggest-frames" busy={busy} busyLabel={tr("Dessin en cours… (jusqu'à 1 minute)")}
         disabled={prompt.trim().length < 3}
-        label={!account ? tr("Se connecter pour dessiner") : pasAssez ? tr("Obtenir des crédits") : tr("Dessiner ({a} crédit{b})", { a: cout, b: cout > 1 ? "s" : "" })}
+        label={!account ? tr("Se connecter pour dessiner") : pasAssez ? tr("Obtenir des crédits") : tr("Dessiner ({a} crédit{b})", { a: cout, b: pl(cout) })}
         onClick={generer} style={{ marginTop: 12 }} />
 
       {erreur && <p className="sp-error" role="alert">{erreur}</p>}

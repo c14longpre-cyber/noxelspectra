@@ -7,7 +7,7 @@ import { HudButton } from "../hud/HudButton";
 import type { ImageMetadata } from "../../utils/exifUtils";
 import "./exif-notice.css";
 
-import { tr } from "../../i18n";
+import { tr, pl } from "../../i18n";
 export type ExifNoticeItem = { name: string; meta: ImageMetadata };
 
 type Props = {
@@ -144,7 +144,7 @@ export function ExifNotice({ items, total, busy = false, onStrip, onKeep }: Prop
                   {i.name}
                 </li>
               ))}
-              {items.length > 6 && <li>{tr("… et")}{" "}{items.length - 6} {tr("autre")}{items.length - 6 > 1 ? "s" : ""}</li>}
+              {items.length > 6 && <li>{tr("… et")}{" "}{items.length - 6} {tr("autre")}{pl(items.length - 6)}</li>}
             </ul>
           </>
         )}
