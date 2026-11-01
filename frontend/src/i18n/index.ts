@@ -52,10 +52,14 @@ function remplir(s: string, vars?: Record<string, unknown>): string {
   return s.replace(/\{(\w+)\}/g, (all, k) => (k in vars ? String(vars[k]) : all));
 }
 
+// Un même mot français peut avoir deux sens : « Annuler@@défaire » s'affiche « Annuler » en français
+// et se traduit à part (Undo), sans toucher à « Annuler » (Cancel).
 export function tr(fr: string, vars?: Record<string, unknown>): string {
-  if (lang.startsWith("fr")) return remplir(fr, vars);
+  const i = fr.indexOf("@@");
+  const texte = i >= 0 ? fr.slice(0, i) : fr;
+  if (lang.startsWith("fr")) return remplir(texte, vars);
   const base = lang.split("-")[0];
-  const s = DICTS[lang]?.[fr] ?? DICTS[base]?.[fr] ?? en[fr] ?? fr;
+  const s = DICTS[lang]?.[fr] ?? DICTS[base]?.[fr] ?? en[fr] ?? texte;
   return remplir(s, vars);
 }
 

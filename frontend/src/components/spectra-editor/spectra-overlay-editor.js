@@ -241,7 +241,7 @@ export class SpectraOverlayEditor {
         ${hudHtml('add-sticker',tr('+ Sticker'),{attrs:'data-action="sticker"'})}
         ${hudHtml('add-shape',tr('+ Forme'),{attrs:'data-action="shape"'})}
         <span class="sp-sep" aria-hidden="true"></span>
-        ${hudHtml('undo',tr('Annuler'),{attrs:'data-action="undo"',title:tr('Annuler (Ctrl+Z)')})}
+        ${hudHtml('undo',tr('Annuler@@défaire'),{attrs:'data-action="undo"',title:tr('Annuler (Ctrl+Z)')})}
         ${hudHtml('redo',tr('Rétablir'),{attrs:'data-action="redo"',title:tr('Rétablir (Ctrl+Y)')})}
         <span class="sp-export">${hudHtml('export-png',tr('Exporter PNG'),{attrs:'data-action="export"'})}</span>
       </div>
