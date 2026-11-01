@@ -64,6 +64,7 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
       <textarea id="sp-ai-prompt" className="sp-ai__prompt" rows={4} maxLength={2000} value={prompt}
         placeholder={tr("Ex. : une tasse de café fumante sur une table en bois, lumière du matin, style photo")}
         onChange={(e) => setPrompt(e.target.value)} />
+      <p className="sp-ai__hint">{tr("Astuce : pour un mot écrit dans l'image (enseigne, titre), mets-le entre guillemets, par exemple « NOXEL ».")}</p>
       <div className="controls-grid" style={{ marginTop: 10 }}>
         <label>{tr("Format :")}{" "}
           <select value={format} onChange={(e) => setFormat(e.target.value)}>
@@ -77,6 +78,10 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
         {account
           ? <>{tr("Il te reste")}{" "}{reste} {tr("crédit")}{pl(reste)} ({account.credits.inclus} {tr("inclus ce mois-ci,")}{" "}{account.credits.achetes} {tr("achetés). Un crédit est rendu si la génération échoue.")}</>
           : <>{tr("Connecte-toi pour utiliser tes crédits : le dessin IA est inclus à partir du forfait Silver.")}</>}
+        <p className="sp-ai__buy">
+          {tr("Besoin de plus de crédits ? Achète un paquet (sans date limite) ou choisis un forfait qui en inclut chaque mois, dans la section Forfaits.")}{" "}
+          <button type="button" className="sp-ai__link" onClick={openPricing}>{tr("Acheter des crédits →")}</button>
+        </p>
       </div>
 
       <HudButton action="suggest-frames" busy={busy} busyLabel={tr("Dessin en cours… (jusqu'à 1 minute)")}
