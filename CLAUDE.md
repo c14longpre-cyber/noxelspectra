@@ -18,7 +18,7 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 - **Pages 404** : `landing/404.html`, `frontend/public/404.html`, `video/public/404.html` (noindex).
 - Tests : `npm test` dans backend/.
 
-## Consentement cookies — NOXEL Consent 1.4.1 (commun aux sites NOXEL)
+## Consentement cookies — NOXEL Consent 1.5.0 (commun aux sites NOXEL)
 
 - **Fichiers** : `landing/consent/` (vitrine) et `frontend/public/consent/` (app) (`noxel-consent.js`, `noxel-consent.css`, `sites.js`), chargés dans le `<head>` AVANT tout outil facultatif. Le même moteur est copié à l'identique dans noxel360, noxelseo, noxelforge et noxelspectra : toute modification se fait partout, version incrémentée dans l'en-tête du fichier.
 - **Tout traceur passe par le kit** : script facultatif écrit `<script type="text/plain" data-consent="analytics|marketing|preferences" data-src="…">`, SDK démarré par `NoxelConsent.register()` ou rendu seulement si `NoxelConsent.has(catégorie)` (hook `src/components/consent/useNoxelConsent.ts`, Vercel Analytics via `ConsentedAnalytics.tsx`). Jamais de GTM, gtag, pixel, `<noscript>` de suivi ou widget tiers actif en direct. Déclarer l'outil dans `providers` et, pour un composant React, sa catégorie dans `enabledCategories`.
@@ -26,6 +26,7 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 - **Politique** : noxelforge.com pointe vers `/policies/privacy.html` (frontend/public/policies/ de Forge) ; noxelspectra.com et app.noxelspectra.com pointent vers la politique de la vitrine (`https://www.noxelspectra.com/#confidentialite`). Changer d'outil ou de finalité = incrémenter `policyVersion` du site dans `sites.js`.
 - **Look** (1.2.0) : charte NOXEL (fond #1a1a1a, textes #f5f5f5/#888, vert #3ddc84, violet #A855F7) et boutons HUD (dessins `cancel`, `ok`, `apply-filters`, `save-recipe`, `remove-image`, `protect` copiés tels quels de hud-data.ts du kit HUD de Spectra, intégrés au moteur).
 - **Ouverture à l'arrivée** (1.4.0, `openOnArrival: true` dans `sites.js`) : la même fenêtre de préférences s'ouvre sur tous les sites NOXEL tant qu'aucun choix n'existe. Catégories et outils du réseau définis une seule fois dans `NOXEL_CONSENT_NETWORK` (`sites.js`) — ne pas redéclarer de `providers` dans les pages. « Fermer sans modifier » (ou Échap) = continuer sans accepter. Interface en `translate="no"` (déjà fr/en).
+- **Textes bilingues** (1.5.0) : dans `sites.js`, `siteName`, `privacyUrl` et le `name` / `purpose` de chaque outil acceptent une chaîne ou `{ fr, en }` ; la fenêtre affiche la langue du visiteur. Tout nouvel outil déclaré reçoit ses deux textes.
 - Le kit (README, tests `core`, `relay`, `consent`) et le plan d'exécution sont la référence ; le kit ne gère que fr/en.
 - `video/` (outil vidéo, video.noxelspectra.com) a le kit dans `video/public/consent/` (mêmes fichiers que les autres sites, `policyVersion` `spectra-video-1`), chargé dans `video/index.html` ; bouton « Préférences de confidentialité » et lien « Confidentialité » en bas de la barre latérale.
 
