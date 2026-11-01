@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video tools — NOXEL SPECTRA Video</title>
+<meta name="description" content="NOXEL SPECTRA Video, in beta: trim, compress, convert, crop and rotate a video in your browser, without uploading the file.">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="NOXEL SPECTRA">
+<meta property="og:locale" content="en_CA">
+<meta property="og:title" content="Video tools — NOXEL SPECTRA Video">
+<meta property="og:description" content="NOXEL SPECTRA Video, in beta: trim, compress, convert, crop and rotate a video in your browser, without uploading the file.">
+<meta property="og:url" content="https://www.noxelspectra.com/en/video/">
+<meta property="og:image" content="https://www.noxelspectra.com/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Video tools — NOXEL SPECTRA Video">
+<meta name="twitter:description" content="NOXEL SPECTRA Video, in beta: trim, compress, convert, crop and rotate a video in your browser, without uploading the file.">
+<meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
+<link rel="canonical" href="https://www.noxelspectra.com/en/video/">
+<link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/video/">
+<link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/video/">
+<link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/video/">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.noxelspectra.com/#org",
+      "name": "NOXEL SPECTRA",
+      "url": "https://www.noxelspectra.com/",
+      "logo": "https://www.noxelspectra.com/logo.png",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "NOXEL360",
+        "url": "https://noxel360.com"
+      }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.noxelspectra.com/#site",
+      "name": "NOXEL SPECTRA",
+      "url": "https://www.noxelspectra.com/",
+      "inLanguage": "en",
+      "publisher": {
+        "@id": "https://www.noxelspectra.com/#org"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://www.noxelspectra.com/en/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Video",
+          "item": "https://www.noxelspectra.com/en/video/"
+        }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root { --bg: #07090f; --text: #e8e8ef; --muted: #9a9aab; --green: #3ddc84; --purple: #a855f7; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; line-height: 1.65; }
+  .glow { position: fixed; top: -20%; left: 50%; transform: translateX(-50%); width: 900px; max-width: 100%; height: 900px; background: radial-gradient(circle, rgba(61,220,132,0.08) 0%, rgba(168,85,247,0.05) 40%, transparent 70%); pointer-events: none; }
+  main { position: relative; max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  .brand { color: var(--text); font-weight: 800; text-decoration: none; letter-spacing: 0.04em; }
+  .brand span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  nav { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
+  a { color: var(--green); }
+  nav a, footer a { text-decoration: none; }
+  nav a:hover, footer a:hover { text-decoration: underline; }
+  .hero { text-align: center; padding: 28px 0 8px; }
+  .logo { width: 220px; height: auto; max-width: 60%; margin-bottom: 20px; }
+  h1 { font-size: 34px; font-weight: 900; line-height: 1.25; margin: 0 0 16px; }
+  h1 span { background: linear-gradient(90deg, var(--green), var(--purple)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: 22px; margin: 44px 0 10px; }
+  h3 { font-size: 16px; margin: 22px 0 4px; }
+  p, li { color: #cfcfdb; font-size: 16px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  .crumbs { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .cta { display: inline-block; margin: 6px 8px 6px 0; padding: 11px 20px; border-radius: 999px; border: 1px solid var(--green); color: var(--green); font-weight: 700; text-decoration: none; }
+  .cta.alt { border-color: var(--purple); color: #e3ccff; }
+  .cta:hover { background: rgba(255,255,255,0.06); }
+  .note { color: var(--muted); font-size: 14px; }
+</style>
+<!-- NOXEL Consent 1.4.1: no optional tools on the showcase site; preferences + choice relay between NOXEL sites -->
+<link rel="stylesheet" href="/consent/noxel-consent.css">
+<!-- NOXEL Shell 1.0: same header and footer as NOXEL360, NOXEL SEO and NOXEL FORGE -->
+<link rel="stylesheet" href="/noxel-shell.css">
+<script>try{localStorage.setItem("noxel-lang","en")}catch(_){}</script>
+<script src="/consent/sites.js"></script>
+<script src="/consent/noxel-consent.js"></script>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<header class="nx-bar">
+  <a class="nx-bar__brand" href="/en/" aria-label="NOXEL SPECTRA"><img src="/NOXEL_SPECTRA_LOGO.svg" alt="NOXEL SPECTRA" class="nx-bar__logo" width="70" height="58"></a>
+  <nav class="nx-bar__nav nx-bar__nav--static" aria-label="Main navigation" style="display:flex;position:static;flex-direction:row;padding:0;background:none;border:0;margin-left:12px">
+    <a class="nx-nav" href="/en/images/">Images</a>
+    <a class="nx-nav" href="/en/video/" aria-current="page">Video</a>
+    <a class="nx-nav" href="/en/#privacy">Privacy</a>
+    <a class="nx-nav" href="/en/#questions">Questions</a>
+  </nav>
+  <div class="nx-bar__right">
+    <a class="nx-pill" href="/video/" hreflang="fr" lang="fr" data-lang="fr" title="Français" style="text-decoration:none">FR</a>
+    <a class="nx-pill" href="https://app.noxelspectra.com/?lang=en" rel="noopener" style="text-decoration:none"><span class="nx-pill__code">→</span> Open the app</a>
+  </div>
+</header>
+
+<main>
+  <p class="crumbs"><a href="/en/">Home</a> › Video</p>
+  <h1>NOXEL SPECTRA Video</h1>
+  <p>NOXEL SPECTRA Video prepares your videos right in your browser. The video stays on your device: nothing is uploaded.</p>
+  <p><a class="cta alt" href="https://video.noxelspectra.com/?lang=en">Try Spectra Video (beta)</a></p>
+  <p class="note">Beta version: the tools below work and more are being added. A recent browser is required.</p>
+
+  <h2>Shrink and convert</h2>
+  <ul>
+    <li><b>Analyze</b>: the video's format, duration, dimensions, bitrate and tracks.</li>
+    <li><b>Under 25 MB</b> and <b>Compress</b>: aim for a size in MB or choose the quality.</li>
+    <li><b>Convert</b>: MP4, WebM or MOV.</li>
+    <li><b>Ready for my site</b>: a light video, its thumbnail and the embed code.</li>
+  </ul>
+
+  <h2>Trim and frame</h2>
+  <ul>
+    <li><b>Trim</b>: keep a clip of the video.</li>
+    <li><b>Crop and resize</b>: 9:16, 1:1, 4:5 or 16:9.</li>
+    <li><b>Versions for social media</b>: vertical, square and horizontal versions of the same clip.</li>
+    <li><b>Rotate and flip</b>, <b>Speed</b>.</li>
+  </ul>
+
+  <h2>Sound, text and rights</h2>
+  <ul>
+    <li><b>Audio</b>: mute, adjust the volume, add music.</li>
+    <li><b>Text and logo</b>: titles and a logo placed on the video.</li>
+    <li><b>Copyright</b>: rights written into the file and a visible watermark.</li>
+    <li><b>Thumbnail</b>: a cover image taken from the video.</li>
+  </ul>
+
+  <p class="note">Working with images too? See <a href="/en/images/">the image tools</a>.</p>
+</main>
+
+<footer class="nx-foot">
+  <nav class="nx-foot__links" aria-label="Footer">
+    <a href="/en/images/">Images</a>
+    <a href="/en/video/">Video</a>
+    <a href="https://noxelseo.com" rel="noopener">NOXEL SEO</a>
+    <a href="https://noxelforge.com" rel="noopener">NOXEL FORGE</a>
+    <a href="https://noxel360.com/" rel="noopener">NOXEL360</a>
+    <a href="/en/#privacy">Privacy</a>
+    <a href="mailto:legal@noxel360.com">Contact</a>
+    <button type="button" data-noxel-consent-settings>Privacy preferences</button>
+  </nav>
+  <div class="nx-foot__copy">© 2026 NOXEL360 Inc. All rights reserved.</div>
+</footer>
+
+<script>document.addEventListener("click",function(e){var a=e.target.closest("a[data-lang]");if(a){try{localStorage.setItem("noxel-lang",a.getAttribute("data-lang"))}catch(_){}}});</script>
+</body>
+</html>

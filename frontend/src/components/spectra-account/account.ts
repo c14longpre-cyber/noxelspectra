@@ -1,3 +1,4 @@
+import { trServeur } from "../../i18n/serveur";
 // NOXEL SPECTRA — compte, forfait et crédits (côté navigateur)
 // Le cookie de session est posé par l'API (api.noxelspectra.com) : chaque appel doit l'envoyer
 // (credentials: "include"), sinon le quota compte l'adresse IP au lieu du compte.
@@ -73,7 +74,7 @@ export const openPricing = () => window.dispatchEvent(new CustomEvent(PRICING_EV
 
 export async function lireErreur(r: Response): Promise<string> {
   const d = await r.json().catch(() => ({} as { error?: string; url?: string }));
-  return d.error || `Erreur ${r.status}`;
+  return trServeur(d.error, r.status);
 }
 
 export async function allerVers(path: string, body?: object): Promise<void> {
@@ -82,6 +83,6 @@ export async function allerVers(path: string, body?: object): Promise<void> {
   });
   if (r.status === 401) { openLogin(); return; }
   const d = await r.json().catch(() => ({} as { error?: string; url?: string }));
-  if (!r.ok || !d.url) throw new Error(d.error || `Erreur ${r.status}`);
+  if (!r.ok || !d.url) throw new Error(trServeur(d.error, r.status));
   window.location.assign(d.url);
 }

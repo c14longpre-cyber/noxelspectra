@@ -1,17 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://www.noxelspectra.com/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/"/>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.noxelspectra.com/en/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/"/>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://www.noxelspectra.com/images/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/images/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/images/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/images/"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.noxelspectra.com/en/images/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/images/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/images/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/images/"/>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.noxelspectra.com/video/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/video/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/video/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/video/"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.noxelspectra.com/en/video/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/video/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/video/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/video/"/>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

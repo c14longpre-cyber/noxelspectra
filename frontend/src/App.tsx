@@ -37,6 +37,7 @@ import {
 import type { Project, ProjectSummary } from "./projectStore";
 
 import { tr, locale } from "./i18n";
+import { trServeur } from "./i18n/serveur";
 import { useLang } from "./i18n/useLang";
 import { LangPill } from "./components/spectra-nexus/LangPill";
 const NexusSelector = lazy(() => import("./components/spectra-nexus/NexusSelector"));
@@ -1315,7 +1316,7 @@ export default function App() {
       const res = await apiFetch(`${apiUrl}/api/batch`, { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const ok = Number(res.headers.get("X-Batch-Ok") || 0);
       const failed = Number(res.headers.get("X-Batch-Failed") || 0);
@@ -1352,7 +1353,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       setAnalyzeResult(data);
     } catch (err) {
@@ -1397,7 +1398,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const originalSize = Number(res.headers.get("X-Original-Size") || file.size);
@@ -1437,7 +1438,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       setPalette(data.palette);
     } catch (err) {
@@ -1473,7 +1474,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const originalWidth = Number(res.headers.get("X-Original-Width") || 0);
@@ -1523,7 +1524,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const srcsetHeader = res.headers.get("X-Srcset");
@@ -1565,7 +1566,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const hexes: string[] = data.palette.map((c: { hex: string }) => c.hex);
       setDetectedColors(hexes);
@@ -1610,7 +1611,7 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok || !data.ok) {
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       setVectorizeSvg(data.svg);
       setVectorizeMeta({ width: data.width, height: data.height, colorsUsed: data.colorsUsed });
@@ -1648,7 +1649,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       setFaviconResultUrl(URL.createObjectURL(blob));
@@ -1676,7 +1677,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const originalSize = Number(res.headers.get("X-Original-Size") || file.size);
@@ -1722,7 +1723,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const originalWidth = Number(res.headers.get("X-Original-Width") || 0);
@@ -1761,7 +1762,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
@@ -1805,7 +1806,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
@@ -1849,7 +1850,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
@@ -1898,7 +1899,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
@@ -1934,7 +1935,7 @@ export default function App() {
       const res = await apiFetch(`${apiUrl}/api/remove-background`, { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       setBgCutout(await res.blob());
     } catch (err) {
@@ -1999,7 +2000,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
@@ -2041,7 +2042,7 @@ export default function App() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
 
       const width = Number(res.headers.get("X-Output-Width") || 0);
@@ -2257,7 +2258,7 @@ export default function App() {
             {analyzeResult.notes.length > 0 && (
               <ul style={{ fontSize: 13, color: "#555", paddingLeft: 18, marginBottom: 12 }}>
                 {analyzeResult.notes.map((note, i) => (
-                  <li key={i}>{note}</li>
+                  <li key={i}>{trServeur(note)}</li>
                 ))}
               </ul>
             )}

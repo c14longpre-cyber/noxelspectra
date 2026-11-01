@@ -20,6 +20,9 @@
 <meta name="twitter:description" content="Outils simples et rapides pour vos images et vos vidéos : conversion, compression, redimensionnement, détourage, vectorisation. Tout en ligne, sans installation.">
 <meta name="twitter:image" content="https://www.noxelspectra.com/logo.png">
 <link rel="canonical" href="https://www.noxelspectra.com/">
+<link rel="alternate" hreflang="fr" href="https://www.noxelspectra.com/">
+<link rel="alternate" hreflang="en" href="https://www.noxelspectra.com/en/">
+<link rel="alternate" hreflang="x-default" href="https://www.noxelspectra.com/">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -169,6 +172,7 @@
 <link rel="stylesheet" href="/consent/noxel-consent.css">
 <!-- NOXEL Shell 1.0 : même en-tête et même pied de page que NOXEL360, NOXEL SEO et NOXEL FORGE -->
 <link rel="stylesheet" href="/noxel-shell.css">
+<script>try{localStorage.setItem("noxel-lang","fr")}catch(_){}</script>
 <script src="/consent/sites.js"></script>
 <script src="/consent/noxel-consent.js"></script>
 </head>
@@ -185,6 +189,7 @@
     <a class="nx-nav" href="/#questions">Questions</a>
   </nav>
   <div class="nx-bar__right">
+    <a class="nx-pill" href="/en/" hreflang="en" lang="en" data-lang="en" title="English" style="text-decoration:none">EN</a>
     <a class="nx-pill" href="https://app.noxelspectra.com/" rel="noopener" style="text-decoration:none"><span class="nx-pill__code">→</span> Ouvrir l'app</a>
   </div>
 </header>
@@ -357,5 +362,6 @@
   <div class="nx-foot__copy">© 2026 NOXEL360 Inc. Tous droits réservés. Dernière mise à jour : 31 octobre 2026.</div>
 </footer>
 
+<script>document.addEventListener("click",function(e){var a=e.target.closest("a[data-lang]");if(a){try{localStorage.setItem("noxel-lang",a.getAttribute("data-lang"))}catch(_){}}});</script>
 </body>
 </html>
