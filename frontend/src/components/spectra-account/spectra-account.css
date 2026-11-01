@@ -51,4 +51,8 @@
 .sp-ai__cost strong { color: #c9a2ff; }
 .sp-ai__result { margin-top: 18px; }
 .sp-ai__result img { max-width: 100%; max-height: 70vh; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.08); display: block; }
+.sp-ai__buy { margin: 8px 0 0; font-size: 13px; color: #cfcfdb; }
+.sp-ai__link { background: none; border: 0; padding: 0; color: #3ddc84; font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.sp-ai__link:hover { color: #6cf0a6; }
+.sp-ai__hint { margin: 6px 0 0; font-size: 12px; color: #888; }
 .sp-ai__legal { font-size: 11px; color: #888; margin-top: 8px; }

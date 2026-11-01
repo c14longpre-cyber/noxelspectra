@@ -1547,6 +1547,9 @@ const en: Record<string, string> = {
  "Paysage 16:9": "Landscape 16:9",
  "Bannière 3:1": "Banner 3:1",
  "{a} police{b}": "{a} font{b}",
- "Annuler@@défaire": "Undo"
+ "Annuler@@défaire": "Undo",
+ "Besoin de plus de crédits ? Achète un paquet (sans date limite) ou choisis un forfait qui en inclut chaque mois, dans la section Forfaits.": "Need more credits? Buy a pack (no expiry date) or choose a plan that includes credits every month, in the Plans section.",
+ "Acheter des crédits →": "Buy credits →",
+ "Astuce : pour un mot écrit dans l'image (enseigne, titre), mets-le entre guillemets, par exemple « NOXEL ».": "Tip: for a word written in the image (a sign, a title), put it in quotes, for example “NOXEL”."
 };
 export default en;
