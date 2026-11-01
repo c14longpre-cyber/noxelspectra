@@ -13,6 +13,17 @@ const DICTS: Record<string, Record<string, string>> = { en };
 export const FULL_LANGS = ["fr", "en"];
 
 function langueInitiale(): string {
+  // ?lang=en dans l'adresse (liens de la vitrine anglaise) : choix gardé, puis retiré de l'adresse
+  try {
+    const url = new URL(window.location.href);
+    const q = url.searchParams.get("lang");
+    if (q && /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(q)) {
+      localStorage.setItem(STORAGE_KEY, q);
+      url.searchParams.delete("lang");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+      return q;
+    }
+  } catch { /* hors navigateur ou stockage indisponible */ }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return saved;

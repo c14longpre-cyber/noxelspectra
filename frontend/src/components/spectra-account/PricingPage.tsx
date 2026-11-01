@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { API_URL, TIER_COLORS, TIER_MEDAL, allerVers, apiFetch, openLogin, useAccount, type PlanInfo } from "./account";
 
-import { tr, locale } from "../../i18n";
+import { tr, locale, shownLang } from "../../i18n";
 interface PlansReponse { plans: PlanInfo[]; creditPack: { credits: number; priceCad: number; available: boolean } }
 
 const prix = (n: number) => n.toLocaleString(locale(), { style: "currency", currency: "CAD", maximumFractionDigits: n % 1 ? 2 : 0 });
@@ -68,7 +68,7 @@ export function PricingPage() {
               {p.monthly > 0 && cycle === "annual" && <div className="nx-pcard__sub">{tr("Facturé")}{" "}{prix(p.annual)} {tr("par an")}</div>}
               <div className="nx-pcard__note">{p.aiCredits > 0 ? tr("{a} crédits de dessin IA par mois", { a: p.aiCredits }) : tr("Sans compte")}</div>
               <ul className="nx-pcard__items">
-                {p.features.fr.map((f) => <li key={f}><span style={{ color: TIER_COLORS[p.tier] }}>✓</span>{f}</li>)}
+                {p.features[shownLang()].map((f) => <li key={f}><span style={{ color: TIER_COLORS[p.tier] }}>✓</span>{f}</li>)}
               </ul>
               <div className="nx-pcard__cta">
                 {p.tier === "bronze" ? (
@@ -76,7 +76,7 @@ export function PricingPage() {
                 ) : (
                   <HudButton action="continue" compact busy={busy === p.tier}
                     disabled={(estActuel && !!account) || !p.available || (cycle === "annual" && !p.annualAvailable)}
-                    label={estActuel && account ? tr("Forfait actuel") : !p.available ? tr("Bientôt") : `Choisir ${p.name}`}
+                    label={estActuel && account ? tr("Forfait actuel") : !p.available ? tr("Bientôt") : tr("Choisir {a}", { a: p.name })}
                     onClick={() => choisir(p)} />
                 )}
               </div>

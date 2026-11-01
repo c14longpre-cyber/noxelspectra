@@ -10,6 +10,7 @@ import { HudButton, HudLink } from "../hud/HudButton";
 import { apiFetch } from "../spectra-account/account";
 
 import { tr } from "../../i18n";
+import { trServeur } from "../../i18n/serveur";
 type Fields = Record<string, string>;
 
 type Props = {
@@ -145,7 +146,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
       const res = await apiFetch(`${apiUrl}/api/copyright`, { method: "POST", body: fd });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erreur ${res.status}`);
+        throw new Error(trServeur(data.error, res.status));
       }
       const missing = (res.headers.get("X-Rights-Missing") || "").split(",").filter(Boolean);
       const blob = await res.blob();

@@ -6,6 +6,7 @@ import { HudButton } from "../hud/HudButton";
 import { API_URL, apiFetch, lireErreur, rafraichirCompte } from "./account";
 
 import { tr, shownLang } from "../../i18n";
+import { trServeur } from "../../i18n/serveur";
 declare global {
   interface Window { google?: { accounts: { id: { initialize: (c: object) => void; renderButton: (el: HTMLElement, c: object) => void } } } }
 }
@@ -85,7 +86,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
           const f = await post("/api/auth/passkey/register/finish", { email, credential, lang: shownLang() });
           if (!f.ok) throw new Error(await lireErreur(f));
           const d = await f.json();
-          if (d.pending) setInfo(d.message);
+          if (d.pending) setInfo(trServeur(d.message));
           else { await rafraichirCompte(); onClose(); }
         } else {
           const s = await post("/api/auth/passkey/login/start", {});
