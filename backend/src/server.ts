@@ -426,6 +426,7 @@ app.post("/api/palette", upload.single("file"), limiteImage, quotaOutils(), asyn
 //   width, height    at least one required (pixels)
 //   maintainAspect   "true" (default) fits inside width/height keeping ratio; "false" stretches to exact size
 //   fit              optional "cover": fills width×height exactly by cropping the centre, never stretches (overrides maintainAspect)
+//   extract          optional JSON {left, top, width, height} in pixels of the upright image: cut first, then resize
 //   format           optional — if omitted, keeps the original format
 //   quality          1-100 (default 85, ignored for png/gif)
 app.post("/api/resize", upload.single("file"), limiteImage, quotaOutils(), async (req, res) => {
@@ -462,10 +463,28 @@ app.post("/api/resize", upload.single("file"), limiteImage, quotaOutils(), async
 
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 85));
 
-    let pipeline = oriented(req.file.buffer).resize({
+    // Zone choisie par l'utilisateur (outil Réseaux sociaux), en pixels de l'image redressée :
+    // découpée d'abord, puis mise aux dimensions exactes du réseau, sans jamais étirer
+    let zone: { left: number; top: number; width: number; height: number } | null = null;
+    if (req.body.extract) {
+      try {
+        const z = JSON.parse(String(req.body.extract));
+        const left = Math.max(0, Math.round(Number(z.left)));
+        const top = Math.max(0, Math.round(Number(z.top)));
+        const w = Math.round(Number(z.width));
+        const h = Math.round(Number(z.height));
+        if (![left, top, w, h].every(Number.isFinite) || w < 1 || h < 1) throw new Error();
+        zone = { left, top, width: Math.min(w, originalWidth - left), height: Math.min(h, originalHeight - top) };
+        if (zone.width < 1 || zone.height < 1) throw new Error();
+      } catch {
+        return res.status(400).json({ ok: false, error: "Zone de recadrage invalide" });
+      }
+    }
+
+    let pipeline = (zone ? oriented(req.file.buffer).extract(zone) : oriented(req.file.buffer)).resize({
       width,
       height,
-      fit: cover ? "cover" : maintainAspect ? "inside" : "fill",
+      fit: zone && width && height ? "cover" : cover ? "cover" : maintainAspect ? "inside" : "fill",
       position: "centre",
       withoutEnlargement: false,
     });
