@@ -4,6 +4,7 @@ import { audioEncoding, audioOptions } from "./audio";
 import { referenceBitrate } from "./probe";
 import { assertNoLostTrack } from "./tracks";
 
+import { tr } from "../i18n";
 export type CompressFormat = "mp4" | "webm"; // mp4 = H.264 + AAC (compatible partout) ; webm = VP9 + Opus (plus léger)
 export type CompressOptions = {
   start: number;
@@ -124,7 +125,7 @@ export async function compressVideo(
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
     return { blob: new Blob([buffer], { type: mp4 ? "video/mp4" : "video/webm" }), ext: o.format };
   } finally {
     input.dispose();

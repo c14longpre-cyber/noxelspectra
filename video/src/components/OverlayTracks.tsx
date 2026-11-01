@@ -6,6 +6,7 @@ import type { OverlayItem } from "../lib/overlay";
 import { fmtTime } from "../lib/probe";
 import "../textlogo.css";
 
+import { tr } from "../i18n";
 type Props = {
   items: OverlayItem[];
   duration: number;
@@ -62,7 +63,7 @@ export function OverlayTracks({ items, duration, selectedId, onSelect, onChange 
   };
 
   return (
-    <div ref={box} className="vx-otracks" aria-label="Pistes des textes et logos">
+    <div ref={box} className="vx-otracks" aria-label={tr("Pistes des textes et logos")}>
       {items.map((it) => (
         <div key={it.id} className="vx-otrack" data-oid={it.id}>
           <button
@@ -70,7 +71,7 @@ export function OverlayTracks({ items, duration, selectedId, onSelect, onChange 
             className={`vx-obar${it.id === selectedId ? " is-on" : ""}`}
             style={{ left: `${pct(it.start)}%`, width: `${pct(it.end - it.start)}%` }}
             aria-pressed={it.id === selectedId}
-            aria-label={`${it.kind === "text" ? "Texte" : "Logo"} « ${itemLabel(it)} », de ${fmtTime(it.start)} à ${fmtTime(it.end)}. Flèches gauche et droite pour le déplacer dans le temps.`}
+            aria-label={tr("{a} « {b} », de {c} à {d}. Flèches gauche et droite pour le déplacer dans le temps.", { a: it.kind === "text" ? tr("Texte") : tr("Logo"), b: itemLabel(it), c: fmtTime(it.start), d: fmtTime(it.end) })}
             onClick={() => onSelect(it.id)}
             onKeyDown={(e) => key(e, it)}
             onPointerDown={(e) => down(e, it, "move")}

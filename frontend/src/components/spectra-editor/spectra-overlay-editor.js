@@ -1,3 +1,4 @@
+import { tr } from "../../i18n";
 import { gradientFill, stickerSpectrum, gradientPanelHtml, bindGradientPanel, hudHtml, hudLabelHtml } from "./editor-gradient";
 import "./editor-hud.css";
 import { ensureFont, isFontReady, fontPickerHtml, bindFontPicker } from "./font-library";
@@ -196,7 +197,7 @@ export class SpectraOverlayEditor {
     { key: "formes/04_Badges_Interfaces/pastille", label: "Pastille de notification", group: "Badges et interface" },
   ];
   constructor(root, options = {}) {
-    if (!(root instanceof HTMLElement)) throw new TypeError('root must be an HTMLElement');
+    if (!(root instanceof HTMLElement)) throw new TypeError(tr('root must be an HTMLElement'));
     this.root = root;
     this.options = options;
     this.image = null;
@@ -234,27 +235,27 @@ export class SpectraOverlayEditor {
   markup() {
     return `<div class="sp-editor">
       <div class="sp-toolbar">
-        ${hudLabelHtml('choose-file','Ouvrir une image','<input type="file" accept="image/*" data-open hidden>','sp-file')}
+        ${hudLabelHtml('choose-file',tr('Ouvrir une image'),'<input type="file" accept="image/*" data-open hidden>','sp-file')}
         <span class="sp-sep" aria-hidden="true"></span>
-        ${hudHtml('add-text','+ Texte',{attrs:'data-action="text"'})}
-        ${hudHtml('add-sticker','+ Sticker',{attrs:'data-action="sticker"'})}
-        ${hudHtml('add-shape','+ Forme',{attrs:'data-action="shape"'})}
+        ${hudHtml('add-text',tr('+ Texte'),{attrs:'data-action="text"'})}
+        ${hudHtml('add-sticker',tr('+ Sticker'),{attrs:'data-action="sticker"'})}
+        ${hudHtml('add-shape',tr('+ Forme'),{attrs:'data-action="shape"'})}
         <span class="sp-sep" aria-hidden="true"></span>
-        ${hudHtml('undo','Annuler',{attrs:'data-action="undo"',title:'Annuler (Ctrl+Z)'})}
-        ${hudHtml('redo','Rétablir',{attrs:'data-action="redo"',title:'Rétablir (Ctrl+Y)'})}
-        <span class="sp-export">${hudHtml('export-png','Exporter PNG',{attrs:'data-action="export"'})}</span>
+        ${hudHtml('undo',tr('Annuler'),{attrs:'data-action="undo"',title:tr('Annuler (Ctrl+Z)')})}
+        ${hudHtml('redo',tr('Rétablir'),{attrs:'data-action="redo"',title:tr('Rétablir (Ctrl+Y)')})}
+        <span class="sp-export">${hudHtml('export-png',tr('Exporter PNG'),{attrs:'data-action="export"'})}</span>
       </div>
       <div class="sp-body">
-        <div class="sp-stage"><canvas data-canvas aria-label="Image avec éléments modifiables"></canvas><span class="sp-size" data-size></span></div>
+        <div class="sp-stage"><canvas data-canvas aria-label="${tr('Image avec éléments modifiables')}"></canvas><span class="sp-size" data-size></span></div>
         <aside class="sp-inspector">
-          <h2>Éléments</h2>
-          <p class="sp-help">Cliquez sur un élément pour le déplacer. Glissez le carré vert pour changer sa taille.</p>
-          <div class="sp-section"><h3>Ajouter un sticker</h3><div class="sp-stickers" data-stickers></div></div><div class="sp-section"><h3>Ajouter une forme</h3><div class="sp-stickers" data-formes></div></div>
-          <div class="sp-section"><h3>Calques</h3><div class="sp-layers" data-layers></div></div>
-          <div class="sp-section" data-properties><h3>Propriétés</h3><p class="sp-help">Sélectionnez un élément.</p></div>
+          <h2>${tr('Éléments')}</h2>
+          <p class="sp-help">${tr('Cliquez sur un élément pour le déplacer. Glissez le carré vert pour changer sa taille.')}</p>
+          <div class="sp-section"><h3>${tr('Ajouter un sticker')}</h3><div class="sp-stickers" data-stickers></div></div><div class="sp-section"><h3>${tr('Ajouter une forme')}</h3><div class="sp-stickers" data-formes></div></div>
+          <div class="sp-section"><h3>${tr('Calques')}</h3><div class="sp-layers" data-layers></div></div>
+          <div class="sp-section" data-properties><h3>${tr('Propriétés')}</h3><p class="sp-help">${tr('Sélectionnez un élément.')}</p></div>
         </aside>
       </div>
-      <div class="sp-status" role="status" data-status>Prêt. Les modifications restent locales à votre navigateur.</div>
+      <div class="sp-status" role="status" data-status>${tr('Prêt. Les modifications restent locales à votre navigateur.')}</div>
     </div>`;
   }
 
@@ -283,7 +284,7 @@ export class SpectraOverlayEditor {
       if (item?.type === 'text') this.editText(item);
     });
     // Un intitulé de catégorie s'insère chaque fois que le groupe change (la liste est triée par dossier)
-    const grid = (list, attr) => list.map((a, i) => (a.group !== list[i - 1]?.group ? `<span class="sp-group">${a.group}</span>` : '') + `<button type="button" ${attr}="${a.key}" title="${a.label}" aria-label="Ajouter ${a.label}"><img src="/stickers-pack/${a.key}.svg" alt="" width="20" height="20" loading="lazy" /></button>`).join('');
+    const grid = (list, attr) => list.map((a, i) => (a.group !== list[i - 1]?.group ? `<span class="sp-group">${tr(a.group)}</span>` : '') + `<button type="button" ${attr}="${a.key}" title="${tr(a.label)}" aria-label="${tr('Ajouter {a}',{a:tr(a.label)})}"><img src="/stickers-pack/${a.key}.svg" alt="" width="20" height="20" loading="lazy" /></button>`).join('');
     this.root.querySelector('[data-stickers]').innerHTML = grid(SpectraOverlayEditor.STICKERS, 'data-sticker');
     this.root.querySelector('[data-formes]').innerHTML = grid(SpectraOverlayEditor.FORMES, 'data-forme');
     // Keyboard shortcuts only act while the editor has focus.
@@ -326,17 +327,17 @@ export class SpectraOverlayEditor {
   async setImage(source) {
     let url;
     if (source instanceof Blob) {
-      if (!source.type.startsWith('image/')) throw new Error('Choisissez un fichier image.');
+      if (!source.type.startsWith('image/')) throw new Error(tr('Choisissez un fichier image.'));
       url = URL.createObjectURL(source);
     } else if (typeof source === 'string') url = source;
     else if (source instanceof HTMLImageElement) url = source.currentSrc || source.src;
-    else throw new TypeError('Source non prise en charge');
+    else throw new TypeError(tr('Source non prise en charge'));
     const image = new Image();
     image.decoding = 'async';
     image.src = url;
     try { await image.decode(); }
-    catch { if (source instanceof Blob) URL.revokeObjectURL(url); throw new Error('Impossible d’ouvrir cette image.'); }
-    if (!image.naturalWidth || !image.naturalHeight) throw new Error('Dimensions invalides.');
+    catch { if (source instanceof Blob) URL.revokeObjectURL(url); throw new Error(tr('Impossible d’ouvrir cette image.')); }
+    if (!image.naturalWidth || !image.naturalHeight) throw new Error(tr('Dimensions invalides.'));
     if (this.imageUrl) URL.revokeObjectURL(this.imageUrl);
     this.imageUrl = source instanceof Blob ? url : null;
     this.image = image;
@@ -346,14 +347,14 @@ export class SpectraOverlayEditor {
     this.selectedId = null;
     this.resetHistory();
     this.render();
-    this.status(`Image chargée : ${this.width} × ${this.height} px.`);
+    this.status(tr('Image chargée : {a} × {b} px.',{a:this.width,b:this.height}));
   }
 
   base(type) {
     const size = Math.max(36, Math.min(140, Math.round(this.width * .075)));
     return { id:this.nextId++, type, x:this.width/2, y:this.height/2, size, rotation:0, opacity:1, color:'#ffffff', shadow:false, fillMode:'solid', gradientStops:[{position:0,color:'#3ddc84'},{position:100,color:'#a855f7'}] };
   }
-  addText(value = 'Votre texte') {
+  addText(value = tr('Votre texte')) {
     const item = { ...this.base('text'), text:value, font:'Inter', bold:true, stroke:'#07090f', strokeWidth:0 };
     this.items.push(item); this.selectedId=item.id; this.commit(); return item;
   }
@@ -424,11 +425,11 @@ export class SpectraOverlayEditor {
       const url=URL.createObjectURL(blob), link=document.createElement('a');
       link.href=url; link.download='spectra-edited.png'; link.click();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
-      this.status('PNG exporté à la résolution de l’image source.');
+      this.status(tr('PNG exporté à la résolution de l’image source.'));
     }).catch(err=>this.status(err.message));
   }
   editText(item) {
-    const next=prompt('Modifier le texte',item.text);
+    const next=prompt(tr('Modifier le texte'),item.text);
     if(next!=null) { item.text=next.slice(0,500); this.commit(); }
   }
 
@@ -518,28 +519,28 @@ export class SpectraOverlayEditor {
   }
   renderLayers() {
     this.root.querySelector('[data-layers]').innerHTML=this.items.slice().reverse().map(item=>{
-      const label=item.type==='text'?item.text.slice(0,24):item.type==='sticker'?item.value:`Forme : ${item.shape}`;
-      const kind=item.type==='text'?'TEXTE':item.type==='sticker'?'STICKER':'FORME';
+      const label=item.type==='text'?item.text.slice(0,24):item.type==='sticker'?item.value:tr('Forme : {a}',{a:item.shape});
+      const kind=item.type==='text'?tr('TEXTE'):item.type==='sticker'?tr('STICKER'):tr('FORME');
       return `<button type="button" data-layer="${item.id}" class="${item.id===this.selectedId?'active':''}"><span class="sp-layer-type">${kind}</span><span>${this.escape(label)}</span></button>`;
-    }).join('')||'<p class="sp-help">Aucun calque ajouté.</p>';
+    }).join('')||`<p class="sp-help">${tr('Aucun calque ajouté.')}</p>`;
   }
   escape(value) {return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
   renderProperties() {
     const host=this.root.querySelector('[data-properties]'),item=this.selected;
-    if(!item){host.innerHTML='<h3>Propriétés</h3><p class="sp-help">Sélectionnez un élément.</p>';return;}
-    const sizeLabel=item.type==='text'?'Taille du texte':'Taille';
+    if(!item){host.innerHTML=`<h3>${tr('Propriétés')}</h3><p class="sp-help">${tr('Sélectionnez un élément.')}</p>`;return;}
+    const sizeLabel=item.type==='text'?tr('Taille du texte'):tr('Taille');
     const number=(label,key,value,min,max,step=1)=>`<label>${label}<input data-prop="${key}" type="number" min="${min}" max="${max}" step="${step}" value="${value}"></label>`;
-    host.innerHTML=`<h3>Propriétés</h3>
-      ${item.type==='text'?`<label>Texte<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><div class="sp-font-row"><span>Police</span>${fontPickerHtml(item.font)}</div><label>Gras<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>Contour<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number('Épaisseur du contour','strokeWidth',item.strokeWidth,0,60)}`:''}
-      ${item.type==='shape'?`<label>Forme<select data-prop="shape">${['rectangle','circle','star'].map(s=>`<option ${item.shape===s?'selected':''} value="${s}">${s}</option>`).join('')}</select></label>`:''}
-      <label>Type de remplissage<select data-prop="fillMode">${item.type==='sticker'?`<option value="original" ${item.fillMode==='original'?'selected':''}>Original (pack NOXEL)</option>`:''}<option value="solid" ${item.fillMode==='solid'?'selected':''}>Uni</option><option value="gradient" ${item.fillMode==='gradient'?'selected':''}>Dégradé</option></select></label>
-      ${item.fillMode==='gradient'?gradientPanelHtml(item):item.fillMode==='solid'?`<label>Couleur<input type="color" data-prop="color" value="${item.color}"></label>`:''}
-      ${item.type==='sticker'?`<label>Couleur du contour<input type="color" data-prop="strokeColor" value="${item.strokeColor==='__original__'?'#142132':item.strokeColor}"></label>${number("Épaisseur du contour","strokeWidthSticker",item.strokeWidth==='__original__'?18:item.strokeWidth,0,60)}${hudHtml('reset-colors','Réinitialiser le sticker',{attrs:'data-action="reset-color"',title:"Remet le remplissage et le contour d'origine"})}`:''}
+    host.innerHTML=`<h3>${tr('Propriétés')}</h3>
+      ${item.type==='text'?`<label>${tr('Texte')}<textarea data-prop="text" rows="3" maxlength="500">${this.escape(item.text)}</textarea></label><div class="sp-font-row"><span>${tr('Police')}</span>${fontPickerHtml(item.font)}</div><label>${tr('Gras')}<input type="checkbox" data-prop="bold" ${item.bold?'checked':''}></label><label>${tr('Contour')}<input type="color" data-prop="stroke" value="${item.stroke}"></label>${number(tr('Épaisseur du contour'),'strokeWidth',item.strokeWidth,0,60)}`:''}
+      ${item.type==='shape'?`<label>${tr('Forme')}<select data-prop="shape">${['rectangle','circle','star'].map(s=>`<option ${item.shape===s?'selected':''} value="${s}">${s}</option>`).join('')}</select></label>`:''}
+      <label>${tr('Type de remplissage')}<select data-prop="fillMode">${item.type==='sticker'?`<option value="original" ${item.fillMode==='original'?'selected':''}>${tr('Original (pack NOXEL)')}</option>`:''}<option value="solid" ${item.fillMode==='solid'?'selected':''}>${tr('Uni')}</option><option value="gradient" ${item.fillMode==='gradient'?'selected':''}>${tr('Dégradé')}</option></select></label>
+      ${item.fillMode==='gradient'?gradientPanelHtml(item):item.fillMode==='solid'?`<label>${tr('Couleur')}<input type="color" data-prop="color" value="${item.color}"></label>`:''}
+      ${item.type==='sticker'?`<label>${tr('Couleur du contour')}<input type="color" data-prop="strokeColor" value="${item.strokeColor==='__original__'?'#142132':item.strokeColor}"></label>${number(tr("Épaisseur du contour"),"strokeWidthSticker",item.strokeWidth==='__original__'?18:item.strokeWidth,0,60)}${hudHtml('reset-colors',tr('Réinitialiser le sticker'),{attrs:'data-action="reset-color"',title:tr("Remet le remplissage et le contour d'origine")})}`:''}
       ${number(sizeLabel,'size',Math.round(item.size),12,Math.max(this.width,this.height)*2)}
-      ${number('Rotation (°)','rotation',item.rotation,-360,360)}
-      <label>Opacité <span>${Math.round(item.opacity*100)} %</span><input data-prop="opacity" type="range" min="0" max="100" value="${Math.round(item.opacity*100)}"></label>
-      <label>Ombre<input type="checkbox" data-prop="shadow" ${item.shadow?'checked':''}></label>
-      <div class="sp-order">${hudHtml('layer-down','Reculer',{attrs:'data-action="down"'})}${hudHtml('layer-up','Avancer',{attrs:'data-action="up"'})}${hudHtml('delete-layer','Supprimer',{attrs:'data-action="delete"'})}</div>`;
+      ${number(tr('Rotation (°)'),'rotation',item.rotation,-360,360)}
+      <label>${tr('Opacité')} <span>${Math.round(item.opacity*100)} %</span><input data-prop="opacity" type="range" min="0" max="100" value="${Math.round(item.opacity*100)}"></label>
+      <label>${tr('Ombre')}<input type="checkbox" data-prop="shadow" ${item.shadow?'checked':''}></label>
+      <div class="sp-order">${hudHtml('layer-down',tr('Reculer'),{attrs:'data-action="down"'})}${hudHtml('layer-up',tr('Avancer'),{attrs:'data-action="up"'})}${hudHtml('delete-layer',tr('Supprimer'),{attrs:'data-action="delete"'})}</div>`;
     host.querySelectorAll('[data-prop]').forEach(input=>{
       input.addEventListener('input',()=>{
         const key=input.dataset.prop;
@@ -579,7 +580,7 @@ export class SpectraOverlayEditor {
       item.font=family;
       this.commit();
       this.renderProperties();
-      ensureFont(family).then(()=>this.render()).catch(()=>this.status('Cette police n’a pas pu être chargée. Vérifiez votre connexion.'));
+      ensureFont(family).then(()=>this.render()).catch(()=>this.status(tr('Cette police n’a pas pu être chargée. Vérifiez votre connexion.')));
     });
     if(item.fillMode==='gradient')bindGradientPanel(host,item,{
       draw:()=>{if(item.type==='sticker')this.refreshStickerImage(item);else this.drawOnly();},
@@ -657,13 +658,13 @@ export class SpectraOverlayEditor {
   }
   pointerUp(){if(!this.pointerAction)return;this.pointerAction=null;this.commit();}
   async exportPng(){
-    if(!this.image)throw new Error('Ouvrez d’abord une image à exporter.');
+    if(!this.image)throw new Error(tr('Ouvrez d’abord une image à exporter.'));
     const canvas=document.createElement('canvas');canvas.width=this.width;canvas.height=this.height;
     // Toutes les polices doivent être chargées avant de dessiner, sinon le PNG garderait la police de secours
     await Promise.all(this.items.filter(item=>item.type==='text').map(item=>ensureFont(item.font).then(()=>document.fonts.load(this.fontFor(item))).catch(()=>{})));
     const ctx=canvas.getContext('2d');ctx.drawImage(this.image,0,0,this.width,this.height);
     for(const item of this.items)this.paintItem(ctx,item);
-    return new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Export impossible.')), 'image/png');}catch(e){reject(e);}});
+    return new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(new Error(tr('Export impossible.'))), 'image/png');}catch(e){reject(e);}});
   }
   destroy(){document.removeEventListener('keydown',this.keydown);if(this.imageUrl)URL.revokeObjectURL(this.imageUrl);this.root.innerHTML='';}
 }

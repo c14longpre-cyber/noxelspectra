@@ -9,6 +9,7 @@ import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 import { LeadNote } from "./LeadNote";
 
+import { tr } from "../i18n";
 type Common = { file: File; info: VideoInfo; range: [number, number]; onContinue: (blob: Blob, ext: string, suffix: string) => void };
 
 /** Exécution + progression + résultat, partagés par les trois outils. */
@@ -47,7 +48,7 @@ function useJob() {
       urls.current.push(url);
       setResult({ ...r, url });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? e.message : "Traitement impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? e.message : tr("Traitement impossible."));
     } finally {
       setProgress(null);
       cancel.current = null;
@@ -67,10 +68,10 @@ function JobFooter({ job, button, file, suffix, note, onContinue }: {
         {button}
         {job.progress !== null && <HudButton action="cancel" compact onClick={job.stop} />}
       </div>
-      {job.error && <p className="vx-alert">Traitement impossible : {job.error}</p>}
+      {job.error && <p className="vx-alert">{tr("Traitement impossible :")}{" "}{job.error}</p>}
       {job.result && (
         <div className="vx-result">
-          <span>✓ {fmtBytes(job.result.blob.size)} · {job.result.ext.toUpperCase()}{job.result.remuxed ? " · sans réencodage (aucune perte)" : ""}{note ? ` · ${note}` : ""}</span>
+          <span>✓ {fmtBytes(job.result.blob.size)} · {job.result.ext.toUpperCase()}{job.result.remuxed ? tr(" · sans réencodage (aucune perte)") : ""}{note ? ` · ${note}` : ""}</span>
           <HudLink action="download-result" compact href={job.result.url} download={`${base}-${suffix}.${job.result.ext}`} />
           <HudButton action="continue" compact onClick={() => onContinue(job.result!.blob, job.result!.ext, suffix)} />
         </div>
@@ -81,9 +82,9 @@ function JobFooter({ job, button, file, suffix, note, onContinue }: {
 
 function ContainerSelect({ value, onChange }: { value: ContainerId; onChange: (c: ContainerId) => void }) {
   return (
-    <label>Format de sortie
+    <label>{tr("Format de sortie")}
       <select value={value} onChange={(e) => onChange(e.target.value as ContainerId)}>
-        {CONTAINERS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+        {CONTAINERS.map((c) => <option key={c.id} value={c.id}>{tr(c.label)}</option>)}
       </select>
     </label>
   );
@@ -100,16 +101,16 @@ export function ConvertPanel({ file, info, range, onContinue }: Common) {
   const codecs = `${info.video?.codec.toUpperCase() || "—"}${info.audio ? ` + ${info.audio.codec.toUpperCase()}` : ""}`;
   return (
     <div>
-      <p className="vx-muted">Vidéo actuelle : {info.container} ({codecs}).</p>
+      <p className="vx-muted">{tr("Vidéo actuelle :")}{" "}{info.container} ({codecs}).</p>
       <div className="vx-fields"><ContainerSelect value={target} onChange={setTarget} /></div>
       <div className="vx-estimate">
-        {remux === null ? <span>Vérification…</span> : remux
-          ? <span><b>Conversion instantanée, sans perte</b> : les codecs actuels sont acceptés par ce format, les images sont simplement recopiées.</span>
-          : <span>Réencodage nécessaire vers {target === "webm" ? "VP9 + Opus" : "H.264 + AAC"}, au débit vidéo de la source.{surround ? ` Le son ${info.audio!.channels} canaux sera converti en stéréo.` : ""}</span>}
+        {remux === null ? <span>{tr("Vérification…")}</span> : remux
+          ? <span><b>{tr("Conversion instantanée, sans perte")}</b> {tr(": les codecs actuels sont acceptés par ce format, les images sont simplement recopiées.")}</span>
+          : <span>{tr("Réencodage nécessaire vers")}{" "}{target === "webm" ? tr("VP9 + Opus") : tr("H.264 + AAC")}{tr(", au débit vidéo de la source.")}{surround ? tr(" Le son {a} canaux sera converti en stéréo.", { a: info.audio!.channels }) : ""}</span>}
       </div>
       {remux && target !== "webm" && <LeadNote start={range[0]} />}
       <JobFooter job={job} file={file} suffix="converti" onContinue={onContinue}
-        button={<HudButton action="convert" label={`Convertir en ${target.toUpperCase()}`} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Conversion")}
+        button={<HudButton action="convert" label={tr("Convertir en {a}", { a: target.toUpperCase() })} busy={job.progress !== null} busyLabel={busyLabel(job.progress, tr("Conversion"))}
           onClick={() => job.start((p, r) => convertVideo(file, range, target, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, p, r))} />} />
     </div>
   );
@@ -126,24 +127,24 @@ export function RotatePanel({ file, info, range, onContinue }: Common) {
       <div className="vx-rot">
         {([0, 90, 180, 270] as const).map((r) => (
           <button key={r} type="button" aria-pressed={o.rotation === r} className={`vx-chip${o.rotation === r ? " is-on" : ""}`} onClick={() => setO({ ...o, rotation: r })}>
-            {r === 0 ? "Aucune rotation" : `↻ ${r}°`}
+            {r === 0 ? tr("Aucune rotation") : `↻ ${r}°`}
           </button>
         ))}
       </div>
       <div className="vx-fields">
-        <label className="vx-check"><input type="checkbox" checked={o.flipH} onChange={(e) => setO({ ...o, flipH: e.target.checked })} /> Miroir horizontal (gauche ↔ droite)</label>
-        <label className="vx-check"><input type="checkbox" checked={o.flipV} onChange={(e) => setO({ ...o, flipV: e.target.checked })} /> Miroir vertical (haut ↕ bas)</label>
+        <label className="vx-check"><input type="checkbox" checked={o.flipH} onChange={(e) => setO({ ...o, flipH: e.target.checked })} /> {tr("Miroir horizontal (gauche ↔ droite)")}</label>
+        <label className="vx-check"><input type="checkbox" checked={o.flipV} onChange={(e) => setO({ ...o, flipV: e.target.checked })} /> {tr("Miroir vertical (haut ↕ bas)")}</label>
         <ContainerSelect value={target} onChange={setTarget} />
-        <label className="vx-check"><input type="checkbox" checked={o.bake} onChange={(e) => setO({ ...o, bake: e.target.checked })} /> Réencoder les images (pour les rares lecteurs qui ignorent la rotation)</label>
+        <label className="vx-check"><input type="checkbox" checked={o.bake} onChange={(e) => setO({ ...o, bake: e.target.checked })} /> {tr("Réencoder les images (pour les rares lecteurs qui ignorent la rotation)")}</label>
       </div>
       <p className="vx-muted">{o.bake
-        ? "Les images sont réellement tournées : compatible partout, plus long."
+        ? tr("Les images sont réellement tournées : compatible partout, plus long.")
         : target === "webm"
-          ? "Le format WebM ne permet pas d'inscrire la rotation dans le fichier : les images seront réencodées (choisis MP4 pour une rotation instantanée et sans perte)."
-          : "La rotation est inscrite dans le fichier : instantané et sans perte, respecté par les navigateurs, téléphones et réseaux."}</p>
+          ? tr("Le format WebM ne permet pas d'inscrire la rotation dans le fichier : les images seront réencodées (choisis MP4 pour une rotation instantanée et sans perte).")
+          : tr("La rotation est inscrite dans le fichier : instantané et sans perte, respecté par les navigateurs, téléphones et réseaux.")}</p>
       {!o.bake && target !== "webm" && !nothing && <LeadNote start={range[0]} />}
       <JobFooter job={job} file={file} suffix="pivote" onContinue={onContinue}
-        button={<HudButton action="apply-rotation" disabled={nothing} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Rotation")}
+        button={<HudButton action="apply-rotation" disabled={nothing} busy={job.progress !== null} busyLabel={busyLabel(job.progress, tr("Rotation"))}
           onClick={() => job.start((p, r) => rotateVideo(file, range, target, o, info.video?.bitrate || 2e6, p, r))} />} />
     </div>
   );
@@ -166,30 +167,30 @@ export function SpeedPanel({ file, info, range, onContinue }: Common) {
   }, [info.audio]);
   const dur = range[1] - range[0];
   // Le son gardé est réencodé en Opus (WebM) ou en AAC (MP4, MOV) : le navigateur doit savoir le faire
-  const outCodec = target === "webm" ? "Opus" : "AAC";
+  const outCodec = target === "webm" ? tr("Opus") : "AAC";
   const noAudioEncoder = keepAudio && !!info.audio && !!support && !(target === "webm" ? support.ogg : support.m4a);
   return (
     <div>
       <div className="vx-rot">
         {SPEEDS.map((s) => (
           <button key={s} type="button" aria-pressed={speed === s} className={`vx-chip${speed === s ? " is-on" : ""}`} onClick={() => setSpeed(s)}>
-            ×{String(s).replace(".", ",")} {s < 1 ? "ralenti" : "accéléré"}
+            ×{String(s).replace(".", ",")} {s < 1 ? "ralenti" : tr("accéléré")}
           </button>
         ))}
       </div>
       <div className="vx-fields"><ContainerSelect value={target} onChange={setTarget} /></div>
       <div className="vx-estimate">
-        <span>Durée : {fmtTime(dur)} → <b>{fmtTime(dur / speed)}</b></span>
+        <span>{tr("Durée :")}{" "}{fmtTime(dur)} → <b>{fmtTime(dur / speed)}</b></span>
         {info.audio && (
           <label className="vx-check"><input type="checkbox" checked={keepAudio} onChange={(e) => setKeepAudio(e.target.checked)} />
-            Garder le son — {speed > 1 ? "la voix devient plus aiguë" : "la voix devient plus grave"} (comme un disque joué {speed > 1 ? "plus vite" : "plus lentement"})</label>
+            {tr("Garder le son —")}{" "}{speed > 1 ? tr("la voix devient plus aiguë") : tr("la voix devient plus grave")} {tr("(comme un disque joué")}{" "}{speed > 1 ? tr("plus vite") : tr("plus lentement")})</label>
         )}
-        {keepAudio && (info.audio?.channels ?? 0) > 2 && <span className="vx-muted">Le son {info.audio!.channels} canaux sera converti en stéréo.</span>}
-        {speed < 1 && <span className="vx-muted">Ralenti : chaque image est affichée plus longtemps (pour un ralenti très fluide, filme en 60 ou 120 images/s).</span>}
+        {keepAudio && (info.audio?.channels ?? 0) > 2 && <span className="vx-muted">{tr("Le son")}{" "}{info.audio!.channels} {tr("canaux sera converti en stéréo.")}</span>}
+        {speed < 1 && <span className="vx-muted">{tr("Ralenti : chaque image est affichée plus longtemps (pour un ralenti très fluide, filme en 60 ou 120 images/s).")}</span>}
       </div>
-      {noAudioEncoder && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : décoche « Garder le son » ou choisis un autre format de sortie.</p>}
+      {noAudioEncoder && <p className="vx-alert">{tr("Ce navigateur ne sait pas encoder le son en")}{" "}{outCodec} {tr(": décoche « Garder le son » ou choisis un autre format de sortie.")}</p>}
       <JobFooter job={job} file={file} suffix={`x${String(speed).replace(".", ",")}`} onContinue={onContinue}
-        button={<HudButton action="speed-video" label={`Appliquer ×${String(speed).replace(".", ",")}`} disabled={noAudioEncoder} busy={job.progress !== null} busyLabel={busyLabel(job.progress, "Traitement")}
+        button={<HudButton action="speed-video" label={tr("Appliquer ×{a}", { a: String(speed).replace(".", ",") })} disabled={noAudioEncoder} busy={job.progress !== null} busyLabel={busyLabel(job.progress, tr("Traitement"))}
           onClick={() => job.start((p, r) => speedVideo(file, range, target, speed, info.video?.fps || 30, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, keepAudio && !!info.audio, p, r))} />} />
     </div>
   );

@@ -10,6 +10,7 @@ import { useCancel } from "../lib/useCancel";
 import { fmtBytes, referenceBitrate } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 
+import { tr } from "../i18n";
 type Props = {
   file: File;
   info: VideoInfo;
@@ -69,7 +70,7 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
       urls.current.push(url);
       setResult({ url, blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${r.width} × ${r.height}` });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Recadrage impossible : ${e.message}` : "Recadrage impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Recadrage impossible : ${e.message}` : tr("Recadrage impossible."));
     } finally {
       setProgress(null);
       job.end();
@@ -85,8 +86,8 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
         {ASPECTS.map((a) => (
           <button key={a.id} type="button" className={`vx-aspect${a.id === aspect ? " is-on" : ""}`} onClick={() => setAspect(a.id)} aria-pressed={a.id === aspect}>
             <AspectIcon aspect={a.id} />
-            <b>{a.label}</b>
-            <span>{a.use}</span>
+            <b>{tr(a.label)}</b>
+            <span>{tr(a.use)}</span>
           </button>
         ))}
       </div>
@@ -94,38 +95,38 @@ export function ReframePanel({ file, info, range, video, onContinue }: Props) {
       <div className="vx-reframe-body">
         <div>
           <FramePreview video={video} src={src} aspect={aspect} mode={mode} focus={focus} onFocus={setFocus} />
-          <p className="vx-hint">{mode === "crop" ? (nothingToCrop ? "L'image entière tient déjà dans ce format." : "Glisse le cadre vert pour choisir la zone gardée.") : "Aperçu du résultat final."} Image affichée : position actuelle de la vidéo.</p>
+          <p className="vx-hint">{mode === "crop" ? (nothingToCrop ? tr("L'image entière tient déjà dans ce format.") : tr("Glisse le cadre vert pour choisir la zone gardée.")) : tr("Aperçu du résultat final.")} {tr("Image affichée : position actuelle de la vidéo.")}</p>
         </div>
         <div className="vx-fields" style={{ alignContent: "start" }}>
-          <div className="vx-modes" role="radiogroup" aria-label="Remplissage">
-            <label><input type="radio" name="rmode" checked={mode === "crop"} onChange={() => setMode("crop")} /><b>Recadrer</b> — remplit le format, coupe les bords</label>
-            <label><input type="radio" name="rmode" checked={mode === "blur"} onChange={() => setMode("blur")} /><b>Fond flouté</b> — toute l'image, sur un flou de la vidéo</label>
-            <label><input type="radio" name="rmode" checked={mode === "bars"} onChange={() => setMode("bars")} /><b>Bandes noires</b> — toute l'image</label>
+          <div className="vx-modes" role="radiogroup" aria-label={tr("Remplissage")}>
+            <label><input type="radio" name="rmode" checked={mode === "crop"} onChange={() => setMode("crop")} /><b>{tr("Recadrer")}</b> {tr("— remplit le format, coupe les bords")}</label>
+            <label><input type="radio" name="rmode" checked={mode === "blur"} onChange={() => setMode("blur")} /><b>{tr("Fond flouté")}</b> {tr("— toute l'image, sur un flou de la vidéo")}</label>
+            <label><input type="radio" name="rmode" checked={mode === "bars"} onChange={() => setMode("bars")} /><b>{tr("Bandes noires")}</b> {tr("— toute l'image")}</label>
           </div>
-          <label>Résolution
+          <label>{tr("Résolution")}
             <select value={shortSide} onChange={(e) => setShortSide(Number(e.target.value))}>
-              <option value={1080}>1080 (recommandé pour les réseaux)</option>
-              <option value={720}>720 (plus léger)</option>
+              <option value={1080}>{tr("1080 (recommandé pour les réseaux)")}</option>
+              <option value={720}>{tr("720 (plus léger)")}</option>
             </select>
           </label>
-          <label>Format
+          <label>{tr("Format")}
             <select value={format} onChange={(e) => setFormat(e.target.value as CompressFormat)}>
-              <option value="mp4" disabled={support ? !support.mp4 : false}>MP4 (H.264) — accepté par tous les réseaux</option>
-              <option value="webm" disabled={support ? !support.webm : false}>WebM (VP9) — pour le web</option>
+              <option value="mp4" disabled={support ? !support.mp4 : false}>{tr("MP4 (H.264) — accepté par tous les réseaux")}</option>
+              <option value="webm" disabled={support ? !support.webm : false}>{tr("WebM (VP9) — pour le web")}</option>
             </select>
           </label>
           {src.fps > 31 && (
-            <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> Limiter à 30 images/s</label>
+            <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> {tr("Limiter à 30 images/s")}</label>
           )}
           <div className="vx-estimate">
-            <span>Sortie : <b>{out.width} × {out.height}</b> · {fps} i/s</span>
-            <span>Poids estimé : <b>{fmtBytes(estimate)}</b></span>
+            <span>{tr("Sortie :")}{" "}<b>{out.width} × {out.height}</b> · {fps} i/s</span>
+            <span>{tr("Poids estimé :")}{" "}<b>{fmtBytes(estimate)}</b></span>
           </div>
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <HudButton action="crop" label={`Créer la version ${aspect}`} busy={progress !== null}
+        <HudButton action="crop" label={tr("Créer la version {a}", { a: aspect })} busy={progress !== null}
           busyLabel={progress !== null ? `Recadrage… ${Math.round(progress * 100)} %` : undefined}
           disabled={!support || (!support.mp4 && !support.webm)} onClick={run} />
         {progress !== null && <HudButton action="cancel" compact onClick={job.stop} />}

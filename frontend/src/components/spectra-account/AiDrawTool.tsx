@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { API_URL, apiFetch, lireErreur, openLogin, openPricing, rafraichirCompte, useAccount } from "./account";
 
+import { tr } from "../../i18n";
 interface AiInfo { enabled: boolean; costPerImage: number; formats: Record<string, { label: string; width: number; height: number }> }
 
 export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void }) {
@@ -40,7 +41,7 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
       urlRef.current = url;
       setResultat({ url, blob });
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : "La génération a échoué.");
+      setErreur(e instanceof Error ? e.message : tr("La génération a échoué."));
     } finally {
       setBusy(false);
       void rafraichirCompte();  // crédits à jour (rendus si l'image a échoué)
@@ -54,46 +55,46 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
   }
 
   if (!accountsEnabled || (info && !info.enabled)) {
-    return <p className="sp-info">Le dessin IA arrive bientôt sur NOXEL SPECTRA.</p>;
+    return <p className="sp-info">{tr("Le dessin IA arrive bientôt sur NOXEL SPECTRA.")}</p>;
   }
 
   return (
     <div className="sp-ai">
-      <label className="sp-ai__label" htmlFor="sp-ai-prompt">Décris l'image à dessiner</label>
+      <label className="sp-ai__label" htmlFor="sp-ai-prompt">{tr("Décris l'image à dessiner")}</label>
       <textarea id="sp-ai-prompt" className="sp-ai__prompt" rows={4} maxLength={2000} value={prompt}
-        placeholder="Ex. : une tasse de café fumante sur une table en bois, lumière du matin, style photo"
+        placeholder={tr("Ex. : une tasse de café fumante sur une table en bois, lumière du matin, style photo")}
         onChange={(e) => setPrompt(e.target.value)} />
       <div className="controls-grid" style={{ marginTop: 10 }}>
-        <label>Format :{" "}
+        <label>{tr("Format :")}{" "}
           <select value={format} onChange={(e) => setFormat(e.target.value)}>
-            {Object.entries(info?.formats ?? {}).map(([id, f]) => <option key={id} value={id}>{f.label} — {f.width}×{f.height}px</option>)}
+            {Object.entries(info?.formats ?? {}).map(([id, f]) => <option key={id} value={id}>{tr(f.label)} — {f.width}×{f.height}px</option>)}
           </select>
         </label>
       </div>
 
       <div className="sp-ai__cost" role="note">
-        <strong>Coût : {cout} crédit{cout > 1 ? "s" : ""} par image.</strong>{" "}
+        <strong>{tr("Coût :")}{" "}{cout} {tr("crédit")}{cout > 1 ? "s" : ""} {tr("par image.")}</strong>{" "}
         {account
-          ? <>Il te reste {reste} crédit{reste > 1 ? "s" : ""} ({account.credits.inclus} inclus ce mois-ci, {account.credits.achetes} achetés). Un crédit est rendu si la génération échoue.</>
-          : <>Connecte-toi pour utiliser tes crédits : le dessin IA est inclus à partir du forfait Silver.</>}
+          ? <>{tr("Il te reste")}{" "}{reste} {tr("crédit")}{reste > 1 ? "s" : ""} ({account.credits.inclus} {tr("inclus ce mois-ci,")}{" "}{account.credits.achetes} {tr("achetés). Un crédit est rendu si la génération échoue.")}</>
+          : <>{tr("Connecte-toi pour utiliser tes crédits : le dessin IA est inclus à partir du forfait Silver.")}</>}
       </div>
 
-      <HudButton action="suggest-frames" busy={busy} busyLabel="Dessin en cours… (jusqu'à 1 minute)"
+      <HudButton action="suggest-frames" busy={busy} busyLabel={tr("Dessin en cours… (jusqu'à 1 minute)")}
         disabled={prompt.trim().length < 3}
-        label={!account ? "Se connecter pour dessiner" : pasAssez ? "Obtenir des crédits" : `Dessiner (${cout} crédit${cout > 1 ? "s" : ""})`}
+        label={!account ? tr("Se connecter pour dessiner") : pasAssez ? tr("Obtenir des crédits") : tr("Dessiner ({a} crédit{b})", { a: cout, b: cout > 1 ? "s" : "" })}
         onClick={generer} style={{ marginTop: 12 }} />
 
       {erreur && <p className="sp-error" role="alert">{erreur}</p>}
 
       {resultat && (
         <div className="sp-ai__result">
-          <img src={resultat.url} alt={`Image dessinée par l'IA : ${prompt}`} />
+          <img src={resultat.url} alt={tr("Image dessinée par l'IA : {a}", { a: prompt })} />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <a className="nx-pill" href={resultat.url} download={nomFichier()} style={{ textDecoration: "none" }}>⬇ Télécharger</a>
-            <HudButton action="continue" compact label="Retoucher avec les outils SPECTRA"
+            <a className="nx-pill" href={resultat.url} download={nomFichier()} style={{ textDecoration: "none" }}>{tr("⬇ Télécharger")}</a>
+            <HudButton action="continue" compact label={tr("Retoucher avec les outils SPECTRA")}
               onClick={() => onUseImage(new File([resultat.blob], nomFichier(), { type: resultat.blob.type }))} />
           </div>
-          <p className="sp-ai__legal">Image générée par IA (FLUX.2 [pro]). Indique-le si tu la publies là où c'est exigé.</p>
+          <p className="sp-ai__legal">{tr("Image générée par IA (FLUX.2 [pro]). Indique-le si tu la publies là où c'est exigé.")}</p>
         </div>
       )}
     </div>

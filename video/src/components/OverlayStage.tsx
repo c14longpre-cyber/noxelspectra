@@ -7,6 +7,7 @@ import { drawOverlays, hitTest, itemSize } from "../lib/overlay";
 import type { OverlayItem } from "../lib/overlay";
 import "../textlogo.css";
 
+import { tr } from "../i18n";
 type Props = {
   video: HTMLVideoElement;
   items: OverlayItem[];
@@ -133,7 +134,7 @@ export function OverlayStage({ video, items, selectedId, onSelect = () => {}, on
     <canvas
       ref={canvasRef}
       className="vx-stage"
-      aria-label="Aperçu des textes et logos : clique un élément pour le choisir, glisse-le pour le déplacer, tire le coin mauve pour changer sa taille. Les mêmes réglages sont disponibles au clavier dans le panneau."
+      aria-label={tr("Aperçu des textes et logos : clique un élément pour le choisir, glisse-le pour le déplacer, tire le coin mauve pour changer sa taille. Les mêmes réglages sont disponibles au clavier dans le panneau.")}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={() => (drag.current = null)}

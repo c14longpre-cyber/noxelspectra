@@ -2,6 +2,7 @@
 import { canvasGradient, fontStack } from "./overlay";
 import type { Fill } from "./overlay";
 
+import { tr } from "../i18n";
 export type ThumbAspect = "original" | "16:9" | "1:1" | "9:16";
 export const THUMB_SIZES: Record<Exclude<ThumbAspect, "original">, { width: number; height: number; label: string }> = {
   "16:9": { width: 1280, height: 720, label: "16:9 — YouTube, site web (1280 × 720)" },
@@ -87,7 +88,7 @@ function drawTitle(ctx: CanvasRenderingContext2D, w: number, h: number, t: Title
 }
 
 export const canvasToBlob = (c: HTMLCanvasElement, type: string, quality = 0.9) =>
-  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("export impossible"))), type, quality));
+  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error(tr("export impossible")))), type, quality));
 
 export type FrameCandidate = { time: number; score: number; thumb: string };
 
@@ -103,7 +104,7 @@ export async function suggestFrames(url: string, start: number, end: number, sam
   v.src = url;
   await new Promise<void>((res, rej) => {
     v.onloadeddata = () => res();
-    v.onerror = () => rej(new Error("lecture impossible"));
+    v.onerror = () => rej(new Error(tr("lecture impossible")));
   });
   const W = 160, H = Math.max(2, Math.round((160 * v.videoHeight) / v.videoWidth));
   const c = document.createElement("canvas");

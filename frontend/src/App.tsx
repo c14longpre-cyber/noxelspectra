@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
 import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
 import { GradientTool } from "./components/spectra-gradient/GradientTool";
@@ -36,6 +36,10 @@ import {
 } from "./projectStore";
 import type { Project, ProjectSummary } from "./projectStore";
 
+import { tr, locale } from "./i18n";
+import { useLang } from "./i18n/useLang";
+import { LangPill } from "./components/spectra-nexus/LangPill";
+const NexusSelector = lazy(() => import("./components/spectra-nexus/NexusSelector"));
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
 type Format = (typeof FORMATS)[number];
 
@@ -172,7 +176,7 @@ function ratioLabel(w: number, h: number): string {
   const g = pgcd(w, h);
   if (w / g <= 21 && h / g <= 21) return `${w / g}:${h / g}`;
   const r = w / h;
-  return r >= 1 ? `${(Math.round(r * 100) / 100).toLocaleString("fr-CA")}:1` : `1:${(Math.round((1 / r) * 100) / 100).toLocaleString("fr-CA")}`;
+  return r >= 1 ? `${(Math.round(r * 100) / 100).toLocaleString(locale())}:1` : `1:${(Math.round((1 / r) * 100) / 100).toLocaleString(locale())}`;
 }
 
 type ConversionStats = {
@@ -314,24 +318,24 @@ function describeRecipe(r: Recipe): string[] {
         const w = s.width ? `${s.width}` : "auto";
         const h = s.height ? `${s.height}` : "auto";
         return s.maintainAspect === false
-          ? `Redimensionner exactement à ${w}×${h} px`
-          : `Redimensionner à ${w}×${h} px maximum (ratio conservé)`;
+          ? tr("Redimensionner exactement à {a}×{b} px", { a: w, b: h })
+          : tr("Redimensionner à {a}×{b} px maximum (ratio conservé)", { a: w, b: h });
       }
       case "rotate": {
         const parts = [];
         if (s.angle) parts.push(`rotation ${s.angle}°`);
-        if (s.flipHorizontal) parts.push("miroir horizontal");
-        if (s.flipVertical) parts.push("miroir vertical");
-        return parts.length ? parts.join(", ").replace(/^./, (c) => c.toUpperCase()) : "Rotation (aucune)";
+        if (s.flipHorizontal) parts.push(tr("miroir horizontal"));
+        if (s.flipVertical) parts.push(tr("miroir vertical"));
+        return parts.length ? parts.join(", ").replace(/^./, (c) => c.toUpperCase()) : tr("Rotation (aucune)");
       }
       case "adjust":
-        return "Filtres / réglages";
+        return tr("Filtres / réglages");
       case "removeBg":
-        return `Supprimer l'arrière-plan${s.background ? ` (fond ${String(s.background)})` : " (transparent)"}${s.trim ? ", recadré au sujet" : ""}`;
+        return tr("Supprimer l'arrière-plan{a}{b}", { a: s.background ? ` (fond ${String(s.background)})` : " (transparent)", b: s.trim ? tr(", recadré au sujet") : "" });
       case "shadow":
-        return "Ombre portée";
+        return tr("Ombre portée");
       case "glow":
-        return "Effet lumineux";
+        return tr("Effet lumineux");
       case "watermarkText":
         return `Filigrane « ${String(s.text)} »`;
       default:
@@ -339,10 +343,10 @@ function describeRecipe(r: Recipe): string[] {
     }
   });
   const o = r.output;
-  const fmt = o.format === "original" ? "format d'origine" : o.format.toUpperCase();
-  const q = o.targetSizeKB ? `${o.targetSizeKB} Ko max` : `qualité ${o.quality}`;
-  lines.push(`Sortie : ${fmt} (${q})${o.copyright || o.rights ? " + droits d'auteur" : ""}`);
-  lines.push("Métadonnées EXIF/GPS retirées, orientation corrigée");
+  const fmt = o.format === "original" ? tr("format d'origine") : o.format.toUpperCase();
+  const q = o.targetSizeKB ? `${o.targetSizeKB} Ko max` : tr("qualité {a}", { a: o.quality });
+  lines.push(`Sortie : ${fmt} (${q})${o.copyright || o.rights ? tr(" + droits d'auteur") : ""}`);
+  lines.push(tr("Métadonnées EXIF/GPS retirées, orientation corrigée"));
   return lines;
 }
 
@@ -377,10 +381,10 @@ function baseName(name: string): string {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024) return `${bytes} ${tr("o")}`;
   const kb = bytes / 1024;
-  if (kb < 1024) return `${kb.toFixed(1)} Ko`;
-  return `${(kb / 1024).toFixed(2)} Mo`;
+  if (kb < 1024) return `${kb.toFixed(1)} ${tr("Ko")}`;
+  return `${(kb / 1024).toFixed(2)} ${tr("Mo")}`;
 }
 
 function sanitizeFilename(name: string): string {
@@ -445,13 +449,13 @@ function BeforeAfterSlider({
     >
       <img
         src={beforeUrl}
-        alt="Avant"
+        alt={tr("Avant")}
         draggable={false}
         style={{ display: "block", width: "100%", height: "auto" }}
       />
       <img
         src={afterUrl}
-        alt="Après"
+        alt={tr("Après")}
         draggable={false}
         style={{
           position: "absolute",
@@ -507,7 +511,7 @@ function BeforeAfterSlider({
           borderRadius: 4,
         }}
       >
-        Avant
+        {tr("Avant")}
       </span>
       <span
         style={{
@@ -521,13 +525,16 @@ function BeforeAfterSlider({
           borderRadius: 4,
         }}
       >
-        Après
+        {tr("Après")}
       </span>
     </div>
   );
 }
 
 export default function App() {
+  // Re-render de toute l'app quand la langue change (sélecteur NOXEL NEXUS)
+  const { lang, setLang } = useLang();
+  const [showLang, setShowLang] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [originalPreviewUrl, setOriginalPreviewUrl] = useState<string | null>(null);
   const [format, setFormat] = useState<Format>("webp");
@@ -588,17 +595,17 @@ export default function App() {
     const auth = q.get("auth_success"), err = q.get("auth_error"), billing = q.get("billing");
     if (!auth && !err && !billing) return;
     const ERREURS: Record<string, string> = {
-      invalid_token: "Ce lien n'est plus valide. Demande-en un nouveau.",
-      token_expired: "Ce lien a expiré (15 minutes). Demande-en un nouveau.",
-      email_in_use: "Un compte NOXEL existe déjà pour ce courriel avec une autre méthode de connexion. Utilise celle-ci.",
-      missing_token: "Lien incomplet.",
-      server_error: "Connexion impossible pour le moment. Réessaie.",
+      invalid_token: tr("Ce lien n'est plus valide. Demande-en un nouveau."),
+      token_expired: tr("Ce lien a expiré (15 minutes). Demande-en un nouveau."),
+      email_in_use: tr("Un compte NOXEL existe déjà pour ce courriel avec une autre méthode de connexion. Utilise celle-ci."),
+      missing_token: tr("Lien incomplet."),
+      server_error: tr("Connexion impossible pour le moment. Réessaie."),
     };
-    if (auth) setAvisCompte({ texte: "Tu es connecté à NOXEL SPECTRA." });
-    else if (err) setAvisCompte({ texte: ERREURS[err] ?? "Connexion impossible.", erreur: true });
-    else if (billing === "success") { setAvisCompte({ texte: "Merci ! Ton forfait est actif (il peut falloir quelques secondes)." }); setActiveSection("pricing"); }
-    else if (billing === "credits") { setAvisCompte({ texte: "Merci ! Tes crédits de dessin IA sont ajoutés." }); setActiveSection("ai"); }
-    else if (billing === "cancelled") setAvisCompte({ texte: "Paiement annulé : rien n'a été facturé." });
+    if (auth) setAvisCompte({ texte: tr("Tu es connecté à NOXEL SPECTRA.") });
+    else if (err) setAvisCompte({ texte: ERREURS[err] ?? tr("Connexion impossible."), erreur: true });
+    else if (billing === "success") { setAvisCompte({ texte: tr("Merci ! Ton forfait est actif (il peut falloir quelques secondes).") }); setActiveSection("pricing"); }
+    else if (billing === "credits") { setAvisCompte({ texte: tr("Merci ! Tes crédits de dessin IA sont ajoutés.") }); setActiveSection("ai"); }
+    else if (billing === "cancelled") setAvisCompte({ texte: tr("Paiement annulé : rien n'a été facturé.") });
     void rafraichirCompte();
     // Le webhook Stripe peut arriver après le retour : une deuxième lecture quelques secondes plus tard
     if (billing === "success" || billing === "credits") setTimeout(() => void rafraichirCompte(), 4000);
@@ -648,29 +655,29 @@ export default function App() {
   }, [savedRecipes]);
 
   const NAV_ITEMS: { id: string; label: string; icon: string; ref: React.RefObject<HTMLDivElement | null> }[] = [
-    { id: "projects", label: "Mes projets", icon: "❏", ref: projectsSectionRef },
-    { id: "ai", label: "Dessin IA", icon: "✦", ref: aiSectionRef },
-    { id: "analyze", label: "Analyser", icon: "⌁", ref: analyzeSectionRef },
-    { id: "convert", label: "Convertir", icon: "↔", ref: convertSectionRef },
-    { id: "batch", label: "Traitement par lots", icon: "▦", ref: batchSectionRef },
-    { id: "resize", label: "Redimensionner", icon: "⤢", ref: resizeSectionRef },
-    { id: "crop", label: "Rogner", icon: "⊡", ref: cropSectionRef },
-    { id: "removebg", label: "Supprimer l'arrière-plan", icon: "✂", ref: bgSectionRef },
-    { id: "rotate", label: "Rotation / Miroir", icon: "↻", ref: rotateSectionRef },
-    { id: "adjust", label: "Filtres / Réglages", icon: "☷", ref: adjustSectionRef },
-    { id: "responsive", label: "Tailles responsives", icon: "▣", ref: responsiveSectionRef },
-    { id: "palette", label: "Palette de couleurs", icon: "◉", ref: paletteSectionRef },
-    { id: "vectorize", label: "Vectoriser", icon: "◇", ref: vectorizeSectionRef },
-    { id: "favicon", label: "Favicons", icon: "☆", ref: faviconSectionRef },
-    { id: "metaclean", label: "Nettoyer les métadonnées", icon: "▤", ref: metaCleanSectionRef },
-    { id: "shadow", label: "Ombre portée", icon: "▢", ref: shadowSectionRef },
-    { id: "glow", label: "Effet lumineux", icon: "☼", ref: glowSectionRef },
-    { id: "social", label: "Réseaux sociaux", icon: "⚑", ref: socialSectionRef },
-    { id: "editor", label: "Éditeur", icon: "✎", ref: editorSectionRef },
-    { id: "gradient", label: "Dégradé", icon: "◐", ref: gradientSectionRef },
-    { id: "watermark", label: "Filigrane", icon: "⛆", ref: watermarkSectionRef },
-    { id: "copyright", label: "Auteur et droits", icon: "©", ref: copyrightSectionRef },
-    { id: "pricing", label: "Forfaits", icon: "$", ref: pricingSectionRef },
+    { id: "projects", label: tr("Mes projets"), icon: "❏", ref: projectsSectionRef },
+    { id: "ai", label: tr("Dessin IA"), icon: "✦", ref: aiSectionRef },
+    { id: "analyze", label: tr("Analyser"), icon: "⌁", ref: analyzeSectionRef },
+    { id: "convert", label: tr("Convertir"), icon: "↔", ref: convertSectionRef },
+    { id: "batch", label: tr("Traitement par lots"), icon: "▦", ref: batchSectionRef },
+    { id: "resize", label: tr("Redimensionner"), icon: "⤢", ref: resizeSectionRef },
+    { id: "crop", label: tr("Rogner"), icon: "⊡", ref: cropSectionRef },
+    { id: "removebg", label: tr("Supprimer l'arrière-plan"), icon: "✂", ref: bgSectionRef },
+    { id: "rotate", label: tr("Rotation / Miroir"), icon: "↻", ref: rotateSectionRef },
+    { id: "adjust", label: tr("Filtres / Réglages"), icon: "☷", ref: adjustSectionRef },
+    { id: "responsive", label: tr("Tailles responsives"), icon: "▣", ref: responsiveSectionRef },
+    { id: "palette", label: tr("Palette de couleurs"), icon: "◉", ref: paletteSectionRef },
+    { id: "vectorize", label: tr("Vectoriser"), icon: "◇", ref: vectorizeSectionRef },
+    { id: "favicon", label: tr("Favicons"), icon: "☆", ref: faviconSectionRef },
+    { id: "metaclean", label: tr("Nettoyer les métadonnées"), icon: "▤", ref: metaCleanSectionRef },
+    { id: "shadow", label: tr("Ombre portée"), icon: "▢", ref: shadowSectionRef },
+    { id: "glow", label: tr("Effet lumineux"), icon: "☼", ref: glowSectionRef },
+    { id: "social", label: tr("Réseaux sociaux"), icon: "⚑", ref: socialSectionRef },
+    { id: "editor", label: tr("Éditeur"), icon: "✎", ref: editorSectionRef },
+    { id: "gradient", label: tr("Dégradé"), icon: "◐", ref: gradientSectionRef },
+    { id: "watermark", label: tr("Filigrane"), icon: "⛆", ref: watermarkSectionRef },
+    { id: "copyright", label: tr("Auteur et droits"), icon: "©", ref: copyrightSectionRef },
+    { id: "pricing", label: tr("Forfaits"), icon: "$", ref: pricingSectionRef },
   ];
 
   function goToSection(id: string) {
@@ -865,8 +872,8 @@ export default function App() {
         .catch((err) => {
           setProjectError(
             isQuotaError(err)
-              ? "Espace de stockage du navigateur plein — exporte puis supprime d'anciens projets dans « Mes projets »."
-              : "Sauvegarde automatique impossible dans ce navigateur (navigation privée ?)."
+              ? tr("Espace de stockage du navigateur plein — exporte puis supprime d'anciens projets dans « Mes projets ».")
+              : tr("Sauvegarde automatique impossible dans ce navigateur (navigation privée ?).")
           );
         });
     }, 600);
@@ -905,7 +912,7 @@ export default function App() {
       });
       setStorageInfo(await storageEstimate());
     } catch {
-      setProjectError("Impossible de lire les projets enregistrés dans ce navigateur.");
+      setProjectError(tr("Impossible de lire les projets enregistrés dans ce navigateur."));
     }
   }
 
@@ -928,7 +935,7 @@ export default function App() {
     resetStackingParams();
     setWorkingFile(entries[idx].file);
     setLastProjectId(p.id);
-    setProjectNotice(restored ? `Projet « ${p.name} » restauré.` : `Projet « ${p.name} » ouvert.`);
+    setProjectNotice(restored ? tr("Projet « {a} » restauré.", { a: p.name }) : tr("Projet « {a} » ouvert.", { a: p.name }));
   }
 
   async function handleOpenProject(id: string) {
@@ -938,7 +945,7 @@ export default function App() {
       openProject(p);
       goToSection("analyze");
     } catch {
-      setProjectError("Impossible d'ouvrir ce projet.");
+      setProjectError(tr("Impossible d'ouvrir ce projet."));
     }
   }
 
@@ -954,7 +961,7 @@ export default function App() {
   }
 
   async function handleRenameProject(id: string, currentName: string) {
-    const name = window.prompt("Nouveau nom du projet :", currentName);
+    const name = window.prompt(tr("Nouveau nom du projet :"), currentName);
     if (!name || !name.trim()) return;
     const clean = name.trim().slice(0, 80);
     try {
@@ -969,18 +976,18 @@ export default function App() {
       }
       await refreshProjects();
     } catch {
-      setProjectError("Renommage impossible.");
+      setProjectError(tr("Renommage impossible."));
     }
   }
 
   async function handleDeleteProject(id: string, name: string) {
-    if (!window.confirm(`Supprimer définitivement le projet « ${name} » ?\nAstuce : exporte-le d'abord si tu veux le garder.`)) return;
+    if (!window.confirm(tr("Supprimer définitivement le projet « {a} » ?\nAstuce : exporte-le d'abord si tu veux le garder.", { a: name }))) return;
     try {
       await deleteProject(id);
       if (id === projectId) startNewProject();
       await refreshProjects();
     } catch {
-      setProjectError("Suppression impossible.");
+      setProjectError(tr("Suppression impossible."));
     }
   }
 
@@ -996,7 +1003,7 @@ export default function App() {
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
-      setProjectError("Export impossible.");
+      setProjectError(tr("Export impossible."));
     }
   }
 
@@ -1006,15 +1013,15 @@ export default function App() {
       const p = await importProject(f);
       await saveProject(p);
       openProject(p);
-      setProjectNotice(`Projet « ${p.name} » importé et ouvert.`);
+      setProjectNotice(tr("Projet « {a} » importé et ouvert.", { a: p.name }));
       goToSection("analyze");
     } catch (err) {
       setProjectError(
         isQuotaError(err)
-          ? "Espace de stockage du navigateur plein — supprime d'anciens projets avant d'importer."
+          ? tr("Espace de stockage du navigateur plein — supprime d'anciens projets avant d'importer.")
           : err instanceof Error && err.message
             ? err.message
-            : "Import impossible."
+            : tr("Import impossible.")
       );
     }
   }
@@ -1064,7 +1071,7 @@ export default function App() {
     }
     setExifPrompt(null);
     const failMsg = failed.length
-      ? `Impossible de retirer les métadonnées de ${failed.map((n) => `« ${n} »`).join(", ")} : fichier d'origine conservé.`
+      ? tr("Impossible de retirer les métadonnées de {a} : fichier d'origine conservé.", { a: failed.map((n) => `« ${n} »`).join(", ") })
       : null;
     if (prompt.target === "main") {
       handleFileChange(files[0]);
@@ -1076,7 +1083,7 @@ export default function App() {
   }
 
   function handleFileChange(f: File | null) {
-    setHistory(f ? [{ file: f, label: "Original", lossy: false, part: {} }] : []);
+    setHistory(f ? [{ file: f, label: tr("Original"), lossy: false, part: {} }] : []);
     setHistoryIndex(f ? 0 : -1);
     setChainError(null);
     setProjectNotice(null);
@@ -1210,7 +1217,7 @@ export default function App() {
       resetStackingParams();
       setWorkingFile(next);
     } catch {
-      setChainError("Impossible de reprendre ce résultat — relance l'outil puis réessaie.");
+      setChainError(tr("Impossible de reprendre ce résultat — relance l'outil puis réessaie."));
     } finally {
       setContinuing(false);
     }
@@ -1252,14 +1259,14 @@ export default function App() {
 
   function saveCurrentAsRecipe() {
     const { recipe, skipped } = buildRecipeFromHistory();
-    const name = window.prompt("Nom de la recette :", `Ma recette ${savedRecipes.length + 1}`);
+    const name = window.prompt(tr("Nom de la recette :"), tr("Ma recette {a}", { a: savedRecipes.length + 1 }));
     if (!name || !name.trim()) return;
     const id = `user-${Date.now()}`;
     setSavedRecipes((prev) => [...prev, { id, name: name.trim().slice(0, 60), recipe }]);
     setBatchRecipeId(id);
     setRecipeNotice(
-      `Recette « ${name.trim()} » enregistrée.` +
-        (skipped.length ? ` Ignoré (non transposable en lot) : ${skipped.join(", ")}.` : "")
+      tr("Recette « {a} » enregistrée.", { a: name.trim() }) +
+        (skipped.length ? tr(" Ignoré (non transposable en lot) : {a}.", { a: skipped.join(", ") }) : "")
     );
   }
 
@@ -1273,7 +1280,7 @@ export default function App() {
     setBatchFiles((prev) => {
       const merged = [...prev, ...images];
       if (merged.length > BATCH_MAX_FILES) {
-        setBatchError(`${BATCH_MAX_FILES} images maximum par lot — les suivantes ont été ignorées.`);
+        setBatchError(tr("{a} images maximum par lot — les suivantes ont été ignorées.", { a: BATCH_MAX_FILES }));
       }
       return merged.slice(0, BATCH_MAX_FILES);
     });
@@ -1292,7 +1299,7 @@ export default function App() {
     if (!selected || batchFiles.length === 0) return;
     const total = batchFiles.reduce((sum, f) => sum + f.size, 0);
     if (total > BATCH_MAX_BYTES) {
-      setBatchError(`Lot trop lourd (${formatBytes(total)}) — 100 Mo maximum au total.`);
+      setBatchError(tr("Lot trop lourd ({a}) — 100 Mo maximum au total.", { a: formatBytes(total) }));
       return;
     }
 
@@ -1316,7 +1323,7 @@ export default function App() {
       setBatchResultUrl(URL.createObjectURL(blob));
       setBatchCounts({ ok, failed });
     } catch (err) {
-      setBatchError(err instanceof Error ? err.message : "Traitement par lots échoué");
+      setBatchError(err instanceof Error ? err.message : tr("Traitement par lots échoué"));
     } finally {
       setBatchLoading(false);
     }
@@ -1349,7 +1356,7 @@ export default function App() {
       }
       setAnalyzeResult(data);
     } catch (err) {
-      setAnalyzeError(err instanceof Error ? err.message : "Analyse échouée");
+      setAnalyzeError(err instanceof Error ? err.message : tr("Analyse échouée"));
     } finally {
       setAnalyzeLoading(false);
     }
@@ -1407,7 +1414,7 @@ export default function App() {
       setResultUrl(outUrl);
       setStats({ originalSize, outputSize, reductionPct, qualityUsed, metTarget });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Conversion échouée");
+      setError(err instanceof Error ? err.message : tr("Conversion échouée"));
     } finally {
       setLoading(false);
     }
@@ -1434,7 +1441,7 @@ export default function App() {
       }
       setPalette(data.palette);
     } catch (err) {
-      setPaletteError(err instanceof Error ? err.message : "Extraction échouée");
+      setPaletteError(err instanceof Error ? err.message : tr("Extraction échouée"));
     } finally {
       setPaletteLoading(false);
     }
@@ -1443,7 +1450,7 @@ export default function App() {
   async function handleResize() {
     if (!file) return;
     if (!resizeWidth && !resizeHeight) {
-      setResizeError("Indique au moins une largeur ou une hauteur");
+      setResizeError(tr("Indique au moins une largeur ou une hauteur"));
       return;
     }
 
@@ -1490,7 +1497,7 @@ export default function App() {
       setResizeResultUrl(outUrl);
       setResizeStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
     } catch (err) {
-      setResizeError(err instanceof Error ? err.message : "Redimensionnement échoué");
+      setResizeError(err instanceof Error ? err.message : tr("Redimensionnement échoué"));
     } finally {
       setResizeLoading(false);
     }
@@ -1527,7 +1534,7 @@ export default function App() {
       setResponsiveSrcset(srcsetHeader ? decodeURIComponent(srcsetHeader) : null);
       setResponsiveSizes(sizesHeader);
     } catch (err) {
-      setResponsiveError(err instanceof Error ? err.message : "Génération échouée");
+      setResponsiveError(err instanceof Error ? err.message : tr("Génération échouée"));
     } finally {
       setResponsiveLoading(false);
     }
@@ -1564,7 +1571,7 @@ export default function App() {
       setDetectedColors(hexes);
       setEditedColors(hexes);
     } catch (err) {
-      setDetectError(err instanceof Error ? err.message : "Détection échouée");
+      setDetectError(err instanceof Error ? err.message : tr("Détection échouée"));
     } finally {
       setDetectLoading(false);
     }
@@ -1608,7 +1615,7 @@ export default function App() {
       setVectorizeSvg(data.svg);
       setVectorizeMeta({ width: data.width, height: data.height, colorsUsed: data.colorsUsed });
     } catch (err) {
-      setVectorizeError(err instanceof Error ? err.message : "Vectorisation échouée");
+      setVectorizeError(err instanceof Error ? err.message : tr("Vectorisation échouée"));
     } finally {
       setVectorizeLoading(false);
     }
@@ -1646,7 +1653,7 @@ export default function App() {
       const blob = await res.blob();
       setFaviconResultUrl(URL.createObjectURL(blob));
     } catch (err) {
-      setFaviconError(err instanceof Error ? err.message : "Génération échouée");
+      setFaviconError(err instanceof Error ? err.message : tr("Génération échouée"));
     } finally {
       setFaviconLoading(false);
     }
@@ -1684,7 +1691,7 @@ export default function App() {
       setMetaCleanResultUrl(outUrl);
       setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger, format: cleanedFormat });
     } catch (err) {
-      setMetaCleanError(err instanceof Error ? err.message : "Nettoyage échoué");
+      setMetaCleanError(err instanceof Error ? err.message : tr("Nettoyage échoué"));
     } finally {
       setMetaCleanLoading(false);
     }
@@ -1731,7 +1738,7 @@ export default function App() {
       setSocialResultUrl(outUrl);
       setSocialStats({ originalWidth, originalHeight, outputWidth, outputHeight, originalSize, outputSize });
     } catch (err) {
-      setSocialError(err instanceof Error ? err.message : "Redimensionnement échoué");
+      setSocialError(err instanceof Error ? err.message : tr("Redimensionnement échoué"));
     } finally {
       setSocialLoading(false);
     }
@@ -1761,7 +1768,7 @@ export default function App() {
       recipeParts.current[outUrl] = { steps: [{ op: "glow", intensity: glowIntensity }] };
       setGlowResultUrl(outUrl);
     } catch (err) {
-      setGlowError(err instanceof Error ? err.message : "Effet lumineux échoué");
+      setGlowError(err instanceof Error ? err.message : tr("Effet lumineux échoué"));
     } finally {
       setGlowLoading(false);
     }
@@ -1784,7 +1791,7 @@ export default function App() {
       formData.append("color", watermarkColor);
     } else {
       if (!watermarkLogoFile) {
-        setWatermarkError("Choisis d'abord un logo");
+        setWatermarkError(tr("Choisis d'abord un logo"));
         setWatermarkLoading(false);
         return;
       }
@@ -1804,10 +1811,10 @@ export default function App() {
       const outUrl = URL.createObjectURL(blob);
       recipeParts.current[outUrl] = watermarkType === "text"
         ? { steps: [{ op: "watermarkText", text: watermarkText, color: watermarkColor, position: watermarkPosition, opacity: watermarkOpacity, size: watermarkSize }] }
-        : { skip: "Filigrane (logo)" };
+        : { skip: tr("Filigrane (logo)") };
       setWatermarkResultUrl(outUrl);
     } catch (err) {
-      setWatermarkError(err instanceof Error ? err.message : "Filigrane échoué");
+      setWatermarkError(err instanceof Error ? err.message : tr("Filigrane échoué"));
     } finally {
       setWatermarkLoading(false);
     }
@@ -1849,7 +1856,7 @@ export default function App() {
       recipeParts.current[outUrl] = { steps: [{ op: "shadow", offsetX: shadowOffsetX, offsetY: shadowOffsetY, blur: shadowBlur, opacity: shadowOpacity, color: shadowColor, ...(shadowGradient ? { stops: shadowStops, gradient: shadowGradType === "radial" ? "radial" : "linear", angle: shadowGradAngle } : {}) }] };
       setShadowResultUrl(outUrl);
     } catch (err) {
-      setShadowError(err instanceof Error ? err.message : "Ombre portée échouée");
+      setShadowError(err instanceof Error ? err.message : tr("Ombre portée échouée"));
     } finally {
       setShadowLoading(false);
     }
@@ -1903,7 +1910,7 @@ export default function App() {
       };
       setAdjustResultUrl(outUrl);
     } catch (err) {
-      setAdjustError(err instanceof Error ? err.message : "Ajustement échoué");
+      setAdjustError(err instanceof Error ? err.message : tr("Ajustement échoué"));
     } finally {
       setAdjustLoading(false);
     }
@@ -1931,7 +1938,7 @@ export default function App() {
       }
       setBgCutout(await res.blob());
     } catch (err) {
-      setBgError(err instanceof Error ? err.message : "Suppression d'arrière-plan échouée");
+      setBgError(err instanceof Error ? err.message : tr("Suppression d'arrière-plan échouée"));
     } finally {
       setBgLoading(false);
     }
@@ -1996,10 +2003,10 @@ export default function App() {
       }
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
-      recipeParts.current[outUrl] = { skip: "Rognage" };
+      recipeParts.current[outUrl] = { skip: tr("Rognage") };
       setCropResultUrl(outUrl);
     } catch (err) {
-      setCropError(err instanceof Error ? err.message : "Recadrage échoué");
+      setCropError(err instanceof Error ? err.message : tr("Recadrage échoué"));
     } finally {
       setCropLoading(false);
     }
@@ -2046,7 +2053,7 @@ export default function App() {
       setRotateResultUrl(outUrl);
       setRotateDims({ width, height });
     } catch (err) {
-      setRotateError(err instanceof Error ? err.message : "Rotation échouée");
+      setRotateError(err instanceof Error ? err.message : tr("Rotation échouée"));
     } finally {
       setRotateLoading(false);
     }
@@ -2063,7 +2070,7 @@ export default function App() {
     <div className="app-shell">
       <button
         className="mobile-menu-btn"
-        aria-label="Ouvrir le menu"
+        aria-label={tr("Ouvrir le menu")}
         onClick={() => setSidebarOpen((v) => !v)}
       >
         ☰
@@ -2074,7 +2081,7 @@ export default function App() {
       />
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
         <h1 className="sidebar-logo">
-          <img src="/noxel_spectra_logo.svg" alt="NOXEL SPECTRA" className="sidebar-logo-img" />
+          <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA")} className="sidebar-logo-img" />
         </h1>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
@@ -2084,7 +2091,7 @@ export default function App() {
               onClick={() => goToSection(item.id)}
             >
               <NavIcon id={item.id} fallback={item.icon} />
-              {item.label}
+              {tr(item.label)}
             </button>
           ))}
         </nav>
@@ -2095,21 +2102,27 @@ export default function App() {
       {/* Barre du haut commune NOXEL (noxel-shell.css), sur le modèle de NOXEL SEO */}
       <div className="nx-page-header" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-          <h2 className="nx-page-title" style={{ margin: 0 }}>{NAV_ITEMS.find((n) => n.id === activeSection)?.label ?? "NOXEL SPECTRA"}</h2>
-          <span className="nx-page-subtitle">NOXEL SPECTRA · images</span>
+          <h2 className="nx-page-title" style={{ margin: 0 }}>{NAV_ITEMS.find((n) => n.id === activeSection)?.label ?? tr("NOXEL SPECTRA")}</h2>
+          <span className="nx-page-subtitle">{tr("NOXEL SPECTRA · images")}</span>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>Vidéo <span className="nx-pill__muted" style={{ display: "inline" }}>(test)</span></a>
-          <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> Aide</a>
-          <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>NOXEL360</a>
+          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}{" "}<span className="nx-pill__muted" style={{ display: "inline" }}>{tr("(test)")}</span></a>
+          <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> {tr("Aide")}</a>
+          <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("NOXEL360")}</a>
+          <LangPill lang={lang} onClick={() => setShowLang(true)} />
           <AccountPill />
         </div>
       </div>
+      {showLang && (
+        <Suspense fallback={null}>
+          <NexusSelector locale={lang} onChange={(l) => { setLang(l); setShowLang(false); }} onClose={() => setShowLang(false)} />
+        </Suspense>
+      )}
 
       {avisCompte && (
         <div className={`sp-banner${avisCompte.erreur ? " sp-banner--error" : ""}`} role="status">
           <span>{avisCompte.texte}</span>
-          <button type="button" aria-label="Fermer" onClick={() => setAvisCompte(null)}>✕</button>
+          <button type="button" aria-label={tr("Fermer")} onClick={() => setAvisCompte(null)}>✕</button>
         </div>
       )}
 
@@ -2143,13 +2156,13 @@ export default function App() {
         />
         <HudButton action="choose-file" compact onClick={() => mainFileInputRef.current?.click()} />
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
-          ou glisse-dépose une image ici
+          {tr("ou glisse-dépose une image ici")}
         </p>
         {file && projectId && (
           <p style={{ margin: "6px 0 0", fontSize: 13 }}>
-            Projet : <strong>{projectName}</strong>{" "}
+            {tr("Projet :")}{" "}<strong>{projectName}</strong>{" "}
             <span style={{ color: "var(--muted)" }}>
-              — image de travail : {file.name} ({formatBytes(file.size)}) — sauvegarde automatique
+              {tr("— image de travail :")}{" "}{file.name} ({formatBytes(file.size)}{tr(") — sauvegarde automatique")}
             </span>
           </p>
         )}
@@ -2167,14 +2180,14 @@ export default function App() {
       {history.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
-            <HudButton action="undo" compact disabled={historyIndex <= 0} onClick={() => goToStep(historyIndex - 1)} title="Revenir à l'étape précédente" />
-            <HudButton action="redo" compact disabled={historyIndex >= history.length - 1} onClick={() => goToStep(historyIndex + 1)} title="Rétablir l'étape suivante" />
+            <HudButton action="undo" compact disabled={historyIndex <= 0} onClick={() => goToStep(historyIndex - 1)} title={tr("Revenir à l'étape précédente")} />
+            <HudButton action="redo" compact disabled={historyIndex >= history.length - 1} onClick={() => goToStep(historyIndex + 1)} title={tr("Rétablir l'étape suivante")} />
             {history.map((h, i) => (
               <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                 {i > 0 && <span style={{ color: "var(--muted)" }}>→</span>}
                 <button
                   onClick={() => goToStep(i)}
-                  title={`${h.file.name} — ${formatBytes(h.file.size)}${h.lossy ? " — format avec perte" : ""}`}
+                  title={`${h.file.name} — ${formatBytes(h.file.size)}${h.lossy ? tr(" — format avec perte") : ""}`}
                   style={{
                     padding: "3px 10px",
                     fontSize: 12,
@@ -2186,7 +2199,7 @@ export default function App() {
                                         color: i === historyIndex ? "#3ddc84" : "#e6e6e6",
                   }}
                 >
-                  {h.label}
+                  {tr(h.label)}
                   {h.lossy && i > 0 ? " ⚠" : ""}
                 </button>
               </span>
@@ -2194,9 +2207,7 @@ export default function App() {
           </div>
           {historyIndex > 0 && history[historyIndex]?.lossy && (
             <p style={{ margin: "8px 0 0", fontSize: 12, color: "#c89b3c" }}>
-              ⚠ Cette étape est dans un format avec perte (JPG/WebP/AVIF). Chaque outil appliqué
-              ensuite recompresse l'image — pour une qualité maximale, garde la conversion finale
-              pour la dernière étape.
+              {tr("⚠ Cette étape est dans un format avec perte (JPG/WebP/AVIF). Chaque outil appliqué ensuite recompresse l'image — pour une qualité maximale, garde la conversion finale pour la dernière étape.")}
             </p>
           )}
           {chainError && <p style={{ margin: "8px 0 0", fontSize: 13, color: "red" }}>{chainError}</p>}
@@ -2225,9 +2236,9 @@ export default function App() {
         className="glass-panel glass-panel--accent"
         style={{ marginTop: 24 }}
       >
-        <h2 style={{ fontSize: 17, margin: "0 0 4px" }}>✨ Analyser (recommandation intelligente)</h2>
+        <h2 style={{ fontSize: 17, margin: "0 0 4px" }}>{tr("✨ Analyser (recommandation intelligente)")}</h2>
         <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-          Teste plusieurs formats réels et recommande le plus léger pour cette image précise.
+          {tr("Teste plusieurs formats réels et recommande le plus léger pour cette image précise.")}
         </p>
 
         <HudButton action="analyse" disabled={!file} busy={analyzeLoading} onClick={handleAnalyze} style={{ marginTop: 16 }} />
@@ -2239,8 +2250,8 @@ export default function App() {
             <div style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
               {analyzeResult.sourceFormat.toUpperCase()} — {analyzeResult.width}×{analyzeResult.height}px —{" "}
               {formatBytes(analyzeResult.originalSize)} —{" "}
-              {analyzeResult.imageType === "graphic" ? "Graphique/logo" : "Photo"}
-              {analyzeResult.hasAlpha ? " — Transparent" : ""}
+              {analyzeResult.imageType === "graphic" ? tr("Graphique/logo") : tr("Photo")}
+              {analyzeResult.hasAlpha ? tr(" — Transparent") : ""}
             </div>
 
             {analyzeResult.notes.length > 0 && (
@@ -2302,11 +2313,11 @@ export default function App() {
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
       <div ref={convertSectionRef}>
-        <h2 style={{ fontSize: 18, marginBottom: 4 }}>Convertir</h2>
+        <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Convertir")}</h2>
 
         <div style={{ marginTop: 16 }}>
           <label>
-            Format :{" "}
+            {tr("Format :")}{" "}
             <select
               value={format}
               onChange={(e) => {
@@ -2329,7 +2340,7 @@ export default function App() {
               checked={mode === "quality"}
               onChange={() => setMode("quality")}
             />
-            Qualité manuelle
+            {tr("Qualité manuelle")}
           </label>
           <label
             style={{
@@ -2338,7 +2349,7 @@ export default function App() {
               gap: 4,
               opacity: targetSizeAvailable ? 1 : 0.4,
             }}
-            title={targetSizeAvailable ? "" : "Pas disponible pour PNG/GIF"}
+            title={targetSizeAvailable ? "" : tr("Pas disponible pour PNG/GIF")}
           >
             <input
               type="radio"
@@ -2346,14 +2357,14 @@ export default function App() {
               disabled={!targetSizeAvailable}
               onChange={() => setMode("targetSize")}
             />
-            Taille cible
+            {tr("Taille cible")}
           </label>
         </div>
 
         {mode === "quality" && (
           <div style={{ marginTop: 12 }}>
             <label>
-              Qualité : <NumberInput label="Qualité" value={quality} onChange={setQuality} min={1} max={100} />
+              {tr("Qualité :")}{" "}<NumberInput label={tr("Qualité")} value={quality} onChange={setQuality} min={1} max={100} />
               <input
                 type="range"
                 min={1}
@@ -2369,7 +2380,7 @@ export default function App() {
         {mode === "targetSize" && targetSizeAvailable && (
           <div style={{ marginTop: 12 }}>
             <label>
-              Poids max (Ko) :{" "}
+              {tr("Poids max (Ko) :")}{" "}
               <input
                 type="number"
                 min={1}
@@ -2379,7 +2390,7 @@ export default function App() {
               />
             </label>
             <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
-              La qualité sera ajustée automatiquement pour rester sous cette limite.
+              {tr("La qualité sera ajustée automatiquement pour rester sous cette limite.")}
             </div>
           </div>
         )}
@@ -2398,20 +2409,20 @@ export default function App() {
               fontSize: 14,
             }}
           >
-            <div>Avant : {formatBytes(stats.originalSize)}</div>
-            <div>Après : {formatBytes(stats.outputSize)}</div>
+            <div>{tr("Avant :")}{" "}{formatBytes(stats.originalSize)}</div>
+            <div>{tr("Après :")}{" "}{formatBytes(stats.outputSize)}</div>
             <div style={{ fontWeight: 600, color: stats.reductionPct >= 0 ? "#2a8a4a" : "#c0392b" }}>
               {stats.reductionPct >= 0
-                ? `Réduction de ${stats.reductionPct}%`
-                : `Augmentation de ${Math.abs(stats.reductionPct)}%`}
+                ? tr("Réduction de {a}%", { a: stats.reductionPct })
+                : tr("Augmentation de {a}%", { a: Math.abs(stats.reductionPct) })}
             </div>
             {mode === "targetSize" && (
               <div style={{ marginTop: 4, color: "#888" }}>
-                Qualité utilisée : {stats.qualityUsed}
+                {tr("Qualité utilisée :")}{" "}{stats.qualityUsed}
                 {!stats.metTarget && (
                   <span style={{ color: "#c0392b" }}>
                     {" "}
-                    — impossible de descendre sous la limite demandée, taille minimale atteinte
+                    {tr("— impossible de descendre sous la limite demandée, taille minimale atteinte")}
                   </span>
                 )}
               </div>
@@ -2424,7 +2435,7 @@ export default function App() {
             {originalPreviewUrl ? (
               <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={resultUrl} />
             ) : (
-              <img src={resultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+              <img src={resultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", borderRadius: 8 }} />
             )}
             <div style={{ marginTop: 8 }}>
               <HudLink action="download-result" compact href={resultUrl} download={`converted.${format}`} />
@@ -2442,14 +2453,14 @@ export default function App() {
       <div ref={resizeSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Redimensionner</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Redimensionner")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Change les dimensions de l'image sélectionnée ci-dessus.
+        {tr("Change les dimensions de l'image sélectionnée ci-dessus.")}
       </p>
 
       <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
         <label>
-          Largeur (px) :{" "}
+          {tr("Largeur (px) :")}{" "}
           <input
             type="number"
             min={1}
@@ -2460,7 +2471,7 @@ export default function App() {
           />
         </label>
         <label>
-          Hauteur (px) :{" "}
+          {tr("Hauteur (px) :")}{" "}
           <input
             type="number"
             min={1}
@@ -2479,18 +2490,18 @@ export default function App() {
             checked={maintainAspect}
             onChange={(e) => setMaintainAspect(e.target.checked)}
           />
-          Conserver le ratio (sinon étire exactement à ces dimensions)
+          {tr("Conserver le ratio (sinon étire exactement à ces dimensions)")}
         </label>
       </div>
 
       <div style={{ marginTop: 12 }}>
         <label>
-          Format de sortie :{" "}
+          {tr("Format de sortie :")}{" "}
           <select
             value={resizeFormat}
             onChange={(e) => setResizeFormat(e.target.value as "original" | Format)}
           >
-            <option value="original">Garder l'original</option>
+            <option value="original">{tr("Garder l'original")}</option>
             {FORMATS.map((f) => (
               <option key={f} value={f}>{f.toUpperCase()}</option>
             ))}
@@ -2513,10 +2524,10 @@ export default function App() {
           }}
         >
           <div>
-            Avant : {resizeStats.originalWidth}×{resizeStats.originalHeight}px ({formatBytes(resizeStats.originalSize)})
+            {tr("Avant :")}{" "}{resizeStats.originalWidth}×{resizeStats.originalHeight}px ({formatBytes(resizeStats.originalSize)})
           </div>
           <div>
-            Après : {resizeStats.outputWidth}×{resizeStats.outputHeight}px ({formatBytes(resizeStats.outputSize)})
+            {tr("Après :")}{" "}{resizeStats.outputWidth}×{resizeStats.outputHeight}px ({formatBytes(resizeStats.outputSize)})
           </div>
         </div>
       )}
@@ -2526,11 +2537,11 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={resizeResultUrl} />
           ) : (
-            <img src={resizeResultUrl} alt="Résultat redimensionné" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={resizeResultUrl} alt={tr("Résultat redimensionné")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={resizeResultUrl} download="resized" />
-            {renderContinueButton(resizeResultUrl, "Redimension")}
+            {renderContinueButton(resizeResultUrl, tr("Redimension"))}
           </div>
         </div>
       )}
@@ -2543,16 +2554,16 @@ export default function App() {
       <div ref={cropSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rogner</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Rogner")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Ajuste la zone ci-dessous — l'aperçu montre exactement ce qui sera gardé.
+        {tr("Ajuste la zone ci-dessous — l'aperçu montre exactement ce qui sera gardé.")}
       </p>
 
       {originalPreviewUrl && (
         <div style={{ marginTop: 12, position: "relative", display: "inline-block", maxWidth: "100%", overflow: "hidden", borderRadius: 8 }}>
           <img
             src={originalPreviewUrl}
-            alt="Aperçu de rognage"
+            alt={tr("Aperçu de rognage")}
             onLoad={handleCropImageLoad}
             style={{ display: "block", maxWidth: "100%", height: "auto", borderRadius: 8 }}
           />
@@ -2598,7 +2609,7 @@ export default function App() {
           />
         </label>
         <label>
-          Largeur :{" "}
+          {tr("Largeur :")}{" "}
           <input
             type="number"
             min={1}
@@ -2609,7 +2620,7 @@ export default function App() {
           />
         </label>
         <label>
-          Hauteur :{" "}
+          {tr("Hauteur :")}{" "}
           <input
             type="number"
             min={1}
@@ -2633,11 +2644,11 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={cropResultUrl} />
           ) : (
-            <img src={cropResultUrl} alt="Résultat rogné" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={cropResultUrl} alt={tr("Résultat rogné")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={cropResultUrl} download="cropped" />
-            {renderContinueButton(cropResultUrl, "Rognage")}
+            {renderContinueButton(cropResultUrl, tr("Rognage"))}
           </div>
         </div>
       )}
@@ -2650,25 +2661,23 @@ export default function App() {
       <div ref={bgSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Supprimer l'arrière-plan</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Supprimer l'arrière-plan")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Détoure automatiquement le sujet principal (personne, produit, objet, logo) grâce à
-        une IA. Fonctionne le mieux quand le sujet se détache bien du fond ; un fond de
-        couleur proche du sujet peut laisser un léger halo. Le traitement prend quelques secondes.
+        {tr("Détoure automatiquement le sujet principal (personne, produit, objet, logo) grâce à une IA. Fonctionne le mieux quand le sujet se détache bien du fond ; un fond de couleur proche du sujet peut laisser un léger halo. Le traitement prend quelques secondes.")}
       </p>
 
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="radio" checked={bgMode === "transparent"} onChange={() => setBgMode("transparent")} />
-          Fond transparent
+          {tr("Fond transparent")}
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="radio" checked={bgMode === "white"} onChange={() => setBgMode("white")} />
-          Fond blanc
+          {tr("Fond blanc")}
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="radio" checked={bgMode === "color"} onChange={() => setBgMode("color")} />
-          Couleur
+          {tr("Couleur")}
           <input
             type="color"
             value={bgColor}
@@ -2681,18 +2690,18 @@ export default function App() {
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input type="checkbox" checked={bgTrim} onChange={(e) => setBgTrim(e.target.checked)} />
-          Recadrer au sujet (retire les bords vides)
+          {tr("Recadrer au sujet (retire les bords vides)")}
         </label>
         <label>
-          Format :{" "}
+          {tr("Format :")}{" "}
           <select value={bgFormat} onChange={(e) => setBgFormat(e.target.value as "png" | "webp")}>
-            <option value="png">PNG (sans perte)</option>
-            <option value="webp">WebP (plus léger)</option>
+            <option value="png">{tr("PNG (sans perte)")}</option>
+            <option value="webp">{tr("WebP (plus léger)")}</option>
           </select>
         </label>
       </div>
 
-      <HudButton action="remove-background" disabled={!file} busy={bgLoading} busyLabel="Détourage en cours… (quelques secondes)" onClick={handleRemoveBackground} style={{ marginTop: 16 }} />
+      <HudButton action="remove-background" disabled={!file} busy={bgLoading} busyLabel={tr("Détourage en cours… (quelques secondes)")} onClick={handleRemoveBackground} style={{ marginTop: 16 }} />
 
       {bgError && <p style={{ color: "red", marginTop: 16 }}>{bgError}</p>}
 
@@ -2711,11 +2720,9 @@ export default function App() {
         <div style={{ marginTop: 10 }}>
           <span style={{ fontSize: 13, color: "#888", marginRight: 12 }}>{formatBytes(bgStats.size)}</span>
           <HudLink action="download-result" compact href={bgResultUrl} download={`sans-fond.${bgStats.ext}`} />
-          {renderContinueButton(bgResultUrl, "Arrière-plan")}
+          {renderContinueButton(bgResultUrl, tr("Arrière-plan"))}
           <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>
-            Le fond, le recadrage et le format se changent sans relancer le détourage. Les retouches au
-            pinceau s'appliquent à cette image seulement : dans une recette, l'étape refait le détourage
-            automatique.
+            {tr("Le fond, le recadrage et le format se changent sans relancer le détourage. Les retouches au pinceau s'appliquent à cette image seulement : dans une recette, l'étape refait le détourage automatique.")}
           </p>
         </div>
       )}
@@ -2728,9 +2735,9 @@ export default function App() {
       <div ref={rotateSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Rotation / Miroir</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Rotation / Miroir")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Tourne ou retourne l'image sélectionnée ci-dessus.
+        {tr("Tourne ou retourne l'image sélectionnée ci-dessus.")}
       </p>
 
       <div style={{ marginTop: 12 }}>
@@ -2759,7 +2766,7 @@ export default function App() {
             checked={flipHorizontal}
             onChange={(e) => setFlipHorizontal(e.target.checked)}
           />
-          Miroir horizontal
+          {tr("Miroir horizontal")}
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
@@ -2767,7 +2774,7 @@ export default function App() {
             checked={flipVertical}
             onChange={(e) => setFlipVertical(e.target.checked)}
           />
-          Miroir vertical
+          {tr("Miroir vertical")}
         </label>
       </div>
 
@@ -2780,7 +2787,7 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={rotateResultUrl} />
           ) : (
-            <img src={rotateResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={rotateResultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           {rotateDims && (
             <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
@@ -2789,7 +2796,7 @@ export default function App() {
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={rotateResultUrl} download="rotated" />
-            {renderContinueButton(rotateResultUrl, "Rotation")}
+            {renderContinueButton(rotateResultUrl, tr("Rotation"))}
           </div>
         </div>
       )}
@@ -2802,14 +2809,14 @@ export default function App() {
       <div ref={adjustSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Filtres / Réglages</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Filtres / Réglages")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Ajuste la luminosité, le contraste, la saturation, la netteté ou applique un effet.
+        {tr("Ajuste la luminosité, le contraste, la saturation, la netteté ou applique un effet.")}
       </p>
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Luminosité : <NumberInput label="Luminosité" value={brightness} onChange={(v) => { setBrightness(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
+          {tr("Luminosité :")}{" "}<NumberInput label={tr("Luminosité")} value={brightness} onChange={(v) => { setBrightness(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
           <input
             type="range"
             min={0.3}
@@ -2821,7 +2828,7 @@ export default function App() {
           />
         </label>
         <label>
-          Contraste : <NumberInput label="Contraste" value={contrast} onChange={(v) => { setContrast(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
+          {tr("Contraste :")}{" "}<NumberInput label={tr("Contraste")} value={contrast} onChange={(v) => { setContrast(v); setFiltersTouched(true); }} min={0.3} max={2} step={0.05} />
           <input
             type="range"
             min={0.3}
@@ -2833,7 +2840,7 @@ export default function App() {
           />
         </label>
         <label>
-          Saturation : <NumberInput label="Saturation" value={saturation} onChange={(v) => { setSaturation(v); setFiltersTouched(true); }} min={0} max={2} step={0.05} />
+          {tr("Saturation :")}{" "}<NumberInput label={tr("Saturation")} value={saturation} onChange={(v) => { setSaturation(v); setFiltersTouched(true); }} min={0} max={2} step={0.05} />
           <input
             type="range"
             min={0}
@@ -2845,7 +2852,7 @@ export default function App() {
           />
         </label>
         <label>
-          Netteté : <NumberInput label="Netteté" value={sharpenAmount} onChange={(v) => { setSharpenAmount(v); setFiltersTouched(true); }} min={0} max={10} step={0.5} />
+          {tr("Netteté :")}{" "}<NumberInput label={tr("Netteté")} value={sharpenAmount} onChange={(v) => { setSharpenAmount(v); setFiltersTouched(true); }} min={0} max={10} step={0.5} />
           <input
             type="range"
             min={0}
@@ -2857,7 +2864,7 @@ export default function App() {
           />
         </label>
         <label>
-          Flou : <NumberInput label="Flou" value={blurAmount} onChange={(v) => { setBlurAmount(v); setFiltersTouched(true); }} min={0} max={20} step={0.5} />
+          {tr("Flou :")}{" "}<NumberInput label={tr("Flou")} value={blurAmount} onChange={(v) => { setBlurAmount(v); setFiltersTouched(true); }} min={0} max={20} step={0.5} />
           <input
             type="range"
             min={0}
@@ -2869,7 +2876,7 @@ export default function App() {
           />
         </label>
         <label>
-          Pixeliser : <NumberInput label="Pixeliser" value={pixelateSize} onChange={(v) => { setPixelateSize(v); setFiltersTouched(true); }} min={0} max={50} />{pixelateSize === 0 && " (désactivé)"}
+          {tr("Pixeliser :")}{" "}<NumberInput label={tr("Pixeliser")} value={pixelateSize} onChange={(v) => { setPixelateSize(v); setFiltersTouched(true); }} min={0} max={50} />{pixelateSize === 0 && tr(" (désactivé)")}
           <input
             type="range"
             min={0}
@@ -2881,7 +2888,7 @@ export default function App() {
           />
         </label>
         <label>
-          Vignette : <NumberInput label="Vignette" value={vignetteIntensity} onChange={(v) => { setVignetteIntensity(v); setFiltersTouched(true); }} min={0} max={100} unit="%" />{vignetteIntensity === 0 && " (désactivée)"}
+          {tr("Vignette :")}{" "}<NumberInput label={tr("Vignette")} value={vignetteIntensity} onChange={(v) => { setVignetteIntensity(v); setFiltersTouched(true); }} min={0} max={100} unit="%" />{vignetteIntensity === 0 && tr(" (désactivée)")}
           <input
             type="range"
             min={0}
@@ -2893,19 +2900,19 @@ export default function App() {
           />
         </label>
         <label>
-          Réduction du bruit :{" "}
+          {tr("Réduction du bruit :")}{" "}
           <select
             value={reduceNoise}
             onChange={(e) => { setReduceNoise(Number(e.target.value)); setFiltersTouched(true); }}
           >
-            <option value={0}>Désactivée</option>
-            <option value={3}>Légère</option>
-            <option value={5}>Moyenne</option>
-            <option value={7}>Forte</option>
+            <option value={0}>{tr("Désactivée")}</option>
+            <option value={3}>{tr("Légère")}</option>
+            <option value={5}>{tr("Moyenne")}</option>
+            <option value={7}>{tr("Forte")}</option>
           </select>
         </label>
         <label>
-          Quantize (nb de couleurs) : <NumberInput label="Nombre de couleurs (quantize)" value={quantizeColors} onChange={(v) => { setQuantizeColors(v); setFiltersTouched(true); }} min={0} max={256} />{quantizeColors === 0 && " (désactivé)"}
+          {tr("Quantize (nb de couleurs) :")}{" "}<NumberInput label={tr("Nombre de couleurs (quantize)")} value={quantizeColors} onChange={(v) => { setQuantizeColors(v); setFiltersTouched(true); }} min={0} max={256} />{quantizeColors === 0 && tr(" (désactivé)")}
           <input
             type="range"
             min={0}
@@ -2916,18 +2923,18 @@ export default function App() {
             style={{ marginLeft: 8, verticalAlign: "middle", width: "100%" }}
           />
           <div style={{ fontSize: 12, color: "#888" }}>
-            Fonctionne uniquement quand le format de sortie est PNG.
+            {tr("Fonctionne uniquement quand le format de sortie est PNG.")}
           </div>
         </label>
       </div>
 
       <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
         <label>
-          Effet :{" "}
+          {tr("Effet :")}{" "}
           <select value={effect} onChange={(e) => { setEffect(e.target.value as "none" | "grayscale" | "sepia"); setFiltersTouched(true); }}>
-            <option value="none">Aucun</option>
-            <option value="grayscale">Niveaux de gris</option>
-            <option value="sepia">Sépia</option>
+            <option value="none">{tr("Aucun")}</option>
+            <option value="grayscale">{tr("Niveaux de gris")}</option>
+            <option value="sepia">{tr("Sépia")}</option>
           </select>
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -2936,7 +2943,7 @@ export default function App() {
             checked={invertColors}
             onChange={(e) => { setInvertColors(e.target.checked); setFiltersTouched(true); }}
           />
-          Inverser les couleurs
+          {tr("Inverser les couleurs")}
         </label>
       </div>
 
@@ -2949,11 +2956,11 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={adjustResultUrl} />
           ) : (
-            <img src={adjustResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={adjustResultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={adjustResultUrl} download="adjusted" />
-            {renderContinueButton(adjustResultUrl, "Réglages")}
+            {renderContinueButton(adjustResultUrl, tr("Réglages"))}
           </div>
         </div>
       )}
@@ -2966,15 +2973,14 @@ export default function App() {
       <div ref={responsiveSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Générer des tailles responsives (srcset)</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Générer des tailles responsives (srcset)")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Produit plusieurs largeurs (320 à 1920px, jamais agrandies au-delà de l'original) et
-        un <code>srcset</code> prêt à coller dans ton HTML.
+        {tr("Produit plusieurs largeurs (320 à 1920px, jamais agrandies au-delà de l'original) et un")}{" "}<code>{tr("srcset")}</code> {tr("prêt à coller dans ton HTML.")}
       </p>
 
       <div style={{ marginTop: 12, display: "flex", gap: 16, alignItems: "center" }}>
         <label>
-          Format :{" "}
+          {tr("Format :")}{" "}
           <select
             value={responsiveFormat}
             onChange={(e) => setResponsiveFormat(e.target.value as Format)}
@@ -2985,7 +2991,7 @@ export default function App() {
           </select>
         </label>
         <label>
-          Qualité : <NumberInput label="Qualité des tailles responsives" value={responsiveQuality} onChange={setResponsiveQuality} min={1} max={100} />
+          {tr("Qualité :")}{" "}<NumberInput label={tr("Qualité des tailles responsives")} value={responsiveQuality} onChange={setResponsiveQuality} min={1} max={100} />
           <input
             type="range"
             min={1}
@@ -3003,7 +3009,7 @@ export default function App() {
 
       {responsiveSizes && (
         <div style={{ marginTop: 16, fontSize: 13, color: "#888" }}>
-          Tailles générées : {responsiveSizes.split(",").join("px, ")}px
+          {tr("Tailles générées :")}{" "}{responsiveSizes.split(",").join("px, ")}px
         </div>
       )}
 
@@ -3023,7 +3029,7 @@ export default function App() {
           >
             {responsiveSrcset}
           </div>
-          <HudButton action="copy-srcset" compact label={srcsetCopied ? "Copié !" : undefined} onClick={copySrcset} style={{ marginTop: 8 }} />
+          <HudButton action="copy-srcset" compact label={srcsetCopied ? tr("Copié !") : undefined} onClick={copySrcset} style={{ marginTop: 8 }} />
         </div>
       )}
 
@@ -3041,14 +3047,14 @@ export default function App() {
       <div ref={paletteSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Palette de couleurs</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Palette de couleurs")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Extrait les couleurs dominantes de l'image sélectionnée ci-dessus.
+        {tr("Extrait les couleurs dominantes de l'image sélectionnée ci-dessus.")}
       </p>
 
       <div style={{ marginTop: 12 }}>
         <label>
-          Nombre de couleurs : <NumberInput label="Nombre de couleurs de la palette" value={paletteCount} onChange={setPaletteCount} min={3} max={10} />
+          {tr("Nombre de couleurs :")}{" "}<NumberInput label={tr("Nombre de couleurs de la palette")} value={paletteCount} onChange={setPaletteCount} min={3} max={10} />
           <input
             type="range"
             min={3}
@@ -3104,7 +3110,7 @@ export default function App() {
                     display: "inline-block",
                   }}
                 />
-                {copiedHex === c.hex ? "Copié !" : c.hex}
+                {copiedHex === c.hex ? tr("Copié !") : c.hex}
                 <span style={{ color: "#aaa" }}>{c.percent}%</span>
               </button>
             ))}
@@ -3120,15 +3126,14 @@ export default function App() {
       <div ref={vectorizeSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Vectoriser (PNG/WebP → SVG)</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Vectoriser (PNG/WebP → SVG)")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Trace l'image en SVG multi-couleurs. Fonctionne mieux sur des logos simples
-        que sur des photos complexes.
+        {tr("Trace l'image en SVG multi-couleurs. Fonctionne mieux sur des logos simples que sur des photos complexes.")}
       </p>
 
       <div style={{ marginTop: 12 }}>
         <label>
-          Nombre de couleurs : <NumberInput label="Nombre de couleurs à vectoriser" value={vectorizeColors} onChange={(v) => { setVectorizeColors(v); setDetectedColors(null); setEditedColors([]); }} min={2} max={16} />
+          {tr("Nombre de couleurs :")}{" "}<NumberInput label={tr("Nombre de couleurs à vectoriser")} value={vectorizeColors} onChange={(v) => { setVectorizeColors(v); setDetectedColors(null); setEditedColors([]); }} min={2} max={16} />
           <input
             type="range"
             min={2}
@@ -3147,7 +3152,7 @@ export default function App() {
       <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
         <HudButton action="detect-colors" compact disabled={!file} busy={detectLoading} onClick={handleDetectColors} />
 
-        <HudButton action="vectorize" disabled={!file} busy={vectorizeLoading} busyLabel="Vectorisation… (peut prendre un moment)" onClick={handleVectorize} style={{ marginTop: 16 }} />
+        <HudButton action="vectorize" disabled={!file} busy={vectorizeLoading} busyLabel={tr("Vectorisation… (peut prendre un moment)")} onClick={handleVectorize} style={{ marginTop: 16 }} />
       </div>
 
       {detectError && <p style={{ color: "red", marginTop: 16 }}>{detectError}</p>}
@@ -3155,7 +3160,7 @@ export default function App() {
       {detectedColors && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>
-            Ajuste au besoin avant de vectoriser — chaque couleur sera utilisée telle quelle.
+            {tr("Ajuste au besoin avant de vectoriser — chaque couleur sera utilisée telle quelle.")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {editedColors.map((hex, i) => (
@@ -3174,7 +3179,7 @@ export default function App() {
                 />
                 {detectedColors[i] !== hex && (
                   <span style={{ fontSize: 12, color: "#888" }}>
-                    (détecté : {detectedColors[i]})
+                    {tr("(détecté :")}{" "}{detectedColors[i]})
                   </span>
                 )}
               </div>
@@ -3202,12 +3207,12 @@ export default function App() {
             />
           )}
           <div style={{ marginTop: 8, fontSize: 13, color: "#888" }}>
-            {vectorizeMeta.width}×{vectorizeMeta.height}px — {vectorizeMeta.colorsUsed} couleur(s) utilisée(s)
+            {vectorizeMeta.width}×{vectorizeMeta.height}px — {vectorizeMeta.colorsUsed} {tr("couleur(s) utilisée(s)")}
           </div>
 
           <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8 }}>
             <label style={{ fontSize: 13 }}>
-              Nom du fichier :{" "}
+              {tr("Nom du fichier :")}{" "}
               <input
                 type="text"
                 value={vectorizeFilename}
@@ -3215,7 +3220,7 @@ export default function App() {
                 placeholder="vectorized"
                 style={{ width: 160 }}
               />
-              .svg
+              {tr(".svg")}
             </label>
           </div>
 
@@ -3233,11 +3238,9 @@ export default function App() {
       <div ref={faviconSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Générer les favicons</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Générer les favicons")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Génère un pack complet à partir de l'image sélectionnée ci-dessus : favicon.ico,
-        favicon-16x16.png, favicon-32x32.png, favicon-48x48.png, apple-touch-icon.png,
-        favicon-192x192.png et favicon-512x512.png.
+        {tr("Génère un pack complet à partir de l'image sélectionnée ci-dessus : favicon.ico, favicon-16x16.png, favicon-32x32.png, favicon-48x48.png, apple-touch-icon.png, favicon-192x192.png et favicon-512x512.png.")}
       </p>
 
       <HudButton action="generate-favicons" disabled={!file} busy={faviconLoading} onClick={handleGenerateFavicons} style={{ marginTop: 16 }} />
@@ -3258,10 +3261,9 @@ export default function App() {
       <div ref={metaCleanSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Nettoyer les métadonnées</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Nettoyer les métadonnées")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Retire les données EXIF/GPS/ICC embarquées (utile pour la vie privée) sans changer
-        le format ni visiblement la qualité.
+        {tr("Retire les données EXIF/GPS/ICC embarquées (utile pour la vie privée) sans changer le format ni visiblement la qualité.")}
       </p>
 
       <HudButton action="clean-metadata" disabled={!file} busy={metaCleanLoading} onClick={handleStripMetadata} style={{ marginTop: 16 }} />
@@ -3278,34 +3280,29 @@ export default function App() {
             fontSize: 14,
           }}
         >
-          <div>Avant : {formatBytes(metaCleanStats.originalSize)}</div>
-          <div>Après : {formatBytes(metaCleanStats.outputSize)}</div>
+          <div>{tr("Avant :")}{" "}{formatBytes(metaCleanStats.originalSize)}</div>
+          <div>{tr("Après :")}{" "}{formatBytes(metaCleanStats.outputSize)}</div>
           {metaCleanStats.grewLarger ? (
             <div style={{ marginTop: 6, color: "#c89b3c" }}>
-              Tes métadonnées (EXIF/GPS/ICC) ont bien été retirées.{" "}
+              {tr("Tes métadonnées (EXIF/GPS/ICC) ont bien été retirées.")}{" "}
               {metaCleanStats.format === "png" ? (
                 <>
-                  Ce fichier est légèrement plus lourd parce qu'un réencodage sans perte d'un
-                  PNG déjà très compact peut faire ça. Pour un vrai gain de poids sur une photo,
-                  utilise plutôt <strong>Convertir</strong> (WebP ou AVIF) en plus de ce nettoyage.
+                  {tr("Ce fichier est légèrement plus lourd parce qu'un réencodage sans perte d'un PNG déjà très compact peut faire ça. Pour un vrai gain de poids sur une photo, utilise plutôt")}{" "}<strong>{tr("Convertir")}</strong> {tr("(WebP ou AVIF) en plus de ce nettoyage.")}
                 </>
               ) : (
                 <>
-                  Ce fichier {metaCleanStats.format.toUpperCase()} était déjà très compressé :
-                  même en baissant la qualité, le réencodage n'a pas pu repasser sous son poids
-                  d'origine. Astuce : chaque outil de NOXEL SPECTRA retire déjà les métadonnées,
-                  ce nettoyage est inutile après une conversion.
+                  {tr("Ce fichier")}{" "}{metaCleanStats.format.toUpperCase()} {tr("était déjà très compressé : même en baissant la qualité, le réencodage n'a pas pu repasser sous son poids d'origine. Astuce : chaque outil de NOXEL SPECTRA retire déjà les métadonnées, ce nettoyage est inutile après une conversion.")}
                 </>
               )}
               {metaCleanStats.bytesRemoved > 0 && (
-                <> ({formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées)</>
+                <> ({formatBytes(metaCleanStats.bytesRemoved)} {tr("de métadonnées retirées)")}</>
               )}
             </div>
           ) : (
             <div style={{ fontWeight: 600, color: "#2a8a4a" }}>
               {metaCleanStats.bytesRemoved > 0
-                ? `${formatBytes(metaCleanStats.bytesRemoved)} de métadonnées retirées`
-                : "Aucune métadonnée trouvée dans le fichier"}
+                ? tr("{a} de métadonnées retirées", { a: formatBytes(metaCleanStats.bytesRemoved) })
+                : tr("Aucune métadonnée trouvée dans le fichier")}
             </div>
           )}
         </div>
@@ -3314,7 +3311,7 @@ export default function App() {
       {metaCleanResultUrl && (
         <div style={{ marginTop: 16 }}>
           <HudLink action="download-clean" compact href={metaCleanResultUrl} download="cleaned" />
-            {renderContinueButton(metaCleanResultUrl, "Métadonnées")}
+            {renderContinueButton(metaCleanResultUrl, tr("Métadonnées"))}
         </div>
       )}
 
@@ -3326,14 +3323,14 @@ export default function App() {
       <div ref={shadowSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Ombre portée</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Ombre portée")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Fonctionne mieux sur une image avec transparence (logo, icône vectorisée).
+        {tr("Fonctionne mieux sur une image avec transparence (logo, icône vectorisée).")}
       </p>
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Décalage X : <NumberInput label="Décalage X" value={shadowOffsetX} onChange={setShadowOffsetX} min={-500} max={500} unit="px" />
+          {tr("Décalage X :")}{" "}<NumberInput label={tr("Décalage X")} value={shadowOffsetX} onChange={setShadowOffsetX} min={-500} max={500} unit="px" />
           <input
             type="range"
             min={-50}
@@ -3344,7 +3341,7 @@ export default function App() {
           />
         </label>
         <label>
-          Décalage Y : <NumberInput label="Décalage Y" value={shadowOffsetY} onChange={setShadowOffsetY} min={-500} max={500} unit="px" />
+          {tr("Décalage Y :")}{" "}<NumberInput label={tr("Décalage Y")} value={shadowOffsetY} onChange={setShadowOffsetY} min={-500} max={500} unit="px" />
           <input
             type="range"
             min={-50}
@@ -3355,7 +3352,7 @@ export default function App() {
           />
         </label>
         <label>
-          Flou : <NumberInput label="Flou" value={shadowBlur} onChange={setShadowBlur} min={0} max={100} />
+          {tr("Flou :")}{" "}<NumberInput label={tr("Flou")} value={shadowBlur} onChange={setShadowBlur} min={0} max={100} />
           <input
             type="range"
             min={0}
@@ -3366,7 +3363,7 @@ export default function App() {
           />
         </label>
         <label>
-          Opacité : <NumberInput label="Opacité de l'ombre" value={shadowOpacity} onChange={setShadowOpacity} min={0} max={100} unit="%" />
+          {tr("Opacité :")}{" "}<NumberInput label={tr("Opacité de l'ombre")} value={shadowOpacity} onChange={setShadowOpacity} min={0} max={100} unit="%" />
           <input
             type="range"
             min={0}
@@ -3379,25 +3376,25 @@ export default function App() {
       </div>
 
       <div className="shadow-colors">
-        <div className="shadow-colors__modes" role="radiogroup" aria-label="Couleur de l'ombre">
-          <label><input type="radio" checked={!shadowGradient} onChange={() => setShadowGradient(false)} /> Couleur unie</label>
-          <label><input type="radio" checked={shadowGradient} onChange={() => setShadowGradient(true)} /> Dégradé</label>
+        <div className="shadow-colors__modes" role="radiogroup" aria-label={tr("Couleur de l'ombre")}>
+          <label><input type="radio" checked={!shadowGradient} onChange={() => setShadowGradient(false)} /> {tr("Couleur unie")}</label>
+          <label><input type="radio" checked={shadowGradient} onChange={() => setShadowGradient(true)} /> {tr("Dégradé")}</label>
         </div>
         {shadowGradient ? (
           <>
             <div className="shadow-colors__row">
               <label>
-                Type :
+                {tr("Type :")}
                 <select value={shadowGradType} onChange={(e) => setShadowGradType(e.target.value as typeof shadowGradType)}>
-                  <option value="horizontal">Linéaire horizontal (gauche → droite)</option>
-                  <option value="vertical">Linéaire vertical (haut → bas)</option>
-                  <option value="angle">Linéaire, angle libre</option>
-                  <option value="radial">Radial (du centre vers l'extérieur)</option>
+                  <option value="horizontal">{tr("Linéaire horizontal (gauche → droite)")}</option>
+                  <option value="vertical">{tr("Linéaire vertical (haut → bas)")}</option>
+                  <option value="angle">{tr("Linéaire, angle libre")}</option>
+                  <option value="radial">{tr("Radial (du centre vers l'extérieur)")}</option>
                 </select>
               </label>
               {shadowGradType === "angle" && (
                 <label>
-                  Angle : <NumberInput label="Angle du dégradé" value={shadowAngle} onChange={setShadowAngle} min={0} max={360} unit="°" />
+                  {tr("Angle :")}{" "}<NumberInput label={tr("Angle du dégradé")} value={shadowAngle} onChange={setShadowAngle} min={0} max={360} unit="°" />
                   <input type="range" min={0} max={360} step={5} value={shadowAngle} onChange={(e) => setShadowAngle(Number(e.target.value))} />
                 </label>
               )}
@@ -3407,17 +3404,17 @@ export default function App() {
         ) : (
           <div className="shadow-colors__row">
             <label>
-              Couleur
+              {tr("Couleur")}
               <input type="color" value={shadowColor} onChange={(e) => setShadowColor(e.target.value)} />
             </label>
           </div>
         )}
         <div className="shadow-colors__swatches">
-          {[["#000000", "Noir"], ["#ffffff", "Blanc"], ["#3ddc84", "Vert NOXEL"], ["#A855F7", "Violet NOXEL"]].map(([c, name]) => (
+          {[["#000000", tr("Noir")], ["#ffffff", tr("Blanc")], ["#3ddc84", tr("Vert NOXEL")], ["#A855F7", tr("Violet NOXEL")]].map(([c, name]) => (
             <button key={c} type="button" className="shadow-swatch" title={name} aria-label={`Ombre ${name.toLowerCase()}`} style={{ background: c }}
               onClick={() => { setShadowGradient(false); setShadowColor(c); }} />
           ))}
-          <button type="button" className="shadow-swatch shadow-swatch--gradient" title="Dégradé vert → violet" aria-label="Ombre en dégradé vert vers violet"
+          <button type="button" className="shadow-swatch shadow-swatch--gradient" title={tr("Dégradé vert → violet")} aria-label={tr("Ombre en dégradé vert vers violet")}
             onClick={() => { setShadowGradient(true); setShadowStops([{ at: 0, color: "#3ddc84" }, { at: 1, color: "#A855F7" }]); }} />
         </div>
       </div>
@@ -3428,9 +3425,9 @@ export default function App() {
 
       {shadowResultUrl && (
         <div style={{ marginTop: 20 }}>
-          <div className="shadow-preview-bg" role="radiogroup" aria-label="Fond de l'aperçu">
-            Fond de l'aperçu :
-            {([["checker", "Damier"], ["dark", "Noir"], ["light", "Blanc"]] as const).map(([id, name]) => (
+          <div className="shadow-preview-bg" role="radiogroup" aria-label={tr("Fond de l'aperçu")}>
+            {tr("Fond de l'aperçu :")}
+            {([["checker", tr("Damier")], ["dark", tr("Noir")], ["light", tr("Blanc")]] as const).map(([id, name]) => (
               <label key={id}><input type="radio" checked={shadowPreviewBg === id} onChange={() => setShadowPreviewBg(id)} /> {name}</label>
             ))}
           </div>
@@ -3445,11 +3442,11 @@ export default function App() {
                 : "repeating-conic-gradient(#eee 0% 25%, #fff 0% 50%) 50% / 20px 20px",
             }}
           >
-            <img src={shadowResultUrl} alt="Résultat" style={{ maxWidth: "100%", display: "block" }} />
+            <img src={shadowResultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", display: "block" }} />
           </div>
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={shadowResultUrl} download="drop-shadow.png" />
-            {renderContinueButton(shadowResultUrl, "Ombre")}
+            {renderContinueButton(shadowResultUrl, tr("Ombre"))}
           </div>
         </div>
       )}
@@ -3462,13 +3459,13 @@ export default function App() {
       <div ref={glowSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Effet lumineux (Glow)</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Effet lumineux (Glow)")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Ajoute un halo lumineux doux, utile pour des visuels promotionnels.
+        {tr("Ajoute un halo lumineux doux, utile pour des visuels promotionnels.")}
       </p>
 
       <label>
-        Intensité : <NumberInput label="Intensité de la lueur" value={glowIntensity} onChange={setGlowIntensity} min={0} max={30} />
+        {tr("Intensité :")}{" "}<NumberInput label={tr("Intensité de la lueur")} value={glowIntensity} onChange={setGlowIntensity} min={0} max={30} />
         <input
           type="range"
           min={0}
@@ -3490,11 +3487,11 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={glowResultUrl} />
           ) : (
-            <img src={glowResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={glowResultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={glowResultUrl} download="glow" />
-            {renderContinueButton(glowResultUrl, "Lueur")}
+            {renderContinueButton(glowResultUrl, tr("Lueur"))}
           </div>
         </div>
       )}
@@ -3505,17 +3502,14 @@ export default function App() {
       <>
       {/* ── Réseaux sociaux ── */}
       <div ref={socialSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Formats pour réseaux sociaux</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Formats pour réseaux sociaux")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Chaque réseau demande ses propres proportions : une bannière YouTube n'a pas la forme d'une
-        couverture Facebook. Choisis le réseau et le type d'image, puis place le cadre sur la partie
-        de ta photo à garder. L'image est recadrée puis mise aux dimensions exactes, jamais étirée
-        ({Object.keys(SOCIAL_PRESETS).length} réseaux).
+        {tr("Chaque réseau demande ses propres proportions : une bannière YouTube n'a pas la forme d'une couverture Facebook. Choisis le réseau et le type d'image, puis place le cadre sur la partie de ta photo à garder. L'image est recadrée puis mise aux dimensions exactes, jamais étirée (")}{Object.keys(SOCIAL_PRESETS).length} {tr("réseaux).")}
       </p>
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Réseau :{" "}
+          {tr("Réseau :")}{" "}
           <select
             value={socialPlatform}
             onChange={(e) => {
@@ -3524,7 +3518,7 @@ export default function App() {
             }}
           >
             {SOCIAL_GROUPS.map((g) => (
-              <optgroup key={g.group} label={g.group}>
+              <optgroup key={tr(g.group)} label={tr(g.group)}>
                 {Object.keys(g.presets).map((platform) => (
                   <option key={platform} value={platform}>{platform}</option>
                 ))}
@@ -3533,14 +3527,14 @@ export default function App() {
           </select>
         </label>
         <label>
-          Type d'image :{" "}
+          {tr("Type d'image :")}{" "}
           <select
             value={socialPresetIndex}
             onChange={(e) => setSocialPresetIndex(Number(e.target.value))}
           >
             {SOCIAL_PRESETS[socialPlatform].map((preset, i) => (
-              <option key={preset.label} value={i}>
-                {preset.label} — {preset.width}×{preset.height}px
+              <option key={tr(preset.label)} value={i}>
+                {tr(preset.label)} — {preset.width}×{preset.height}px
               </option>
             ))}
           </select>
@@ -3556,21 +3550,21 @@ export default function App() {
         return (
           <>
             <div className="sp-social-info">
-              <div><strong>{socialPlatform} · {preset.label}</strong></div>
+              <div><strong>{socialPlatform} · {tr(preset.label)}</strong></div>
               <div>
-                Format demandé : <strong>{preset.width} × {preset.height} px</strong> ({ratioLabel(preset.width, preset.height)})
-                {preset.shape === "circle" ? " · affichée en rond" : ""}
+                {tr("Format demandé :")}{" "}<strong>{preset.width} × {preset.height} px</strong> ({ratioLabel(preset.width, preset.height)})
+                {preset.shape === "circle" ? tr(" · affichée en rond") : ""}
               </div>
               {nat && (
                 <div>
-                  Ton image : {nat.width} × {nat.height} px ({ratioLabel(nat.width, nat.height)})
+                  {tr("Ton image :")}{" "}{nat.width} × {nat.height} px ({ratioLabel(nat.width, nat.height)})
                   {Math.abs(natRatio - ratio) / ratio < 0.01
-                    ? " · déjà au bon format, rien ne sera coupé"
-                    : natRatio > ratio ? " · plus large que le format : on coupe à gauche et à droite"
-                    : " · plus haute que le format : on coupe en haut et en bas"}
+                    ? tr(" · déjà au bon format, rien ne sera coupé")
+                    : natRatio > ratio ? tr(" · plus large que le format : on coupe à gauche et à droite")
+                    : tr(" · plus haute que le format : on coupe en haut et en bas")}
                 </div>
               )}
-              {preset.note && <div className="sp-social-info__note">{preset.note}</div>}
+              {preset.note && <div className="sp-social-info__note">{tr(preset.note)}</div>}
             </div>
             {originalPreviewUrl ? (
               <SocialCropper
@@ -3581,20 +3575,20 @@ export default function App() {
                 safe={preset.safe}
                 onChange={onSocialZone}
                 labels={{
-                  frameSize: "Taille du cadre",
-                  moveHint: "Glisse le cadre (ou utilise les flèches du clavier) pour choisir la partie à garder.",
-                  safeZone: "Toujours visible",
-                  circle: "Affichée en rond",
+                  frameSize: tr("Taille du cadre"),
+                  moveHint: tr("Glisse le cadre (ou utilise les flèches du clavier) pour choisir la partie à garder."),
+                  safeZone: tr("Toujours visible"),
+                  circle: tr("Affichée en rond"),
                 }}
               />
             ) : (
-              <p style={{ color: "#888", fontSize: 13 }}>Choisis une image en haut pour placer le cadre.</p>
+              <p style={{ color: "#888", fontSize: 13 }}>{tr("Choisis une image en haut pour placer le cadre.")}</p>
             )}
           </>
         );
       })()}
 
-      <HudButton action="resize-social" label="Recadrer au format" busyLabel="Recadrage…" disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
+      <HudButton action="resize-social" label={tr("Recadrer au format")} busyLabel={tr("Recadrage…")} disabled={!file} busy={socialLoading} onClick={handleApplySocialPreset} style={{ marginTop: 16 }} />
 
       {socialError && <p style={{ color: "red", marginTop: 16 }}>{socialError}</p>}
 
@@ -3609,20 +3603,20 @@ export default function App() {
           }}
         >
           <div>
-            Avant : {socialStats.originalWidth}×{socialStats.originalHeight}px ({formatBytes(socialStats.originalSize)})
+            {tr("Avant :")}{" "}{socialStats.originalWidth}×{socialStats.originalHeight}px ({formatBytes(socialStats.originalSize)})
           </div>
           <div>
-            Après : {socialStats.outputWidth}×{socialStats.outputHeight}px ({formatBytes(socialStats.outputSize)})
+            {tr("Après :")}{" "}{socialStats.outputWidth}×{socialStats.outputHeight}px ({formatBytes(socialStats.outputSize)})
           </div>
         </div>
       )}
 
       {socialResultUrl && (
         <div style={{ marginTop: 20 }}>
-          <img src={socialResultUrl} alt={`Résultat pour ${socialPlatform}`}
-            className={SOCIAL_PRESETS[socialPlatform][socialPresetIndex]?.shape === "circle" ? "sp-social-result sp-social-result--circle" : "sp-social-result"} />
+          <img src={socialResultUrl} alt={tr("Résultat pour {a}", { a: socialPlatform })}
+            className={SOCIAL_PRESETS[socialPlatform][socialPresetIndex]?.shape === "circle" ? tr("sp-social-result sp-social-result--circle") : "sp-social-result"} />
           {SOCIAL_PRESETS[socialPlatform][socialPresetIndex]?.shape === "circle" && (
-            <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>Aperçu en rond comme sur le réseau ; le fichier reste carré, c'est le réseau qui l'arrondit.</p>
+            <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>{tr("Aperçu en rond comme sur le réseau ; le fichier reste carré, c'est le réseau qui l'arrondit.")}</p>
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={socialResultUrl} download="social-image" />
@@ -3637,13 +3631,12 @@ export default function App() {
       <>
       {/* ── Éditeur ── */}
       <div ref={editorSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Éditeur</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Éditeur")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Ajoute du texte, des stickers et des formes sur l'image sélectionnée en haut.
-        Utilise le bouton "Exporter PNG" dans la barre d'outils pour télécharger le résultat.
+        {tr("Ajoute du texte, des stickers et des formes sur l'image sélectionnée en haut. Utilise le bouton \"Exporter PNG\" dans la barre d'outils pour télécharger le résultat.")}
       </p>
       <div style={{ marginTop: 12 }}>
-        <OverlayEditor file={file} />
+        <OverlayEditor key={lang} file={file} />
       </div>
       </>
       )}
@@ -3652,9 +3645,9 @@ export default function App() {
       <>
       {/* ── Dégradé ── */}
       <div ref={gradientSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Dégradé</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Dégradé")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Superpose jusqu'à 8 calques — 11 géométries, répétition, 16 modes de fusion, grain — et exporte en PNG, SVG, CSS ou JSON.
+        {tr("Superpose jusqu'à 8 calques — 11 géométries, répétition, 16 modes de fusion, grain — et exporte en PNG, SVG, CSS ou JSON.")}
       </p>
       <div style={{ marginTop: 12 }}>
         <GradientTool />
@@ -3666,9 +3659,9 @@ export default function App() {
       <>
       {/* ── Filigrane ── */}
       <div ref={watermarkSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Filigrane</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Filigrane")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Applique un filigrane texte ou logo sur l'image sélectionnée en haut.
+        {tr("Applique un filigrane texte ou logo sur l'image sélectionnée en haut.")}
       </p>
 
       <div style={{ marginTop: 12, display: "flex", gap: 16 }}>
@@ -3678,7 +3671,7 @@ export default function App() {
             checked={watermarkType === "text"}
             onChange={() => setWatermarkType("text")}
           />
-          Texte
+          {tr("Texte")}
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
@@ -3686,14 +3679,14 @@ export default function App() {
             checked={watermarkType === "logo"}
             onChange={() => setWatermarkType("logo")}
           />
-          Logo
+          {tr("Logo")}
         </label>
       </div>
 
       {watermarkType === "text" ? (
         <div className="controls-grid" style={{ marginTop: 12 }}>
           <label>
-            Texte :{" "}
+            {tr("Texte :")}{" "}
             <input
               type="text"
               value={watermarkText}
@@ -3702,7 +3695,7 @@ export default function App() {
             />
           </label>
           <label>
-            Couleur<input
+            {tr("Couleur")}<input
               type="color"
               value={watermarkColor}
               onChange={(e) => setWatermarkColor(e.target.value)}
@@ -3722,18 +3715,18 @@ export default function App() {
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Position :{" "}
+          {tr("Position :")}{" "}
           <select value={watermarkPosition} onChange={(e) => setWatermarkPosition(e.target.value)}>
-            <option value="bottom-right">Bas droite</option>
-            <option value="bottom-left">Bas gauche</option>
-            <option value="top-right">Haut droite</option>
-            <option value="top-left">Haut gauche</option>
-            <option value="center">Centre</option>
-            <option value="tiled">Mosaïque (répété)</option>
+            <option value="bottom-right">{tr("Bas droite")}</option>
+            <option value="bottom-left">{tr("Bas gauche")}</option>
+            <option value="top-right">{tr("Haut droite")}</option>
+            <option value="top-left">{tr("Haut gauche")}</option>
+            <option value="center">{tr("Centre")}</option>
+            <option value="tiled">{tr("Mosaïque (répété)")}</option>
           </select>
         </label>
         <label>
-          Opacité : <NumberInput label="Opacité du filigrane" value={watermarkOpacity} onChange={setWatermarkOpacity} min={0} max={100} unit="%" />
+          {tr("Opacité :")}{" "}<NumberInput label={tr("Opacité du filigrane")} value={watermarkOpacity} onChange={setWatermarkOpacity} min={0} max={100} unit="%" />
           <input
             type="range"
             min={0}
@@ -3744,7 +3737,7 @@ export default function App() {
           />
         </label>
         <label>
-          Taille : <NumberInput label="Taille du filigrane" value={watermarkSize} onChange={setWatermarkSize} min={0} max={watermarkType === "text" ? 200 : 60} />{watermarkSize === 0 && " (auto)"}
+          {tr("Taille :")}{" "}<NumberInput label={tr("Taille du filigrane")} value={watermarkSize} onChange={setWatermarkSize} min={0} max={watermarkType === "text" ? 200 : 60} />{watermarkSize === 0 && " (auto)"}
           <input
             type="range"
             min={0}
@@ -3765,11 +3758,11 @@ export default function App() {
           {originalPreviewUrl ? (
             <BeforeAfterSlider beforeUrl={originalPreviewUrl} afterUrl={watermarkResultUrl} />
           ) : (
-            <img src={watermarkResultUrl} alt="Résultat" style={{ maxWidth: "100%", borderRadius: 8 }} />
+            <img src={watermarkResultUrl} alt={tr("Résultat")} style={{ maxWidth: "100%", borderRadius: 8 }} />
           )}
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-result" compact href={watermarkResultUrl} download="watermarked" />
-            {renderContinueButton(watermarkResultUrl, "Filigrane")}
+            {renderContinueButton(watermarkResultUrl, tr("Filigrane"))}
           </div>
         </div>
       )}
@@ -3780,19 +3773,16 @@ export default function App() {
       <>
       {/* ── Mes projets ── */}
       <div ref={projectsSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Mes projets</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Mes projets")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Chaque image que tu travailles devient un projet, sauvegardé automatiquement avec
-        tout son historique. Tes projets restent dans ce navigateur — ils ne sont jamais
-        envoyés sur nos serveurs. Exporte-les en <strong>.spectra</strong> pour les garder
-        en lieu sûr ou les ouvrir sur un autre ordinateur.
+        {tr("Chaque image que tu travailles devient un projet, sauvegardé automatiquement avec tout son historique. Tes projets restent dans ce navigateur — ils ne sont jamais envoyés sur nos serveurs. Exporte-les en")}{" "}<strong>{tr(".spectra")}</strong> {tr("pour les garder en lieu sûr ou les ouvrir sur un autre ordinateur.")}
       </p>
 
       <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
         <HudButton action="new-project" compact onClick={() => { startNewProject(); goToSection("analyze"); }} />
         <HudButton action="import-project" compact onClick={() => projectFileInputRef.current?.click()} />
         <label style={{ display: "none" }}>
-          Ouvrir un fichier .spectra
+          {tr("Ouvrir un fichier .spectra")}
           <input
             ref={projectFileInputRef}
             type="file"
@@ -3806,7 +3796,7 @@ export default function App() {
         </label>
         {storageInfo && storageInfo.quota > 0 && (
           <span style={{ fontSize: 12, color: "#888" }}>
-            Espace utilisé dans ce navigateur : {formatBytes(storageInfo.used)} sur {formatBytes(storageInfo.quota)}
+            {tr("Espace utilisé dans ce navigateur :")}{" "}{formatBytes(storageInfo.used)} {tr("sur")}{" "}{formatBytes(storageInfo.quota)}
           </span>
         )}
       </div>
@@ -3815,8 +3805,7 @@ export default function App() {
 
       {projects.length === 0 ? (
         <p style={{ marginTop: 20, fontSize: 14, color: "#888" }}>
-          Aucun projet pour l'instant. Charge une image dans n'importe quel outil : le projet
-          est créé et sauvegardé automatiquement.
+          {tr("Aucun projet pour l'instant. Charge une image dans n'importe quel outil : le projet est créé et sauvegardé automatiquement.")}
         </p>
       ) : (
         <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -3845,12 +3834,12 @@ export default function App() {
                 <div style={{ fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {p.name}
                   {p.id === projectId && (
-                    <span style={{ marginLeft: 8, fontSize: 11, color: "#3ddc84", fontWeight: 400 }}>● en cours</span>
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#3ddc84", fontWeight: 400 }}>{tr("● en cours")}</span>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: "#888" }}>
-                  {p.stepCount} étape(s) — {formatBytes(p.totalBytes)} — modifié le{" "}
-                  {new Date(p.updatedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
+                  {p.stepCount} {tr("étape(s) —")}{" "}{formatBytes(p.totalBytes)} {tr("— modifié le")}{" "}
+                  {new Date(p.updatedAt).toLocaleString(locale(), { dateStyle: "medium", timeStyle: "short" })}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -3870,10 +3859,9 @@ export default function App() {
       <>
       {/* ── Traitement par lots ── */}
       <div ref={batchSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Traitement par lots</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Traitement par lots")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Applique une recette à plusieurs images d'un coup ({BATCH_MAX_FILES} max, 100 Mo au total).
-        Les étapes sont appliquées sans perte : l'image n'est compressée qu'une seule fois, à la fin.
+        {tr("Applique une recette à plusieurs images d'un coup (")}{BATCH_MAX_FILES} {tr("max, 100 Mo au total). Les étapes sont appliquées sans perte : l'image n'est compressée qu'une seule fois, à la fin.")}
       </p>
 
       <div
@@ -3903,14 +3891,14 @@ export default function App() {
         />
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--muted)" }}>
           <HudButton action="choose-files" compact onClick={() => batchFileInputRef.current?.click()} />{" "}
-          ou glisse-dépose plusieurs images ici
+          {tr("ou glisse-dépose plusieurs images ici")}
         </p>
       </div>
 
       {batchFiles.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 6 }}>
-            {batchFiles.length} image(s) — {formatBytes(batchFiles.reduce((s, f) => s + f.size, 0))}
+            {batchFiles.length} {tr("image(s) —")}{" "}{formatBytes(batchFiles.reduce((s, f) => s + f.size, 0))}
             <HudButton action="remove-all" compact onClick={() => { setBatchFiles([]); setBatchError(null); clearBatchResult(); }} style={{ marginLeft: 12 }} />
           </div>
           <div style={{ maxHeight: 180, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
@@ -3930,7 +3918,7 @@ export default function App() {
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {f.name} <span style={{ color: "#888" }}>({formatBytes(f.size)})</span>
                 </span>
-                <HudButton action="remove-image" iconOnly label={`Retirer ${f.name}`} onClick={() => setBatchFiles((prev) => prev.filter((_, j) => j !== i))} />
+                <HudButton action="remove-image" iconOnly label={tr("Retirer {a}", { a: f.name })} onClick={() => setBatchFiles((prev) => prev.filter((_, j) => j !== i))} />
               </div>
             ))}
           </div>
@@ -3939,24 +3927,24 @@ export default function App() {
 
       <div style={{ marginTop: 16 }}>
         <label>
-          Recette :{" "}
+          {tr("Recette :")}{" "}
           <select value={batchRecipeId} onChange={(e) => setBatchRecipeId(e.target.value)}>
-            <optgroup label="Prédéfinies" style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
+            <optgroup label={tr("Prédéfinies")} style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
               {PRESET_RECIPES.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>{tr(r.name)}</option>
               ))}
             </optgroup>
             {savedRecipes.length > 0 && (
-              <optgroup label="Mes recettes" style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
+              <optgroup label={tr("Mes recettes")} style={{ color: "#3ddc84", background: "#0b0f14", fontStyle: "normal" }}>
                 {savedRecipes.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
+                  <option key={r.id} value={r.id}>{tr(r.name)}</option>
                 ))}
               </optgroup>
             )}
           </select>
         </label>
         {savedRecipes.some((r) => r.id === batchRecipeId) && (
-          <HudButton action="delete-recipe" compact onClick={() => { if (window.confirm("Supprimer cette recette ?")) deleteRecipe(batchRecipeId); }} style={{ marginLeft: 8 }} />
+          <HudButton action="delete-recipe" compact onClick={() => { if (window.confirm(tr("Supprimer cette recette ?"))) deleteRecipe(batchRecipeId); }} style={{ marginLeft: 8 }} />
         )}
       </div>
 
@@ -3973,13 +3961,12 @@ export default function App() {
       })()}
 
       <p style={{ fontSize: 12, color: "#888", margin: "10px 0 0" }}>
-        Astuce : bâtis ta chaîne sur une seule image avec « ➜ Continuer », puis clique sur
-        « 💾 Enregistrer comme recette » dans la barre d'historique.
+        {tr("Astuce : bâtis ta chaîne sur une seule image avec « ➜ Continuer », puis clique sur « 💾 Enregistrer comme recette » dans la barre d'historique.")}
       </p>
 
       <HudButton action="process-batch" disabled={batchFiles.length === 0} busy={batchLoading}
-        label={`Traiter ${batchFiles.length} image(s)`}
-        busyLabel={`Traitement de ${batchFiles.length} image(s)…`}
+        label={tr("Traiter {a} image(s)", { a: batchFiles.length })}
+        busyLabel={tr("Traitement de {a} image(s)…", { a: batchFiles.length })}
         onClick={handleBatch} style={{ marginTop: 16 }} />
 
       {batchError && <p style={{ color: "red", marginTop: 16 }}>{batchError}</p>}
@@ -3995,7 +3982,7 @@ export default function App() {
           }}
         >
           <div style={{ fontWeight: 600, color: batchCounts.failed === 0 ? "#2a8a4a" : "#c89b3c" }}>
-            {batchCounts.ok} réussie(s){batchCounts.failed > 0 ? `, ${batchCounts.failed} en échec (détails dans rapport.txt)` : ""}
+            {batchCounts.ok} {tr("réussie(s)")}{batchCounts.failed > 0 ? tr(", {a} en échec (détails dans rapport.txt)", { a: batchCounts.failed }) : ""}
           </div>
           <div style={{ marginTop: 8 }}>
             <HudLink action="download-batch" compact href={batchResultUrl} download="noxel-spectra-lot.zip" />
@@ -4010,8 +3997,7 @@ export default function App() {
       {/* ── Dessin IA (FLUX.2 [pro], crédits) ── */}
       <div ref={aiSectionRef} />
       <p style={{ color: "#888", fontSize: 13, marginTop: 16 }}>
-        Décris une image et l'IA la dessine. Tu peux ensuite la retoucher, la redimensionner pour les réseaux
-        ou la convertir avec les autres outils de NOXEL SPECTRA.
+        {tr("Décris une image et l'IA la dessine. Tu peux ensuite la retoucher, la redimensionner pour les réseaux ou la convertir avec les autres outils de NOXEL SPECTRA.")}
       </p>
       <AiDrawTool onUseImage={(f) => { void loadMainFile(f); goToSection("adjust"); }} />
       </>
@@ -4028,7 +4014,7 @@ export default function App() {
       <>
       {/* ── Auteur, droits et licence ── */}
       <div ref={copyrightSectionRef} />
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Auteur, droits et licence</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Auteur, droits et licence")}</h2>
       <RightsTool
         file={file}
         apiUrl={apiUrl}

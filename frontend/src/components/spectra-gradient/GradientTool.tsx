@@ -11,6 +11,7 @@ import "./gradient-hud.css";
 import { HudButton } from "../hud/HudButton";
 import { NumberInput } from "../NumberInput";
 
+import { tr } from "../../i18n";
 const PREVIEW_MAX = 640;
 const PREVIEW_DRAG = 300; // aperçu allégé pendant un glisser, pleine qualité au relâchement
 const SIZES: [string, number, number][] = [
@@ -50,7 +51,7 @@ function stopsCss(stops: Stop[]): string {
 }
 
 export function GradientTool() {
-  const [doc, setDoc] = useState<GradientDoc>(() => normalizeDoc({ width: 1200, height: 630, layers: [makeLayer({ name: "Dégradé", x1: 0, y1: 0, x2: 100, y2: 100 })] }));
+  const [doc, setDoc] = useState<GradientDoc>(() => normalizeDoc({ width: 1200, height: 630, layers: [makeLayer({ name: tr("Dégradé"), x1: 0, y1: 0, x2: 100, y2: 100 })] }));
   const [selectedId, setSelectedId] = useState<string>("");
   const [status, setStatus] = useState<string | null>(null);
   const [cssOut, setCssOut] = useState<string | null>(null);
@@ -86,16 +87,16 @@ export function GradientTool() {
   };
 
   function addLayer(l?: Layer) {
-    if (doc.layers.length >= MAX_LAYERS) return setStatus(`${MAX_LAYERS} calques maximum.`);
-    const nl = l || makeLayer({ name: `Calque ${doc.layers.length + 1}`, type: "radial", blend: "screen", stops: [
+    if (doc.layers.length >= MAX_LAYERS) return setStatus(tr("{a} calques maximum.", { a: MAX_LAYERS }));
+    const nl = l || makeLayer({ name: tr("Calque {a}", { a: doc.layers.length + 1 }), type: "radial", blend: "screen", stops: [
       { position: 0, color: "#ffffff", opacity: 70 }, { position: 100, color: "#ffffff", opacity: 0 },
     ] });
     setDoc((d) => ({ ...d, layers: [...d.layers, nl] }));
     setSelectedId(nl.id);
   }
   function duplicateLayer() {
-    if (doc.layers.length >= MAX_LAYERS) return setStatus(`${MAX_LAYERS} calques maximum.`);
-    const copy = { ...structuredClone(layer), id: newId(), name: `${layer.name} (copie)` };
+    if (doc.layers.length >= MAX_LAYERS) return setStatus(tr("{a} calques maximum.", { a: MAX_LAYERS }));
+    const copy = { ...structuredClone(layer), id: newId(), name: tr("{a} (copie)", { a: layer.name }) };
     setDoc((d) => {
       const i = d.layers.findIndex((l) => l.id === layer.id);
       const layers = d.layers.slice();
@@ -139,20 +140,20 @@ export function GradientTool() {
     const l = layer;
     if (l.type === "linear" || l.type === "reflected")
       return [
-        { key: "p1", x: l.x1, y: l.y1, color: "#3ddc84", title: l.type === "reflected" ? "Axe" : "Départ" },
-        { key: "p2", x: l.x2, y: l.y2, color: "#a855f7", title: "Arrivée" },
+        { key: "p1", x: l.x1, y: l.y1, color: "#3ddc84", title: l.type === "reflected" ? tr("Axe") : tr("Départ") },
+        { key: "p2", x: l.x2, y: l.y2, color: "#a855f7", title: tr("Arrivée") },
       ];
     if (l.type === "freeform") return l.points.map((p, i) => ({ key: `pt${i}`, x: p.x, y: p.y, color: p.color, title: `Point ${i + 1}` }));
     if (CENTERED.includes(l.type)) {
-      const hs: Handle[] = [{ key: "c", x: l.cx, y: l.cy, color: "#3ddc84", title: "Centre" }];
+      const hs: Handle[] = [{ key: "c", x: l.cx, y: l.cy, color: "#3ddc84", title: tr("Centre") }];
       if (l.type === "conic" || l.type === "conic-symmetric") {
         const a = ((l.angle - 90) * Math.PI) / 180;
-        hs.push({ key: "ang", x: l.cx + (Math.cos(a) * 20 * minSide) / doc.width, y: l.cy + (Math.sin(a) * 20 * minSide) / doc.height, color: "#a855f7", title: "Angle de départ" });
+        hs.push({ key: "ang", x: l.cx + (Math.cos(a) * 20 * minSide) / doc.width, y: l.cy + (Math.sin(a) * 20 * minSide) / doc.height, color: "#a855f7", title: tr("Angle de départ") });
       } else if (l.shape === "ellipse" && l.type !== "spiral-cw" && l.type !== "spiral-ccw") {
-        hs.push({ key: "rx", x: l.cx + l.rx, y: l.cy, color: "#a855f7", title: "Rayon horizontal" });
-        hs.push({ key: "ry", x: l.cx, y: l.cy + l.ry, color: "#a855f7", title: "Rayon vertical" });
+        hs.push({ key: "rx", x: l.cx + l.rx, y: l.cy, color: "#a855f7", title: tr("Rayon horizontal") });
+        hs.push({ key: "ry", x: l.cx, y: l.cy + l.ry, color: "#a855f7", title: tr("Rayon vertical") });
       } else {
-        hs.push({ key: "r", x: l.cx + (l.rx * minSide) / doc.width, y: l.cy, color: "#a855f7", title: "Rayon" });
+        hs.push({ key: "r", x: l.cx + (l.rx * minSide) / doc.width, y: l.cy, color: "#a855f7", title: tr("Rayon") });
       }
       return hs;
     }
@@ -188,11 +189,11 @@ export function GradientTool() {
 
   // ── Exports ─────────────────────────────────────────────────────────
   async function exportPng() {
-    setStatus("Rendu PNG en cours…");
+    setStatus(tr("Rendu PNG en cours…"));
     await new Promise((r) => setTimeout(r, 30));
     composeDoc(doc, doc.width, doc.height).toBlob((b) => {
       if (b) download(b, "noxel-degrade.png");
-      setStatus(`PNG ${doc.width} × ${doc.height} exporté.`);
+      setStatus(tr("PNG {a} × {b} exporté.", { a: doc.width, b: doc.height }));
     }, "image/png");
   }
   function exportSvg() {
@@ -200,15 +201,15 @@ export function GradientTool() {
     download(new Blob([svg], { type: "image/svg+xml" }), "noxel-degrade.svg");
     setStatus(
       rasterized.length
-        ? `SVG exporté. Intégrés en image (pas de géométrie SVG native) : ${rasterized.join(", ")}.`
-        : "SVG exporté — entièrement vectoriel."
+        ? tr("SVG exporté. Intégrés en image (pas de géométrie SVG native) : {a}.", { a: rasterized.join(", ") })
+        : tr("SVG exporté — entièrement vectoriel.")
     );
   }
   function exportCss() {
     const { css, skipped } = docToCss(doc);
     setCssOut(css);
     navigator.clipboard?.writeText(css).catch(() => undefined);
-    setStatus(skipped.length ? "CSS copié — certains calques ne sont pas représentables en CSS (voir le commentaire)." : "CSS copié — rendu identique à l'aperçu.");
+    setStatus(skipped.length ? tr("CSS copié — certains calques ne sont pas représentables en CSS (voir le commentaire).") : tr("CSS copié — rendu identique à l'aperçu."));
   }
   const exportJson = () => download(new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" }), "noxel-degrade.json");
   async function importJson(file: File | null) {
@@ -217,17 +218,17 @@ export function GradientTool() {
       const d = normalizeDoc(JSON.parse(await file.text()));
       setDoc(d);
       setSelectedId(d.layers[d.layers.length - 1].id);
-      setStatus("Dégradé importé.");
+      setStatus(tr("Dégradé importé."));
     } catch {
-      setStatus("Fichier JSON invalide.");
+      setStatus(tr("Fichier JSON invalide."));
     }
   }
   function sendToEditor() {
-    const name = window.prompt("Nom du dégradé (visible dans l'Éditeur) :", layer.name || "Mon dégradé");
+    const name = window.prompt(tr("Nom du dégradé (visible dans l'Éditeur) :"), layer.name || tr("Mon dégradé"));
     if (!name) return;
     const list = loadLibrary().filter((g) => g.name !== name.trim());
     const ok = saveLibrary([{ id: newId(), name: name.trim().slice(0, 40), doc }, ...list]);
-    setStatus(ok ? `« ${name.trim()} » est enregistré dans ta bibliothèque de dégradés (dans ce navigateur).` : "Enregistrement impossible dans ce navigateur.");
+    setStatus(ok ? tr("« {a} » est enregistré dans ta bibliothèque de dégradés (dans ce navigateur).", { a: name.trim() }) : tr("Enregistrement impossible dans ce navigateur."));
   }
 
   const nonNativeCss = doc.layers.filter((l) => l.visible && !NATIVE_CSS.includes(l.type)).length;
@@ -247,7 +248,7 @@ export function GradientTool() {
       {/* ── Colonne aperçu ── */}
       <div style={{ position: "sticky", top: 12 }}>
         <section className="nx-panel">
-          <h3 className="nx-head"><b>01</b> / Aperçu</h3>
+          <h3 className="nx-head"><b>01</b> {tr("/ Aperçu")}</h3>
           <div className="nx-viewport-wrap">
             <i /><i /><i /><i />
             <div
@@ -268,9 +269,9 @@ export function GradientTool() {
                 <div
                   key={h.key}
                   className="nx-handle"
-                  title={h.title}
+                  title={tr(h.title)}
                   role="slider"
-                  aria-label={h.title}
+                  aria-label={tr(h.title)}
                   aria-valuenow={Math.round(h.x)}
                   tabIndex={0}
                   onPointerDown={(e) => {
@@ -286,14 +287,14 @@ export function GradientTool() {
             </div>
           </div>
           <div className="nx-readout">
-            <span>{doc.width} × {doc.height} PX · {doc.layers.length} CALQUE(S)</span>
-            <span className="nx-live">{dragging ? "ÉDITION" : "EN DIRECT"}</span>
+            <span>{doc.width} × {doc.height} PX · {doc.layers.length} {tr("CALQUE(S)")}</span>
+            <span className="nx-live">{dragging ? tr("ÉDITION") : tr("EN DIRECT")}</span>
           </div>
-          {handles.length > 0 && <p className="nx-note" style={{ color: "#7f93a8" }}>Déplace les points directement sur l'aperçu.</p>}
+          {handles.length > 0 && <p className="nx-note" style={{ color: "#7f93a8" }}>{tr("Déplace les points directement sur l'aperçu.")}</p>}
         </section>
 
         <section className="nx-panel">
-          <h3 className="nx-head"><b>07</b> / Export</h3>
+          <h3 className="nx-head"><b>07</b> {tr("/ Export")}</h3>
           <div className="nx-row">
             <HudButton action="gradient-png" compact onClick={exportPng} />
             <HudButton action="gradient-svg" compact onClick={exportSvg} />
@@ -305,7 +306,7 @@ export function GradientTool() {
           </div>
           {nonNativeCss > 0 && (
             <p className="nx-note is-warn">
-              {nonNativeCss} calque(s) utilisent une géométrie sans équivalent CSS : le PNG est exact ; le SVG les intègre en image.
+              {nonNativeCss} {tr("calque(s) utilisent une géométrie sans équivalent CSS : le PNG est exact ; le SVG les intègre en image.")}
             </p>
           )}
           {status && <p className="nx-note is-ok">{status}</p>}
@@ -316,27 +317,27 @@ export function GradientTool() {
       {/* ── Colonne réglages ── */}
       <div>
         <section className="nx-panel">
-          <h3 className="nx-head"><b>02</b> / Préréglages</h3>
+          <h3 className="nx-head"><b>02</b> {tr("/ Préréglages")}</h3>
           <div className="nx-presets">
             {presetThumbs.map((p) => (
-              <button key={p.id} type="button" className="nx-preset" onClick={() => loadLayers(p.build())} aria-label={`Préréglage ${p.name}`}>
+              <button key={p.id} type="button" className="nx-preset" onClick={() => loadLayers(p.build())} aria-label={tr("Préréglage {a}", { a: p.name })}>
                 {p.img && <img src={p.img} alt="" />}
-                <span>{p.name}</span>
+                <span>{tr(p.name)}</span>
               </button>
             ))}
           </div>
           <div className="nx-row" style={{ marginTop: 10 }}>
-            <HudButton action="add-vignette" compact label="+ Vignette" onClick={() => addLayer(ADD_ONS[0].build())} />
-            <HudButton action="add-grain" compact label="+ Grain" onClick={() => addLayer(ADD_ONS[1].build())} />
-            <HudButton action="add-halo" compact label="+ Halo" onClick={() => addLayer(ADD_ONS[2].build())} />
+            <HudButton action="add-vignette" compact label={tr("+ Vignette")} onClick={() => addLayer(ADD_ONS[0].build())} />
+            <HudButton action="add-grain" compact label={tr("+ Grain")} onClick={() => addLayer(ADD_ONS[1].build())} />
+            <HudButton action="add-halo" compact label={tr("+ Halo")} onClick={() => addLayer(ADD_ONS[2].build())} />
           </div>
         </section>
 
         <section className="nx-panel">
-          <h3 className="nx-head"><b>03</b> / Format</h3>
+          <h3 className="nx-head"><b>03</b> {tr("/ Format")}</h3>
           <div className="controls-grid">
-            <label>Largeur (px){num(doc.width, (n) => setDoc((d) => ({ ...d, width: Math.round(n) })), 16, 4096)}</label>
-            <label>Hauteur (px){num(doc.height, (n) => setDoc((d) => ({ ...d, height: Math.round(n) })), 16, 4096)}</label>
+            <label>{tr("Largeur (px)")}{num(doc.width, (n) => setDoc((d) => ({ ...d, width: Math.round(n) })), 16, 4096)}</label>
+            <label>{tr("Hauteur (px)")}{num(doc.height, (n) => setDoc((d) => ({ ...d, height: Math.round(n) })), 16, 4096)}</label>
           </div>
           <div className="nx-row" style={{ marginTop: 8, gap: 6 }}>
             {SIZES.map(([label, w, h]) => (
@@ -347,24 +348,24 @@ export function GradientTool() {
         </section>
 
         <section className="nx-panel">
-          <h3 className="nx-head"><b>04</b> / Calques</h3>
+          <h3 className="nx-head"><b>04</b> {tr("/ Calques")}</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             {doc.layers.slice().reverse().map((l) => (
               <div key={l.id} className={`nx-layer${l.id === layer.id ? " is-active" : ""}${l.visible ? "" : " is-hidden"}`} onClick={() => setSelectedId(l.id)}>
-                <input type="checkbox" checked={l.visible} aria-label={`Afficher ${l.name}`} onClick={(e) => e.stopPropagation()}
+                <input type="checkbox" checked={l.visible} aria-label={tr("Afficher {a}", { a: l.name })} onClick={(e) => e.stopPropagation()}
                   onChange={(e) => setDoc((d) => ({ ...d, layers: d.layers.map((x) => (x.id === l.id ? { ...x, visible: e.target.checked } : x)) }))} />
                 {layerThumbs[l.id] ? <img className="nx-layer-thumb" src={layerThumbs[l.id]} alt="" /> : <span className="nx-layer-thumb" />}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</div>
                   <div className="nx-layer-meta">
-                    {GEO_TYPES.find((g) => g.id === l.type)?.label.split(" (")[0].toUpperCase()} · {BLEND_MODES.find(([b]) => b === l.blend)?.[1].toUpperCase()} · {l.opacity}%
+                    {tr(GEO_TYPES.find((g) => g.id === l.type)?.label ?? "").split(" (")[0].toUpperCase()} · {tr(BLEND_MODES.find(([b]) => b === l.blend)?.[1] ?? "").toUpperCase()} · {l.opacity}%
                   </div>
                 </div>
               </div>
             ))}
           </div>
           <div className="nx-row" style={{ marginTop: 8 }}>
-            <HudButton action="add-layer" compact label="+ Calque" disabled={doc.layers.length >= MAX_LAYERS} onClick={() => addLayer()} />
+            <HudButton action="add-layer" compact label={tr("+ Calque")} disabled={doc.layers.length >= MAX_LAYERS} onClick={() => addLayer()} />
             <HudButton action="duplicate-layer" compact disabled={doc.layers.length >= MAX_LAYERS} onClick={duplicateLayer} />
             <HudButton action="layer-up" iconOnly disabled={doc.layers.findIndex((l) => l.id === layer.id) >= doc.layers.length - 1} onClick={() => moveLayer(1)} />
             <HudButton action="layer-down" iconOnly disabled={doc.layers.findIndex((l) => l.id === layer.id) <= 0} onClick={() => moveLayer(-1)} />
@@ -373,76 +374,76 @@ export function GradientTool() {
         </section>
 
         <section className="nx-panel">
-          <h3 className="nx-head"><b>05</b> / Calque « {layer.name || "sans nom"} »</h3>
+          <h3 className="nx-head"><b>05</b> {tr("/ Calque «")}{" "}{layer.name || tr("sans nom")} »</h3>
           <div className="controls-grid">
-            <label>Nom<input type="text" value={layer.name} maxLength={40} onChange={(e) => update({ name: e.target.value })} style={{ width: "100%", marginTop: 4 }} /></label>
+            <label>{tr("Nom")}<input type="text" value={layer.name} maxLength={40} onChange={(e) => update({ name: e.target.value })} style={{ width: "100%", marginTop: 4 }} /></label>
             <label>
-              Type
+              {tr("Type")}
               <select value={layer.type} onChange={(e) => update({ type: e.target.value as GeoType })} style={{ width: "100%", marginTop: 4 }}>
-                {["Base", "Formes", "Plusieurs points"].map((g) => (
+                {[tr("Base"), tr("Formes"), tr("Plusieurs points")].map((g) => (
                   <optgroup key={g} label={g}>
-                    {GEO_TYPES.filter((t) => t.group === g).map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    {GEO_TYPES.filter((t) => t.group === g).map((t) => <option key={t.id} value={t.id}>{tr(t.label)}</option>)}
                   </optgroup>
                 ))}
               </select>
             </label>
             {layer.type !== "four-corners" && layer.type !== "freeform" && layer.type !== "conic" && layer.type !== "conic-symmetric" && (
               <label>
-                Répétition
+                {tr("Répétition")}
                 <select value={layer.repeat} onChange={(e) => update({ repeat: e.target.value as RepeatMode })} style={{ width: "100%", marginTop: 4 }}>
-                  <option value="none">Aucune</option>
-                  <option value="repeat">Répétée</option>
-                  <option value="reflect">Aller-retour</option>
+                  <option value="none">{tr("Aucune")}</option>
+                  <option value="repeat">{tr("Répétée")}</option>
+                  <option value="reflect">{tr("Aller-retour")}</option>
                 </select>
               </label>
             )}
             <label>
-              Mode de fusion
+              {tr("Mode de fusion")}
               <select value={layer.blend} onChange={(e) => update({ blend: e.target.value as BlendMode })} style={{ width: "100%", marginTop: 4 }}>
-                {BLEND_MODES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                {BLEND_MODES.map(([id, label]) => <option key={id} value={id}>{tr(label)}</option>)}
               </select>
             </label>
-            <label>Opacité : <NumberInput label="Opacité du calque" value={layer.opacity} onChange={(v) => update({ opacity: v })} min={0} max={100} unit="%" /><input type="range" min={0} max={100} value={layer.opacity} onChange={(e) => update({ opacity: Number(e.target.value) })} style={{ width: "100%" }} /></label>
-            <label>Grain : <NumberInput label="Grain" value={layer.grain} onChange={(v) => update({ grain: v })} min={0} max={100} unit="%" />{layer.grain === 0 && " (aucun)"}<input type="range" min={0} max={100} value={layer.grain} onChange={(e) => update({ grain: Number(e.target.value) })} style={{ width: "100%" }} /></label>
+            <label>{tr("Opacité :")}{" "}<NumberInput label={tr("Opacité du calque")} value={layer.opacity} onChange={(v) => update({ opacity: v })} min={0} max={100} unit="%" /><input type="range" min={0} max={100} value={layer.opacity} onChange={(e) => update({ opacity: Number(e.target.value) })} style={{ width: "100%" }} /></label>
+            <label>{tr("Grain :")}{" "}<NumberInput label={tr("Grain")} value={layer.grain} onChange={(v) => update({ grain: v })} min={0} max={100} unit="%" />{layer.grain === 0 && tr(" (aucun)")}<input type="range" min={0} max={100} value={layer.grain} onChange={(e) => update({ grain: Number(e.target.value) })} style={{ width: "100%" }} /></label>
           </div>
 
           <div className="controls-grid" style={{ marginTop: 12 }}>
             {(layer.type === "linear" || layer.type === "reflected") && (
               <>
-                <label>{layer.type === "reflected" ? "Axe" : "Départ"} X (%){num(layer.x1, (n) => update({ x1: n }), -100, 200, 0.5)}</label>
-                <label>{layer.type === "reflected" ? "Axe" : "Départ"} Y (%){num(layer.y1, (n) => update({ y1: n }), -100, 200, 0.5)}</label>
-                <label>Arrivée X (%){num(layer.x2, (n) => update({ x2: n }), -100, 200, 0.5)}</label>
-                <label>Arrivée Y (%){num(layer.y2, (n) => update({ y2: n }), -100, 200, 0.5)}</label>
+                <label>{layer.type === "reflected" ? tr("Axe") : tr("Départ")} X (%){num(layer.x1, (n) => update({ x1: n }), -100, 200, 0.5)}</label>
+                <label>{layer.type === "reflected" ? tr("Axe") : tr("Départ")} Y (%){num(layer.y1, (n) => update({ y1: n }), -100, 200, 0.5)}</label>
+                <label>{tr("Arrivée X (%)")}{num(layer.x2, (n) => update({ x2: n }), -100, 200, 0.5)}</label>
+                <label>{tr("Arrivée Y (%)")}{num(layer.y2, (n) => update({ y2: n }), -100, 200, 0.5)}</label>
               </>
             )}
             {CENTERED.includes(layer.type) && (
               <>
-                <label>Centre X (%){num(layer.cx, (n) => update({ cx: n }), -100, 200, 0.5)}</label>
-                <label>Centre Y (%){num(layer.cy, (n) => update({ cy: n }), -100, 200, 0.5)}</label>
+                <label>{tr("Centre X (%)")}{num(layer.cx, (n) => update({ cx: n }), -100, 200, 0.5)}</label>
+                <label>{tr("Centre Y (%)")}{num(layer.cy, (n) => update({ cy: n }), -100, 200, 0.5)}</label>
               </>
             )}
             {isRadialLike && (
               <>
                 {layer.type !== "spiral-cw" && layer.type !== "spiral-ccw" && (
                   <label>
-                    Forme
+                    {tr("Forme")}
                     <select value={layer.shape} onChange={(e) => update({ shape: e.target.value as "circle" | "ellipse" })} style={{ width: "100%", marginTop: 4 }}>
-                      <option value="circle">Cercle</option>
-                      <option value="ellipse">Ellipse</option>
+                      <option value="circle">{tr("Cercle")}</option>
+                      <option value="ellipse">{tr("Ellipse")}</option>
                     </select>
                   </label>
                 )}
-                <label>{layer.shape === "ellipse" ? "Rayon horizontal (% largeur)" : "Rayon (% du petit côté)"}{num(layer.rx, (n) => update({ rx: n }), 1, 300, 0.5)}</label>
+                <label>{layer.shape === "ellipse" ? tr("Rayon horizontal (% largeur)") : tr("Rayon (% du petit côté)")}{num(layer.rx, (n) => update({ rx: n }), 1, 300, 0.5)}</label>
                 {layer.shape === "ellipse" && layer.type !== "spiral-cw" && layer.type !== "spiral-ccw" && (
-                  <label>Rayon vertical (% hauteur){num(layer.ry, (n) => update({ ry: n }), 1, 300, 0.5)}</label>
+                  <label>{tr("Rayon vertical (% hauteur)")}{num(layer.ry, (n) => update({ ry: n }), 1, 300, 0.5)}</label>
                 )}
               </>
             )}
             {(layer.type === "conic" || layer.type === "conic-symmetric" || layer.type === "spiral-cw" || layer.type === "spiral-ccw") && (
-              <label>Angle de départ (°){num(layer.angle, (n) => update({ angle: n }), -360, 360)}</label>
+              <label>{tr("Angle de départ (°)")}{num(layer.angle, (n) => update({ angle: n }), -360, 360)}</label>
             )}
             {(layer.type === "spiral-cw" || layer.type === "spiral-ccw") && (
-              <label>Enroulements{num(layer.turns, (n) => update({ turns: n }), 0, 20, 0.5)}</label>
+              <label>{tr("Enroulements")}{num(layer.turns, (n) => update({ turns: n }), 0, 20, 0.5)}</label>
             )}
           </div>
         </section>
@@ -450,14 +451,14 @@ export function GradientTool() {
         <section className="nx-panel">
           {layer.type === "four-corners" ? (
             <>
-              <h3 className="nx-head"><b>06</b> / Couleurs des coins</h3>
+              <h3 className="nx-head"><b>06</b> {tr("/ Couleurs des coins")}</h3>
               <div className="controls-grid">
-                {["Haut gauche", "Haut droite", "Bas droite", "Bas gauche"].map((label, i) => (
+                {[tr("Haut gauche"), tr("Haut droite"), tr("Bas droite"), tr("Bas gauche")].map((label, i) => (
                   <label key={label}>
                     {label}
                     <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 4 }}>
-                      <input type="color" value={layer.corners[i].color} aria-label={`Couleur ${label}`} onChange={(e) => update({ corners: layer.corners.map((c, j) => (j === i ? { ...c, color: e.target.value } : c)) as Layer["corners"] })} />
-                      <input type="number" min={0} max={100} value={layer.corners[i].opacity} title="Opacité (%)" aria-label={`Opacité ${label}`} style={{ width: 64 }}
+                      <input type="color" value={layer.corners[i].color} aria-label={tr("Couleur {a}", { a: label })} onChange={(e) => update({ corners: layer.corners.map((c, j) => (j === i ? { ...c, color: e.target.value } : c)) as Layer["corners"] })} />
+                      <input type="number" min={0} max={100} value={layer.corners[i].opacity} title={tr("Opacité (%)")} aria-label={tr("Opacité {a}", { a: label })} style={{ width: 64 }}
                         onChange={(e) => update({ corners: layer.corners.map((c, j) => (j === i ? { ...c, opacity: clamp(Number(e.target.value) || 0, 0, 100) } : c)) as Layer["corners"] })} />
                       <span style={{ fontSize: 12 }}>% α</span>
                     </div>
@@ -467,40 +468,40 @@ export function GradientTool() {
             </>
           ) : layer.type === "freeform" ? (
             <>
-              <h3 className="nx-head"><b>06</b> / Points ({layer.points.length}/{MAX_STOPS})</h3>
+              <h3 className="nx-head"><b>06</b> {tr("/ Points (")}{layer.points.length}/{MAX_STOPS})</h3>
               {layer.points.map((p, i) => (
                 <div key={i} className="nx-stop">
-                  <input type="color" value={p.color} aria-label={`Couleur du point ${i + 1}`} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, color: e.target.value } : q)) })} />
+                  <input type="color" value={p.color} aria-label={tr("Couleur du point {a}", { a: i + 1 })} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, color: e.target.value } : q)) })} />
                   <div className="nx-stop-fields">
-                    <label>OPACITÉ %<input type="number" min={0} max={100} value={p.opacity} style={{ width: "100%" }} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, opacity: clamp(Number(e.target.value) || 0, 0, 100) } : q)) })} /></label>
-                    <label>INFLUENCE<input type="range" min={5} max={100} value={p.influence} style={{ width: "100%" }} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, influence: Number(e.target.value) } : q)) })} /></label>
+                    <label>{tr("OPACITÉ %")}<input type="number" min={0} max={100} value={p.opacity} style={{ width: "100%" }} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, opacity: clamp(Number(e.target.value) || 0, 0, 100) } : q)) })} /></label>
+                    <label>{tr("INFLUENCE")}<input type="range" min={5} max={100} value={p.influence} style={{ width: "100%" }} onChange={(e) => update({ points: layer.points.map((q, j) => (j === i ? { ...q, influence: Number(e.target.value) } : q)) })} /></label>
                   </div>
-                  <HudButton action="remove-image" iconOnly label={`Retirer le point ${i + 1}`} disabled={layer.points.length <= 2} onClick={() => update({ points: layer.points.filter((_, j) => j !== i) })} />
+                  <HudButton action="remove-image" iconOnly label={tr("Retirer le point {a}", { a: i + 1 })} disabled={layer.points.length <= 2} onClick={() => update({ points: layer.points.filter((_, j) => j !== i) })} />
                 </div>
               ))}
               <div className="nx-row" style={{ marginTop: 6 }}>
-                <HudButton action="add-point" compact label="+ Point" disabled={layer.points.length >= MAX_STOPS}
+                <HudButton action="add-point" compact label={tr("+ Point")} disabled={layer.points.length >= MAX_STOPS}
                   onClick={() => update({ points: [...layer.points, { x: 50, y: 50, color: "#ffffff", opacity: 100, influence: 50 }] })} />
               </div>
             </>
           ) : (
             <>
-              <h3 className="nx-head"><b>06</b> / Couleurs ({layer.stops.length}/{MAX_STOPS})</h3>
+              <h3 className="nx-head"><b>06</b> {tr("/ Couleurs (")}{layer.stops.length}/{MAX_STOPS})</h3>
               <div className="nx-stops-bar" style={{ backgroundImage: `${stopsCss(layer.stops)}, repeating-conic-gradient(#2a2f3a 0% 25%, #1b1f27 0% 50%)`, backgroundSize: "100% 100%, 10px 10px" }} />
               {layer.stops.map((s, i) => (
                 <div key={i} className="nx-stop">
-                  <input type="color" value={s.color} onChange={(e) => setStops(layer.stops.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))} aria-label={`Couleur ${i + 1}`} />
+                  <input type="color" value={s.color} onChange={(e) => setStops(layer.stops.map((x, j) => (j === i ? { ...x, color: e.target.value } : x)))} aria-label={tr("Couleur {a}", { a: i + 1 })} />
                   <div className="nx-stop-fields">
-                    <label>POSITION %<input type="number" min={0} max={100} value={s.position} style={{ width: "100%" }} aria-label={`Position ${i + 1}`}
+                    <label>{tr("POSITION %")}<input type="number" min={0} max={100} value={s.position} style={{ width: "100%" }} aria-label={`Position ${i + 1}`}
                       onChange={(e) => setStops(layer.stops.map((x, j) => (j === i ? { ...x, position: clamp(Number(e.target.value) || 0, 0, 100) } : x)))} /></label>
-                    <label>OPACITÉ %<input type="number" min={0} max={100} value={s.opacity} style={{ width: "100%" }} aria-label={`Opacité ${i + 1}`}
+                    <label>{tr("OPACITÉ %")}<input type="number" min={0} max={100} value={s.opacity} style={{ width: "100%" }} aria-label={tr("Opacité {a}", { a: i + 1 })}
                       onChange={(e) => setStops(layer.stops.map((x, j) => (j === i ? { ...x, opacity: clamp(Number(e.target.value) || 0, 0, 100) } : x)))} /></label>
                   </div>
-                  <HudButton action="remove-image" iconOnly label={`Retirer la couleur ${i + 1}`} disabled={layer.stops.length <= MIN_STOPS} onClick={() => setStops(layer.stops.filter((_, j) => j !== i))} />
+                  <HudButton action="remove-image" iconOnly label={tr("Retirer la couleur {a}", { a: i + 1 })} disabled={layer.stops.length <= MIN_STOPS} onClick={() => setStops(layer.stops.filter((_, j) => j !== i))} />
                 </div>
               ))}
               <div className="nx-row" style={{ marginTop: 6 }}>
-                <HudButton action="add-color" compact label="+ Couleur" disabled={layer.stops.length >= MAX_STOPS} onClick={addStop} />
+                <HudButton action="add-color" compact label={tr("+ Couleur")} disabled={layer.stops.length >= MAX_STOPS} onClick={addStop} />
                 <HudButton action="reverse-stops" compact onClick={reverseStops} />
                 <HudButton action="spread-stops" compact onClick={spreadStops} />
               </div>

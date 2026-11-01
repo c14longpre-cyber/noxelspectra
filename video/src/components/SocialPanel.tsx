@@ -11,6 +11,7 @@ import { fmtBytes, referenceBitrate } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 import { AspectIcon, FramePreview } from "./FramePreview";
 
+import { tr } from "../i18n";
 type Props = { file: File; info: VideoInfo; range: [number, number]; video: HTMLVideoElement | null };
 type Variant = { aspect: Aspect; on: boolean; mode: ReframeMode; focus: { x: number; y: number } };
 type Done = { aspect: Aspect; url: string; size: number; dims: string; name: string };
@@ -98,7 +99,7 @@ export function SocialPanel({ file, info, range, video }: Props) {
 
   return (
     <div className="vx-social">
-      <p className="vx-muted">Coche les formats voulus et ajuste le cadrage de chacun : toutes les versions sont créées d'un seul clic, à partir de la sélection de la timeline.</p>
+      <p className="vx-muted">{tr("Coche les formats voulus et ajuste le cadrage de chacun : toutes les versions sont créées d'un seul clic, à partir de la sélection de la timeline.")}</p>
       <div className="vx-variants">
         {variants.map((v) => {
           const meta = ASPECTS.find((a) => a.id === v.aspect)!;
@@ -108,15 +109,15 @@ export function SocialPanel({ file, info, range, video }: Props) {
               <label className="vx-variant-head">
                 <input type="checkbox" checked={v.on} onChange={(e) => set(v.aspect, { on: e.target.checked })} />
                 <AspectIcon aspect={v.aspect} />
-                <span><b>{v.aspect}</b> <small>{meta.use}</small></span>
+                <span><b>{v.aspect}</b> <small>{tr(meta.use)}</small></span>
               </label>
               {v.on && (
                 <>
                   <FramePreview video={video} src={src} aspect={v.aspect} mode={v.mode} focus={v.focus} onFocus={(f) => set(v.aspect, { focus: f })} width={240} />
                   <select value={v.mode} onChange={(e) => set(v.aspect, { mode: e.target.value as ReframeMode })} aria-label={`Remplissage ${v.aspect}`}>
-                    <option value="crop">Recadrer (glisse le cadre)</option>
-                    <option value="blur">Fond flouté</option>
-                    <option value="bars">Bandes noires</option>
+                    <option value="crop">{tr("Recadrer (glisse le cadre)")}</option>
+                    <option value="blur">{tr("Fond flouté")}</option>
+                    <option value="bars">{tr("Bandes noires")}</option>
                   </select>
                   <small className="vx-muted">{d.width} × {d.height}</small>
                 </>
@@ -127,28 +128,28 @@ export function SocialPanel({ file, info, range, video }: Props) {
       </div>
 
       <div className="vx-fields" style={{ marginTop: 14 }}>
-        <label>Résolution
+        <label>{tr("Résolution")}
           <select value={shortSide} onChange={(e) => setShortSide(Number(e.target.value))}>
-            <option value={1080}>1080 (recommandé pour les réseaux)</option>
-            <option value={720}>720 (plus léger)</option>
+            <option value={1080}>{tr("1080 (recommandé pour les réseaux)")}</option>
+            <option value={720}>{tr("720 (plus léger)")}</option>
           </select>
         </label>
-        <label>Format
+        <label>{tr("Format")}
           <select value={format} onChange={(e) => setFormat(e.target.value as CompressFormat)}>
-            <option value="mp4" disabled={support ? !support.mp4 : false}>MP4 (H.264) — accepté par tous les réseaux</option>
-            <option value="webm" disabled={support ? !support.webm : false}>WebM (VP9) — pour le web</option>
+            <option value="mp4" disabled={support ? !support.mp4 : false}>{tr("MP4 (H.264) — accepté par tous les réseaux")}</option>
+            <option value="webm" disabled={support ? !support.webm : false}>{tr("WebM (VP9) — pour le web")}</option>
           </select>
         </label>
         {src.fps > 31 && (
-          <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> Limiter à 30 images/s</label>
+          <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> {tr("Limiter à 30 images/s")}</label>
         )}
       </div>
       <div className="vx-estimate">
-        <span>{selected.length} version(s) · poids total estimé : <b>{fmtBytes(totalEstimate)}</b></span>
+        <span>{selected.length} {tr("version(s) · poids total estimé :")}{" "}<b>{fmtBytes(totalEstimate)}</b></span>
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <HudButton action="resize-social" label={`Créer ${selected.length} version(s)`} disabled={!selected.length || !support || (!support.mp4 && !support.webm)}
+        <HudButton action="resize-social" label={tr("Créer {a} version(s)", { a: selected.length })} disabled={!selected.length || !support || (!support.mp4 && !support.webm)}
           busy={running !== null} busyLabel={running ? `Version ${running.index}/${running.total} (${running.aspect}) — ${Math.round(running.progress * 100)} %` : undefined}
           onClick={runAll} />
         {running && <HudButton action="cancel" compact onClick={job.stop} />}
@@ -160,11 +161,11 @@ export function SocialPanel({ file, info, range, video }: Props) {
           {done.map((d) => (
             <div key={d.aspect} className="vx-done-row">
               <span>✓ {d.aspect} · {d.dims} · {fmtBytes(d.size)}</span>
-              <HudLink action="download-result" compact label="Télécharger" href={d.url} download={d.name} />
+              <HudLink action="download-result" compact label={tr("Télécharger")} href={d.url} download={d.name} />
             </div>
           ))}
           {done.length > 1 && !running && (
-            <HudButton action="download-result" compact label={`Tout télécharger (${done.length})`} onClick={downloadAll} />
+            <HudButton action="download-result" compact label={tr("Tout télécharger ({a})", { a: done.length })} onClick={downloadAll} />
           )}
         </div>
       )}

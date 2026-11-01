@@ -7,6 +7,7 @@ import { GEO_TYPES, MAX_STOPS, MIN_STOPS, PRESETS, makeLayer, normalizeDoc } fro
 import type { Layer, Stop } from "../spectra-gradient/gradient-engine";
 import { composeDoc, loadLibrary } from "../spectra-gradient/gradient-render";
 import { HUD_MARKUP } from "../hud/hud-data";
+import { tr } from "../../i18n";
 import type { HudAction } from "../hud/hud-data";
 
 type ItemGradient = { layers: Layer[] };
@@ -38,7 +39,7 @@ export function gradientOf(item: EditorItem): ItemGradient {
   const stops: Stop[] = (item.gradientStops?.length ? item.gradientStops : [
     { position: 0, color: "#3ddc84" }, { position: 100, color: "#a855f7" },
   ]).map((s) => ({ position: s.position, color: s.color, opacity: s.opacity ?? 100 }));
-  item.gradient = { layers: [makeLayer({ name: "Dégradé", x1: 0, y1: 50, x2: 100, y2: 50, stops })] };
+  item.gradient = { layers: [makeLayer({ name: tr("Dégradé"), x1: 0, y1: 50, x2: 100, y2: 50, stops })] };
   return item.gradient;
 }
 
@@ -98,70 +99,70 @@ export function gradientPanelHtml(item: EditorItem): string {
   const l = g.layers[0];
   const library = loadLibrary();
   const tiles = [
-    ...PRESETS.map((p) => ({ attr: `data-grad-preset="${p.id}"`, name: p.name, layers: p.build() })),
+    ...PRESETS.map((p) => ({ attr: `data-grad-preset="${p.id}"`, name: tr(p.name), layers: p.build() })),
     ...library.map((s) => ({ attr: `data-grad-lib="${esc(s.id)}"`, name: `★ ${s.name}`, layers: normalizeDoc(s.doc).layers })),
   ];
   const tilesHtml = `<div class="sp-grad-presets">${tiles
-    .map((t) => `<button type="button" class="sp-grad-tile" ${t.attr} title="${esc(t.name)}" aria-label="Dégradé ${esc(t.name)}"><img src="${thumb(t.layers)}" alt=""><span>${esc(t.name)}</span></button>`)
+    .map((t) => `<button type="button" class="sp-grad-tile" ${t.attr} title="${esc(t.name)}" aria-label="${esc(tr("Dégradé {a}", { a: t.name }))}"><img src="${thumb(t.layers)}" alt=""><span>${esc(t.name)}</span></button>`)
     .join("")}</div>`;
   const num = (label: string, key: string, v: number, min: number, max: number, step = 1) =>
     `<label>${label}<input type="number" data-grad="${key}" min="${min}" max="${max}" step="${step}" value="${Math.round(v * 10) / 10}"></label>`;
 
   if (g.layers.length > 1) {
     return `<div class="sp-grad">
-      <div class="sp-grad-head">Préréglages et bibliothèque</div>${tilesHtml}
-      <p class="sp-help">Dégradé à ${g.layers.length} calques : ${g.layers.map((x) => esc(x.name)).join(", ")}. Ses réglages fins se font dans l'outil Dégradé.</p>
-      ${hudHtml("reset-colors", "Simplifier (premier calque)", { attrs: 'data-grad-action="flatten"' })}
+      <div class="sp-grad-head">${tr("Préréglages et bibliothèque")}</div>${tilesHtml}
+      <p class="sp-help">${tr("Dégradé à {a} calques : {b}. Ses réglages fins se font dans l'outil Dégradé.", { a: g.layers.length, b: g.layers.map((x) => esc(tr(x.name))).join(", ") })}</p>
+      ${hudHtml("reset-colors", tr("Simplifier (premier calque)"), { attrs: 'data-grad-action="flatten"' })}
     </div>`;
   }
 
   let geo = "";
-  if (l.type === "linear" || l.type === "reflected") geo += num("Angle (°)", "linearAngle", linearAngle(l), 0, 359);
-  if (CENTERED.includes(l.type)) geo += num("Centre X (%)", "cx", l.cx, -100, 200) + num("Centre Y (%)", "cy", l.cy, -100, 200);
+  if (l.type === "linear" || l.type === "reflected") geo += num(tr("Angle (°)"), "linearAngle", linearAngle(l), 0, 359);
+  if (CENTERED.includes(l.type)) geo += num(tr("Centre X (%)"), "cx", l.cx, -100, 200) + num(tr("Centre Y (%)"), "cy", l.cy, -100, 200);
   if (["radial", "diamond", "square"].includes(l.type))
-    geo += `<label>Forme<select data-grad="shape"><option value="circle"${l.shape === "circle" ? " selected" : ""}>Cercle</option><option value="ellipse"${l.shape === "ellipse" ? " selected" : ""}>Ellipse</option></select></label>`;
+    geo += `<label>${tr("Forme")}<select data-grad="shape"><option value="circle"${l.shape === "circle" ? " selected" : ""}>${tr("Cercle")}</option><option value="ellipse"${l.shape === "ellipse" ? " selected" : ""}>${tr("Ellipse")}</option></select></label>`;
   if (["radial", "diamond", "square", "spiral-cw", "spiral-ccw"].includes(l.type)) {
-    geo += num(l.shape === "ellipse" && !l.type.startsWith("spiral") ? "Rayon horizontal (%)" : "Rayon (%)", "rx", l.rx, 1, 300);
-    if (l.shape === "ellipse" && !l.type.startsWith("spiral")) geo += num("Rayon vertical (%)", "ry", l.ry, 1, 300);
+    geo += num(l.shape === "ellipse" && !l.type.startsWith("spiral") ? tr("Rayon horizontal (%)") : tr("Rayon (%)"), "rx", l.rx, 1, 300);
+    if (l.shape === "ellipse" && !l.type.startsWith("spiral")) geo += num(tr("Rayon vertical (%)"), "ry", l.ry, 1, 300);
   }
-  if (["conic", "conic-symmetric", "spiral-cw", "spiral-ccw"].includes(l.type)) geo += num("Angle de départ (°)", "angle", l.angle, -360, 360);
-  if (l.type.startsWith("spiral")) geo += num("Enroulements", "turns", l.turns, 0, 20, 0.5);
+  if (["conic", "conic-symmetric", "spiral-cw", "spiral-ccw"].includes(l.type)) geo += num(tr("Angle de départ (°)"), "angle", l.angle, -360, 360);
+  if (l.type.startsWith("spiral")) geo += num(tr("Enroulements"), "turns", l.turns, 0, 20, 0.5);
 
   let colors = "";
   if (l.type === "four-corners") {
-    colors = ["Haut gauche", "Haut droite", "Bas droite", "Bas gauche"]
-      .map((name, i) => `<label>${name}<span class="sp-grad-pair"><input type="color" data-grad-corner="${i}" value="${l.corners[i].color}"><input type="number" data-grad-corner-op="${i}" min="0" max="100" value="${l.corners[i].opacity}" title="Opacité (%)"></span></label>`)
+    colors = [tr("Haut gauche"), tr("Haut droite"), tr("Bas droite"), tr("Bas gauche")]
+      .map((name, i) => `<label>${name}<span class="sp-grad-pair"><input type="color" data-grad-corner="${i}" value="${l.corners[i].color}"><input type="number" data-grad-corner-op="${i}" min="0" max="100" value="${l.corners[i].opacity}" title="${tr("Opacité (%)")}"></span></label>`)
       .join("");
   } else if (l.type === "freeform") {
     colors = l.points
-      .map((p, i) => `${i === 0 ? `<div class="sp-grad-cols"><span></span><span>X %</span><span>Y %</span><span></span></div>` : ""}<div class="sp-grad-stop"><input type="color" data-grad-point="${i}" data-field="color" value="${p.color}" aria-label="Couleur du point ${i + 1}">
-        <input type="number" data-grad-point="${i}" data-field="x" min="0" max="100" value="${Math.round(p.x)}" title="X (%)" aria-label="X du point ${i + 1}">
-        <input type="number" data-grad-point="${i}" data-field="y" min="0" max="100" value="${Math.round(p.y)}" title="Y (%)" aria-label="Y du point ${i + 1}">
-        ${hudHtml("remove-image", `Retirer le point ${i + 1}`, { variant: "icon", attrs: `data-grad-del-point="${i}"`, disabled: l.points.length <= 2 })}</div>`)
-      .join("") + hudHtml("add-point", "+ Point", { attrs: 'data-grad-action="add-point"', disabled: l.points.length >= MAX_STOPS });
+      .map((p, i) => `${i === 0 ? `<div class="sp-grad-cols"><span></span><span>${tr("X %")}</span><span>${tr("Y %")}</span><span></span></div>` : ""}<div class="sp-grad-stop"><input type="color" data-grad-point="${i}" data-field="color" value="${p.color}" aria-label="${tr("Couleur du point {a}", { a: i + 1 })}">
+        <input type="number" data-grad-point="${i}" data-field="x" min="0" max="100" value="${Math.round(p.x)}" title="X (%)" aria-label="${tr("X du point {a}", { a: i + 1 })}">
+        <input type="number" data-grad-point="${i}" data-field="y" min="0" max="100" value="${Math.round(p.y)}" title="Y (%)" aria-label="${tr("Y du point {a}", { a: i + 1 })}">
+        ${hudHtml("remove-image", tr("Retirer le point {a}", { a: i + 1 }), { variant: "icon", attrs: `data-grad-del-point="${i}"`, disabled: l.points.length <= 2 })}</div>`)
+      .join("") + hudHtml("add-point", tr("+ Point"), { attrs: 'data-grad-action="add-point"', disabled: l.points.length >= MAX_STOPS });
   } else {
-    colors = `<div class="sp-grad-cols"><span></span><span>POSITION %</span><span>OPACITÉ %</span><span></span></div>` + l.stops
-      .map((s, i) => `<div class="sp-grad-stop"><input type="color" data-grad-stop="${i}" data-field="color" value="${s.color}" aria-label="Couleur ${i + 1}">
-        <input type="number" data-grad-stop="${i}" data-field="position" min="0" max="100" value="${s.position}" title="Position (%)" aria-label="Position ${i + 1}">
-        <input type="number" data-grad-stop="${i}" data-field="opacity" min="0" max="100" value="${s.opacity}" title="Opacité (%)" aria-label="Opacité ${i + 1}">
-        ${hudHtml("remove-image", `Retirer la couleur ${i + 1}`, { variant: "icon", attrs: `data-grad-del-stop="${i}"`, disabled: l.stops.length <= MIN_STOPS })}</div>`)
+    colors = `<div class="sp-grad-cols"><span></span><span>${tr("POSITION %")}</span><span>${tr("OPACITÉ %")}</span><span></span></div>` + l.stops
+      .map((s, i) => `<div class="sp-grad-stop"><input type="color" data-grad-stop="${i}" data-field="color" value="${s.color}" aria-label="${tr("Couleur {a}", { a: i + 1 })}">
+        <input type="number" data-grad-stop="${i}" data-field="position" min="0" max="100" value="${s.position}" title="Position (%)" aria-label="${tr("Position {a}", { a: i + 1 })}">
+        <input type="number" data-grad-stop="${i}" data-field="opacity" min="0" max="100" value="${s.opacity}" title="${tr("Opacité (%)")}" aria-label="${tr("Opacité {a}", { a: i + 1 })}">
+        ${hudHtml("remove-image", tr("Retirer la couleur {a}", { a: i + 1 }), { variant: "icon", attrs: `data-grad-del-stop="${i}"`, disabled: l.stops.length <= MIN_STOPS })}</div>`)
       .join("") +
-      `<div class="sp-grad-row">${hudHtml("add-color", "+ Couleur", { attrs: 'data-grad-action="add-stop"', disabled: l.stops.length >= MAX_STOPS })}${hudHtml("reverse-stops", "Inverser les couleurs", { variant: "icon", attrs: 'data-grad-action="reverse"' })}${hudHtml("spread-stops", "Répartir les couleurs", { variant: "icon", attrs: 'data-grad-action="spread"' })}</div>`;
+      `<div class="sp-grad-row">${hudHtml("add-color", tr("+ Couleur"), { attrs: 'data-grad-action="add-stop"', disabled: l.stops.length >= MAX_STOPS })}${hudHtml("reverse-stops", tr("Inverser les couleurs"), { variant: "icon", attrs: 'data-grad-action="reverse"' })}${hudHtml("spread-stops", tr("Répartir les couleurs"), { variant: "icon", attrs: 'data-grad-action="spread"' })}</div>`;
   }
 
   const types = ["Base", "Formes", "Plusieurs points"]
-    .map((grp) => `<optgroup label="${grp}">${GEO_TYPES.filter((t) => t.group === grp).map((t) => `<option value="${t.id}"${t.id === l.type ? " selected" : ""}>${t.label}</option>`).join("")}</optgroup>`)
+    .map((grp) => `<optgroup label="${tr(grp)}">${GEO_TYPES.filter((t) => t.group === grp).map((t) => `<option value="${t.id}"${t.id === l.type ? " selected" : ""}>${tr(t.label)}</option>`).join("")}</optgroup>`)
     .join("");
   const repeat = ["four-corners", "freeform", "conic", "conic-symmetric"].includes(l.type)
     ? ""
-    : `<label>Répétition<select data-grad="repeat">${[["none", "Aucune"], ["repeat", "Répétée"], ["reflect", "Aller-retour"]]
+    : `<label>${tr("Répétition")}<select data-grad="repeat">${[["none", tr("Aucune")], ["repeat", tr("Répétée")], ["reflect", tr("Aller-retour")]]
         .map(([v, t]) => `<option value="${v}"${l.repeat === v ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
 
   return `<div class="sp-grad">
-    <div class="sp-grad-head">Préréglages et bibliothèque</div>${tilesHtml}
-    <div class="sp-grad-head">Géométrie</div>
-    <label>Type<select data-grad="type">${types}</select></label>${repeat}${geo}
-    <div class="sp-grad-head">${l.type === "four-corners" ? "Coins" : l.type === "freeform" ? `Points (${l.points.length}/${MAX_STOPS})` : `Couleurs (${l.stops.length}/${MAX_STOPS})`}</div>
+    <div class="sp-grad-head">${tr("Préréglages et bibliothèque")}</div>${tilesHtml}
+    <div class="sp-grad-head">${tr("Géométrie")}</div>
+    <label>${tr("Type")}<select data-grad="type">${types}</select></label>${repeat}${geo}
+    <div class="sp-grad-head">${l.type === "four-corners" ? tr("Coins") : l.type === "freeform" ? tr("Points ({a}/{b})", { a: l.points.length, b: MAX_STOPS }) : tr("Couleurs ({a}/{b})", { a: l.stops.length, b: MAX_STOPS })}</div>
     ${colors}
   </div>`;
 }

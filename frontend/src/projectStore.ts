@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 // NOXEL SPECTRA — sauvegarde de projets dans le navigateur (IndexedDB)
 //
 // Les projets restent dans le navigateur de l'utilisateur : rien n'est
@@ -221,29 +222,29 @@ export async function importProject(source: File): Promise<Project> {
   try {
     zip = await JSZip.loadAsync(source);
   } catch {
-    throw new Error("Ce fichier n'est pas un projet NOXEL SPECTRA valide.");
+    throw new Error(tr("Ce fichier n'est pas un projet NOXEL SPECTRA valide."));
   }
   const manifestFile = zip.file("project.json");
-  if (!manifestFile) throw new Error("Projet invalide : project.json introuvable.");
+  if (!manifestFile) throw new Error(tr("Projet invalide : project.json introuvable."));
 
   let manifest: any;
   try {
     manifest = JSON.parse(await manifestFile.async("string"));
   } catch {
-    throw new Error("Projet invalide : project.json illisible.");
+    throw new Error(tr("Projet invalide : project.json illisible."));
   }
   if (manifest?.format !== FILE_FORMAT || !Array.isArray(manifest.entries) || manifest.entries.length === 0) {
-    throw new Error("Ce fichier n'est pas un projet NOXEL SPECTRA valide.");
+    throw new Error(tr("Ce fichier n'est pas un projet NOXEL SPECTRA valide."));
   }
 
   const entries: StoredEntry[] = [];
   for (const e of manifest.entries) {
     const f = zip.file(String(e.path));
-    if (!f) throw new Error(`Projet incomplet : image manquante (${e.path}).`);
+    if (!f) throw new Error(tr("Projet incomplet : image manquante ({a}).", { a: e.path }));
     const blob = await f.async("blob");
     entries.push({
       file: new File([blob], String(e.fileName || "image"), { type: String(e.type || blob.type) }),
-      label: String(e.label || "Étape"),
+      label: String(e.label || tr("Étape")),
       lossy: e.lossy === true,
       part: e.part ?? undefined,
     });

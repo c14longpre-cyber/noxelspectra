@@ -5,6 +5,7 @@ import { startAuthentication, startRegistration } from "@simplewebauthn/browser"
 import { HudButton } from "../hud/HudButton";
 import { API_URL, apiFetch, lireErreur, rafraichirCompte } from "./account";
 
+import { tr, shownLang } from "../../i18n";
 declare global {
   interface Window { google?: { accounts: { id: { initialize: (c: object) => void; renderButton: (el: HTMLElement, c: object) => void } } } }
 }
@@ -48,7 +49,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             if (!res.ok) throw new Error(await lireErreur(res));
             await rafraichirCompte();
             onClose();
-          } catch (e) { setErreur(e instanceof Error ? e.message : "Connexion Google impossible"); }
+          } catch (e) { setErreur(e instanceof Error ? e.message : tr("Connexion Google impossible")); }
           finally { setBusy(false); }
         },
       });
@@ -67,13 +68,13 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
     setBusy(true); setErreur(null); setInfo(null);
     try {
       if (onglet === "magic") {
-        const r = await post("/api/auth/magic/request", { email, lang: "fr" });
+        const r = await post("/api/auth/magic/request", { email, lang: shownLang() });
         if (!r.ok) throw new Error(await lireErreur(r));
-        setInfo("Lien envoyé : ouvre ton courriel et clique sur le lien (valide 15 minutes).");
+        setInfo(tr("Lien envoyé : ouvre ton courriel et clique sur le lien (valide 15 minutes)."));
       } else if (onglet === "password") {
-        const r = await post(creer ? "/api/auth/register" : "/api/auth/login", { email, password, lang: "fr" });
+        const r = await post(creer ? "/api/auth/register" : "/api/auth/login", { email, password, lang: shownLang() });
         if (!r.ok) throw new Error(await lireErreur(r));
-        if (creer) setInfo("Ouvre le lien reçu par courriel pour créer ton compte.");
+        if (creer) setInfo(tr("Ouvre le lien reçu par courriel pour créer ton compte."));
         else { await rafraichirCompte(); onClose(); }
       } else {
         if (creer) {
@@ -81,7 +82,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
           if (!s.ok) throw new Error(await lireErreur(s));
           const { options } = await s.json();
           const credential = await startRegistration({ optionsJSON: options });
-          const f = await post("/api/auth/passkey/register/finish", { email, credential, lang: "fr" });
+          const f = await post("/api/auth/passkey/register/finish", { email, credential, lang: shownLang() });
           if (!f.ok) throw new Error(await lireErreur(f));
           const d = await f.json();
           if (d.pending) setInfo(d.message);
@@ -98,57 +99,57 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
         }
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur";
-      setErreur(/NotAllowedError|aborted|timed out/i.test(msg) ? "Passkey annulée." : msg);
+      const msg = e instanceof Error ? e.message : tr("Erreur");
+      setErreur(/NotAllowedError|aborted|timed out/i.test(msg) ? tr("Passkey annulée.") : msg);
     } finally {
       setBusy(false);
     }
   }
 
   const onglets: { id: Onglet; label: string }[] = [
-    { id: "magic", label: "Lien par courriel" },
-    { id: "password", label: "Mot de passe" },
-    { id: "passkey", label: "Passkey" },
+    { id: "magic", label: tr("Lien par courriel") },
+    { id: "password", label: tr("Mot de passe") },
+    { id: "passkey", label: tr("Passkey") },
   ];
 
   return (
     <div className="sp-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="sp-modal" role="dialog" aria-modal="true" aria-labelledby="sp-login-title" ref={dialogRef}>
-        <button type="button" className="sp-modal__close" aria-label="Fermer" onClick={onClose}>✕</button>
-        <h2 id="sp-login-title" className="sp-modal__title">Connexion à NOXEL SPECTRA</h2>
-        <p className="sp-modal__sub">Un seul compte NOXEL pour NOXEL SEO, NOXEL FORGE et NOXEL SPECTRA. Les outils gratuits restent ouverts sans compte.</p>
+        <button type="button" className="sp-modal__close" aria-label={tr("Fermer")} onClick={onClose}>✕</button>
+        <h2 id="sp-login-title" className="sp-modal__title">{tr("Connexion à NOXEL SPECTRA")}</h2>
+        <p className="sp-modal__sub">{tr("Un seul compte NOXEL pour NOXEL SEO, NOXEL FORGE et NOXEL SPECTRA. Les outils gratuits restent ouverts sans compte.")}</p>
 
         {GOOGLE_CLIENT_ID && <div ref={googleRef} className="sp-google" />}
-        {GOOGLE_CLIENT_ID && <div className="sp-sep"><span>ou</span></div>}
+        {GOOGLE_CLIENT_ID && <div className="sp-sep"><span>{tr("ou")}</span></div>}
 
         <div className="nx-cycle__track sp-tabs" role="tablist">
           {onglets.map((o) => (
             <button key={o.id} type="button" role="tab" className="nx-cycle__btn" aria-pressed={onglet === o.id} aria-selected={onglet === o.id}
-              onClick={() => { setOnglet(o.id); setErreur(null); setInfo(null); }}>{o.label}</button>
+              onClick={() => { setOnglet(o.id); setErreur(null); setInfo(null); }}>{tr(o.label)}</button>
           ))}
         </div>
 
         <form onSubmit={envoyer} className="sp-form">
           {!(onglet === "passkey" && !creer) && (
-            <label>Courriel
+            <label>{tr("Courriel")}
               <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </label>
           )}
           {onglet === "password" && (
-            <label>Mot de passe
+            <label>{tr("Mot de passe")}
               <input type="password" required minLength={creer ? 8 : 1} autoComplete={creer ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)} />
             </label>
           )}
           {onglet !== "magic" && (
             <label className="sp-check">
               <input type="checkbox" checked={creer} onChange={(e) => setCreer(e.target.checked)} />
-              Je n'ai pas encore de compte NOXEL
+              {tr("Je n'ai pas encore de compte NOXEL")}
             </label>
           )}
           {erreur && <p className="sp-error" role="alert">{erreur}</p>}
           {info && <p className="sp-info" role="status">{info}</p>}
           <HudButton type="submit" action="continue" busy={busy}
-            label={onglet === "magic" ? "Recevoir le lien" : onglet === "passkey" ? (creer ? "Créer avec une passkey" : "Utiliser ma passkey") : creer ? "Créer mon compte" : "Se connecter"} />
+            label={onglet === "magic" ? tr("Recevoir le lien") : onglet === "passkey" ? (creer ? tr("Créer avec une passkey") : tr("Utiliser ma passkey")) : creer ? tr("Créer mon compte") : tr("Se connecter")} />
         </form>
       </div>
     </div>

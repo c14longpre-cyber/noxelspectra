@@ -7,6 +7,7 @@ import { fmtBytes, fmtTime } from "../lib/probe";
 import type { VideoInfo } from "../lib/probe";
 import { LeadNote } from "./LeadNote";
 
+import { tr } from "../i18n";
 type Props = {
   file: File;
   info: VideoInfo;
@@ -76,17 +77,17 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   const replacing = !!music && musicMode === "replace";
   const channels = info.audio?.channels ?? 2;
   // Le son traité est réencodé en Opus (WebM) ou en AAC (MP4) : le navigateur doit savoir le faire
-  const outCodec = info.video && ["vp8", "vp9"].includes(info.video.codec) ? "Opus" : "AAC";
+  const outCodec = info.video && ["vp8", "vp9"].includes(info.video.codec) ? tr("Opus") : "AAC";
   const planOk = !plan || plan.copy || plan.ok; // faux : l'encodeur refuse ce son, quel que soit le réglage
   const canEncode = (!support || (outCodec === "Opus" ? support.ogg : support.m4a)) && planOk;
   const srcBitrate = info.audio?.bitrate || 0;
   const planNotes = plan && !plan.copy && !(tab === "edit" && mute) && (
     <>
-      {plan.downmix && <p className="vx-muted">Le son {channels} canaux sera converti en stéréo.</p>}
+      {plan.downmix && <p className="vx-muted">{tr("Le son")}{" "}{channels} {tr("canaux sera converti en stéréo.")}</p>}
       {srcBitrate > 0 && plan.bitrate > srcBitrate * 1.15 && (
         <p className="vx-muted">
-          Ce navigateur n'encode pas le son en {plan.codec === "opus" ? "Opus" : "AAC"} sous {Math.round(plan.bitrate / 1000)} kb/s : le son pèsera plus que l'original (environ {Math.round(srcBitrate / 1000)} kb/s).
-          {tab === "extract" && fmt === "m4a" ? " Le format OGG est souvent plus léger." : ""}
+          {tr("Ce navigateur n'encode pas le son en")}{" "}{plan.codec === "opus" ? tr("Opus") : "AAC"} {tr("sous")}{" "}{Math.round(plan.bitrate / 1000)} {tr("kb/s : le son pèsera plus que l'original (environ")}{" "}{Math.round(srcBitrate / 1000)} {tr("kb/s).")}
+          {tab === "extract" && fmt === "m4a" ? tr(" Le format OGG est souvent plus léger.") : ""}
         </p>
       )}
     </>
@@ -99,7 +100,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
     try {
       setMusic(await decodeMusic(f, info.audio.sampleRate));
     } catch {
-      setError("Ce fichier audio n'a pas pu être lu par le navigateur (essaie un MP3, M4A, WAV ou OGG).");
+      setError(tr("Ce fichier audio n'a pas pu être lu par le navigateur (essaie un MP3, M4A, WAV ou OGG)."));
     } finally {
       setDecoding(false);
     }
@@ -114,20 +115,20 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
       let r: { blob: Blob; ext: string; label: string; note: string; name: string };
       if (kind === "audio") {
         const x = await extractAudio(file, range[0], range[1], fmt, info.audio?.bitrate || 0, setProgress, register);
-        r = { ...x, label: "Son extrait", note: x.copied ? "recopié sans réencodage" : "", name: "son" };
+        r = { ...x, label: tr("Son extrait"), note: x.copied ? tr("recopié sans réencodage") : "", name: "son" };
       } else {
         const x = await editAudio(file, {
           start: range[0], end: range[1], volume: volume / 100, fadeIn, fadeOut,
           music: music ? { pcm: music, mode: musicMode, volume: musicVolume / 100, offset, loop, fadeIn: musicFade, fadeOut: musicFade } : null,
         }, mute, { video: info.video?.bitrate || 2e6, audio: info.audio?.bitrate || 0 }, setProgress, register);
-        r = { ...x, label: mute ? "Vidéo sans le son" : "Vidéo avec le nouveau son", note: x.reencoded ? "vidéo réencodée" : "", name: mute ? "sans-son" : "audio" };
+        r = { ...x, label: mute ? tr("Vidéo sans le son") : tr("Vidéo avec le nouveau son"), note: x.reencoded ? tr("vidéo réencodée") : "", name: mute ? "sans-son" : "audio" };
       }
       if (!alive.current) return;
       const url = URL.createObjectURL(r.blob);
       urls.current.push(url);
       setResult({ url, blob: r.blob, ext: r.ext, kind, label: r.label, note: r.note, name: r.name });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Traitement impossible : ${e.message}` : "Traitement impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? tr("Traitement impossible : {a}", { a: e.message }) : tr("Traitement impossible."));
     } finally {
       setProgress(null);
       cancel.current = null;
@@ -140,7 +141,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   if (!hasAudio) {
     return (
       <p className="vx-muted">
-        Cette vidéo n'a aucune piste audio. L'ajout d'une musique sur une vidéo totalement muette arrivera dans une prochaine version.
+        {tr("Cette vidéo n'a aucune piste audio. L'ajout d'une musique sur une vidéo totalement muette arrivera dans une prochaine version.")}
       </p>
     );
   }
@@ -148,90 +149,90 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
   return (
     <div className="vx-audio">
       <div className="vx-rot">
-        <button type="button" aria-pressed={tab === "edit"} className={`vx-chip${tab === "edit" ? " is-on" : ""}`} onClick={() => setTab("edit")}>Modifier le son de la vidéo</button>
-        <button type="button" aria-pressed={tab === "extract"} className={`vx-chip${tab === "extract" ? " is-on" : ""}`} onClick={() => setTab("extract")}>Extraire le son seul</button>
+        <button type="button" aria-pressed={tab === "edit"} className={`vx-chip${tab === "edit" ? " is-on" : ""}`} onClick={() => setTab("edit")}>{tr("Modifier le son de la vidéo")}</button>
+        <button type="button" aria-pressed={tab === "extract"} className={`vx-chip${tab === "extract" ? " is-on" : ""}`} onClick={() => setTab("extract")}>{tr("Extraire le son seul")}</button>
       </div>
-      <p className="vx-muted">Son actuel : {info.audio!.codec.toUpperCase()} · {channels === 1 ? "mono" : channels === 2 ? "stéréo" : `${channels} canaux`} · {info.audio!.sampleRate / 1000} kHz. Seule la sélection de la timeline ({fmtTime(dur)}) est traitée.</p>
+      <p className="vx-muted">{tr("Son actuel :")}{" "}{info.audio!.codec.toUpperCase()} · {channels === 1 ? "mono" : channels === 2 ? tr("stéréo") : `${channels} canaux`} · {info.audio!.sampleRate / 1000} {tr("kHz. Seule la sélection de la timeline (")}{fmtTime(dur)}{tr(") est traitée.")}</p>
 
       {tab === "edit" ? (
         <>
           <label className="vx-check" style={{ marginBottom: 10, display: "flex" }}>
-            <input type="checkbox" checked={mute} onChange={(e) => setMute(e.target.checked)} /> Retirer complètement le son
+            <input type="checkbox" checked={mute} onChange={(e) => setMute(e.target.checked)} /> {tr("Retirer complètement le son")}
           </label>
           {!mute && (
             <>
               <div className="vx-fields">
-                <label>Volume : {volume} %
+                <label>{tr("Volume :")}{" "}{volume} %
                   <input type="range" min={0} max={200} step={5} value={volume} disabled={replacing} onChange={(e) => setVolume(Number(e.target.value))} />
                 </label>
-                <label>Fondu d'ouverture : {fadeIn} s
+                <label>{tr("Fondu d'ouverture :")}{" "}{fadeIn} s
                   <input type="range" min={0} max={5} step={0.5} value={fadeIn} disabled={replacing} onChange={(e) => setFadeIn(Number(e.target.value))} />
                 </label>
-                <label>Fondu de fermeture : {fadeOut} s
+                <label>{tr("Fondu de fermeture :")}{" "}{fadeOut} s
                   <input type="range" min={0} max={5} step={0.5} value={fadeOut} onChange={(e) => setFadeOut(Number(e.target.value))} />
                 </label>
               </div>
-              {replacing && <p className="vx-muted">Mode Remplacer : le son d'origine est retiré, donc son volume et son fondu d'ouverture ne s'appliquent pas. Règle ceux de la musique plus bas ; le fondu de fermeture s'applique à la musique.</p>}
-              {volume > 100 && !replacing && <p className="vx-muted">Au-dessus de 100 %, les passages forts peuvent saturer : écoute le résultat.</p>}
+              {replacing && <p className="vx-muted">{tr("Mode Remplacer : le son d'origine est retiré, donc son volume et son fondu d'ouverture ne s'appliquent pas. Règle ceux de la musique plus bas ; le fondu de fermeture s'applique à la musique.")}</p>}
+              {volume > 100 && !replacing && <p className="vx-muted">{tr("Au-dessus de 100 %, les passages forts peuvent saturer : écoute le résultat.")}</p>}
 
-              <h4 className="vx-code-title">Musique</h4>
+              <h4 className="vx-code-title">{tr("Musique")}</h4>
               <input ref={musicInput} type="file" accept="audio/*" style={{ display: "none" }} onChange={(e) => { pickMusic(e.target.files?.[0] || null); e.target.value = ""; }} />
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
-                <HudButton action="add-music" compact label={music ? "Changer de musique" : "Ajouter une musique"} busy={decoding} onClick={() => musicInput.current?.click()} />
+                <HudButton action="add-music" compact label={music ? tr("Changer de musique") : tr("Ajouter une musique")} busy={decoding} onClick={() => musicInput.current?.click()} />
                 {music && <span className="vx-file">{music.name} · {fmtTime(music.duration)}</span>}
                 {music && <HudButton action="remove-music" compact onClick={() => setMusic(null)} />}
               </div>
               {music && (
                 <div className="vx-fields">
-                  <div className="vx-modes" role="radiogroup" aria-label="Mode musique">
-                    <label><input type="radio" name="mmode" checked={musicMode === "mix"} onChange={() => setMusicMode("mix")} /><b>Mélanger</b> — la musique sous le son de la vidéo</label>
-                    <label><input type="radio" name="mmode" checked={musicMode === "replace"} onChange={() => setMusicMode("replace")} /><b>Remplacer</b> — seulement la musique</label>
+                  <div className="vx-modes" role="radiogroup" aria-label={tr("Mode musique")}>
+                    <label><input type="radio" name="mmode" checked={musicMode === "mix"} onChange={() => setMusicMode("mix")} /><b>{tr("Mélanger")}</b> {tr("— la musique sous le son de la vidéo")}</label>
+                    <label><input type="radio" name="mmode" checked={musicMode === "replace"} onChange={() => setMusicMode("replace")} /><b>{tr("Remplacer")}</b> {tr("— seulement la musique")}</label>
                   </div>
-                  <label>Volume de la musique : {musicVolume} %
+                  <label>{tr("Volume de la musique :")}{" "}{musicVolume} %
                     <input type="range" min={0} max={100} step={5} value={musicVolume} onChange={(e) => setMusicVolume(Number(e.target.value))} />
                   </label>
-                  <label>Début de la musique : {fmtTime(offset)}
+                  <label>{tr("Début de la musique :")}{" "}{fmtTime(offset)}
                     <input type="range" min={0} max={maxOffset} step={0.1} value={offset} onChange={(e) => setMusicOffset(Number(e.target.value))} />
                   </label>
-                  <HudButton action="place-playhead" compact label="Placer la musique à la tête de lecture" style={{ alignSelf: "start", justifySelf: "start" }} disabled={!video}
+                  <HudButton action="place-playhead" compact label={tr("Placer la musique à la tête de lecture")} style={{ alignSelf: "start", justifySelf: "start" }} disabled={!video}
                     onClick={() => video && setMusicOffset(Math.min(Math.max(0, video.currentTime - range[0]), maxOffset))} />
-                  <label>Fondus de la musique : {musicFade} s
+                  <label>{tr("Fondus de la musique :")}{" "}{musicFade} s
                     <input type="range" min={0} max={5} step={0.5} value={musicFade} onChange={(e) => setMusicFade(Number(e.target.value))} />
                   </label>
                   {music.duration < dur - offset && (
-                    <label className="vx-check"><input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} /> Répéter la musique (elle est plus courte que la vidéo)</label>
+                    <label className="vx-check"><input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} /> {tr("Répéter la musique (elle est plus courte que la vidéo)")}</label>
                   )}
                 </div>
               )}
             </>
           )}
           <p className="vx-muted">{intact === null
-            ? "Vérification de la vidéo…"
+            ? tr("Vérification de la vidéo…")
             : intact
-              ? "La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image."
-              : "WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, et le poids du fichier peut changer). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo."}</p>
+              ? tr("La vidéo n'est pas réencodée : seul le son est traité, donc c'est rapide et sans perte d'image.")
+              : tr("WebM : la sélection ne commence pas sur une image clé, donc la vidéo sera réencodée (plus long, légère perte d'image, et le poids du fichier peut changer). Pour la garder intacte, fais commencer la sélection au tout début de la vidéo.")}</p>
           {/* MP4 : l'image est recopiée depuis l'image clé précédente (en WebM, hors image clé, elle est réencodée) */}
           {outCodec === "AAC" && <LeadNote start={range[0]} />}
           {planNotes}
-          {!mute && !canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder le son en {outCodec} : il ne peut pas modifier le son de cette vidéo. Tu peux quand même le retirer complètement, ou essayer avec un autre navigateur.</p>}
+          {!mute && !canEncode && <p className="vx-alert">{tr("Ce navigateur ne sait pas encoder le son en")}{" "}{outCodec} {tr(": il ne peut pas modifier le son de cette vidéo. Tu peux quand même le retirer complètement, ou essayer avec un autre navigateur.")}</p>}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <HudButton action="apply-audio" label={mute ? "Retirer le son" : "Appliquer au son"} disabled={!mute && !canEncode} busy={progress !== null} busyLabel={busy("Traitement du son")} onClick={() => run("video")} />
+            <HudButton action="apply-audio" label={mute ? tr("Retirer le son") : tr("Appliquer au son")} disabled={!mute && !canEncode} busy={progress !== null} busyLabel={busy(tr("Traitement du son"))} onClick={() => run("video")} />
             {progress !== null && <HudButton action="cancel" compact onClick={stop} />}
           </div>
         </>
       ) : (
         <>
           <div className="vx-fields">
-            <label>Format
+            <label>{tr("Format")}
               <select value={fmt} onChange={(e) => setFmt(e.target.value as AudioFormat)}>
-                {AUDIO_FORMATS.map((f) => <option key={f.id} value={f.id} disabled={support ? !support[f.id] : false}>{f.label}{support && !support[f.id] ? " (non disponible dans ce navigateur)" : ""}</option>)}
+                {AUDIO_FORMATS.map((f) => <option key={f.id} value={f.id} disabled={support ? !support[f.id] : false}>{tr(f.label)}{support && !support[f.id] ? tr(" (non disponible dans ce navigateur)") : ""}</option>)}
               </select>
             </label>
           </div>
           {planNotes}
-          {!planOk && <p className="vx-alert">Ce navigateur ne sait pas encoder ce son en {plan!.codec === "opus" ? "Opus" : "AAC"} : choisis un autre format.</p>}
+          {!planOk && <p className="vx-alert">{tr("Ce navigateur ne sait pas encoder ce son en")}{" "}{plan!.codec === "opus" ? tr("Opus") : "AAC"} {tr(": choisis un autre format.")}</p>}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <HudButton action="extract-audio" disabled={!planOk} busy={progress !== null} busyLabel={busy("Extraction")} onClick={() => run("audio")} />
+            <HudButton action="extract-audio" disabled={!planOk} busy={progress !== null} busyLabel={busy(tr("Extraction"))} onClick={() => run("audio")} />
             {progress !== null && <HudButton action="cancel" compact onClick={stop} />}
           </div>
         </>
@@ -240,7 +241,7 @@ export function AudioPanel({ file, info, range, video, onContinue }: Props) {
       {error && <p className="vx-alert">{error}</p>}
       {result && (result.kind === "audio") === (tab === "extract") && (
         <div className="vx-result">
-          <span>✓ {result.label} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}{result.note ? ` · ${result.note}` : ""}</span>
+          <span>✓ {tr(result.label)} · {fmtBytes(result.blob.size)} · {result.ext.toUpperCase()}{result.note ? ` · ${result.note}` : ""}</span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-${result.name}.${result.ext}`} />
           {result.kind === "video" && <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, result.name)} />}
         </div>

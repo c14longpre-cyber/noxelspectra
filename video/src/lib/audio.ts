@@ -6,6 +6,7 @@ import {
 } from "mediabunny";
 import type { InputAudioTrack, InputVideoTrack } from "mediabunny";
 
+import { tr } from "../i18n";
 type Progress = (p: number) => void;
 type Register = (cancel: () => Promise<void>) => void;
 
@@ -260,7 +261,7 @@ async function checkOutput(buffer: ArrayBuffer, want: { video: boolean; audio: b
     // Un fichier illisible (réduit à son en-tête) compte comme une piste absente
     if (want.video) {
       const d = await input.getPrimaryVideoTrack().then((t) => (t ? t.computeDuration() : 0)).catch(() => 0);
-      if (!(d > 0)) throw new Error("le fichier produit ne contient aucune image");
+      if (!(d > 0)) throw new Error(tr("le fichier produit ne contient aucune image"));
     }
     if (want.audio) {
       const d = await input.getPrimaryAudioTrack().then((t) => (t ? t.computeDuration() : 0)).catch(() => 0);
@@ -295,13 +296,13 @@ export async function editAudio(file: File, e: AudioEdit, mute: boolean, source:
     const lost = conversion.discardedTracks.filter((d) => d.track.type === "video" || (d.track.type === "audio" && d.reason !== "discarded_by_user"));
     if (!conversion.isValid || lost.length) {
       const why = (lost.length ? lost : conversion.discardedTracks).map((d) => `${d.track.type} : ${d.reason}`).join(", ");
-      throw new Error(`format non pris en charge par ce navigateur${why ? ` (${why})` : ""}`);
+      throw new Error(tr("format non pris en charge par ce navigateur{a}", { a: why ? ` (${why})` : "" }));
     }
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
     await checkOutput(buffer, { video: !!vt, audio: !mute });
     return { blob: new Blob([buffer], { type: webm ? "video/webm" : "video/mp4" }), ext: webm ? "webm" : "mp4", reencoded };
   } finally {
@@ -326,7 +327,7 @@ export async function extractAudio(file: File, start: number, end: number, fmt: 
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const at = await input.getPrimaryAudioTrack();
-    if (!at) throw new Error("cette vidéo n'a aucune piste audio");
+    if (!at) throw new Error(tr("cette vidéo n'a aucune piste audio"));
     const makeOutput = () => new Output({
       format: fmt === "wav" ? new WavOutputFormat() : fmt === "ogg" ? new OggOutputFormat() : new Mp4OutputFormat({ fastStart: "in-memory" }),
       target: new BufferTarget(),
@@ -352,7 +353,7 @@ export async function extractAudio(file: File, start: number, end: number, fmt: 
     });
     if (!conversion.isValid) {
       const why = conversion.discardedTracks.filter((d) => d.track.type === "audio").map((d) => d.reason).join(", ");
-      throw new Error(`ce navigateur ne peut pas produire ce format à partir de cette piste audio${why ? ` (${why})` : ""}`);
+      throw new Error(tr("ce navigateur ne peut pas produire ce format à partir de cette piste audio{a}", { a: why ? ` (${why})` : "" }));
     }
     register?.(() => conversion.cancel());
     conversion.onProgress = (p) => onProgress(p);
@@ -361,7 +362,7 @@ export async function extractAudio(file: File, start: number, end: number, fmt: 
       throw err instanceof Error && /empty|no packets/i.test(err.message) ? new Error(EMPTY_AUDIO) : err;
     });
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
     await checkOutput(buffer, { video: false, audio: true });
     const mime = fmt === "wav" ? "audio/wav" : fmt === "ogg" ? "audio/ogg" : "audio/mp4";
     return { blob: new Blob([buffer], { type: mime }), ext: fmt, copied };

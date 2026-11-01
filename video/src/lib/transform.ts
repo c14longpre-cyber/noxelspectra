@@ -3,6 +3,7 @@ import { ALL_FORMATS, BlobSource, BufferTarget, Conversion, Input, MovOutputForm
 import type { AudioSample, ConversionOptions, VideoSample } from "mediabunny";
 import { audioEncoding, audioOptions, createSpeedResampler } from "./audio";
 
+import { tr } from "../i18n";
 export type ContainerId = "mp4" | "webm" | "mov";
 export const CONTAINERS: { id: ContainerId; label: string; video: string[]; audio: string[]; mime: string }[] = [
   { id: "mp4", label: "MP4 — compatible partout (web, réseaux, téléphones)", video: ["avc", "hevc", "vp9", "av1"], audio: ["aac", "opus", "mp3"], mime: "video/mp4" },
@@ -33,7 +34,7 @@ async function run(file: File, id: ContainerId, build: (input: Input) => Promise
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
     return new Blob([buffer], { type: CONTAINERS.find((c) => c.id === id)!.mime });
   } finally {
     input.dispose();
