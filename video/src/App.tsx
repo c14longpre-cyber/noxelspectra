@@ -1,6 +1,6 @@
 // NOXEL SPECTRA Vidéo — version de test (video.noxelspectra.com)
 // Tout le traitement se fait dans le navigateur (WebCodecs) : aucune vidéo n'est téléversée.
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
 import { Timeline } from "./components/Timeline";
 import { LoadError, analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
@@ -10,6 +10,9 @@ import { LOAD_FAILED, lazyTool, preloadTools } from "./lib/lazyTool";
 import { OverlayStage } from "./components/OverlayStage";
 import { OverlayTracks } from "./components/OverlayTracks";
 
+import { tr, useLang } from "./i18n";
+import { LangPill } from "../../frontend/src/components/spectra-nexus/LangPill";
+const NexusSelector = lazy(() => import("../../frontend/src/components/spectra-nexus/NexusSelector"));
 // Chaque outil (et le moteur vidéo qu'il utilise) est téléchargé quand on l'ouvre, pas au premier affichage
 const CompressPanel = lazyTool(() => import("./components/CompressPanel").then((m) => m.CompressPanel));
 const ReframePanel = lazyTool(() => import("./components/ReframePanel").then((m) => m.ReframePanel));
@@ -46,6 +49,9 @@ const TOOLS: Tool[] = [
 ];
 
 export default function App() {
+  // Re-render quand la langue change (sélecteur NOXEL NEXUS, partagé avec l'app images)
+  const { lang, setLang } = useLang();
+  const [showLang, setShowLang] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
@@ -91,7 +97,7 @@ export default function App() {
   function openFile(f: File | null) {
     if (!f) return;
     if (!f.type.startsWith("video/") && !/\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name)) {
-      setError("Ce fichier ne semble pas être une vidéo.");
+      setError(tr("Ce fichier ne semble pas être une vidéo."));
       setNeedsReload(false);
       return;
     }
@@ -121,7 +127,7 @@ export default function App() {
     try {
       setInfo(await analyzeVideo(file));
     } catch (e) {
-      setError(e instanceof Error ? `Analyse impossible : ${e.message}` : "Analyse impossible.");
+      setError(e instanceof Error ? `Analyse impossible : ${e.message}` : tr("Analyse impossible."));
       setNeedsReload(e instanceof LoadError);
     } finally {
       setBusy(false);
@@ -160,7 +166,7 @@ export default function App() {
       });
     } catch (e) {
       if (!(e instanceof Error && /cancel/i.test(e.message))) {
-        setError(e instanceof Error ? `Découpe impossible : ${e.message}` : "Découpe impossible.");
+        setError(e instanceof Error ? tr("Découpe impossible : {a}", { a: e.message }) : tr("Découpe impossible."));
         setNeedsReload(e instanceof LoadError);
       }
     } finally {
@@ -190,34 +196,40 @@ export default function App() {
 
   const current = TOOLS.find((t) => t.id === tool)!;
   // Texte d'attente des outils qui ont besoin de l'analyse
-  const waitText = !file ? "Choisis d'abord une vidéo." : busy || !error ? "Analyse de la vidéo…" : "L'analyse de la vidéo n'a pas abouti.";
+  const waitText = !file ? tr("Choisis d'abord une vidéo.") : busy || !error ? tr("Analyse de la vidéo…") : tr("L'analyse de la vidéo n'a pas abouti.");
   const baseName = file ? file.name.replace(/\.[^.]+$/, "") : "video";
 
   return (
     <div className="vx-shell">
       <aside className="vx-sidebar">
         <div className="vx-brand">
-          <h1 className="vx-brand-name"><span className="vx-brand-mark">NOXEL</span> Spectra <b>Vidéo</b></h1>
-          <span className="vx-badge">TEST</span>
+          <h1 className="vx-brand-name"><span className="vx-brand-mark">{tr("NOXEL")}</span> {tr("Spectra")}{" "}<b>{tr("Vidéo")}</b></h1>
+          <span className="vx-badge">{tr("TEST")}</span>
         </div>
         <nav>
           {TOOLS.map((t) => (
             <button key={t.id} type="button" className={`vx-nav${t.id === tool ? " is-active" : ""}`} onClick={() => setTool(t.id)}>
               <span aria-hidden="true" className="vx-nav-icon">{t.icon}</span>
-              <span>{t.label}</span>
-              {!t.ready && <span className="vx-soon">bientôt</span>}
+              <span>{tr(t.label)}</span>
+              {!t.ready && <span className="vx-soon">{tr("bientôt")}</span>}
             </button>
           ))}
         </nav>
+        <div className="vx-lang"><LangPill lang={lang} onClick={() => setShowLang(true)} /></div>
         <div className="vx-legal">
-          <button type="button" className="vx-legal-btn" data-noxel-consent-settings>Préférences de confidentialité</button>
-          <a href="https://www.noxelspectra.com/#confidentialite" target="_blank" rel="noopener">Confidentialité</a>
+          <button type="button" className="vx-legal-btn" data-noxel-consent-settings>{tr("Préférences de confidentialité")}</button>
+          <a href="https://www.noxelspectra.com/#confidentialite" target="_blank" rel="noopener">{tr("Confidentialité")}</a>
         </div>
       </aside>
 
+      {showLang && (
+        <Suspense fallback={null}>
+          <NexusSelector locale={lang} onChange={(l) => { setLang(l); setShowLang(false); }} onClose={() => setShowLang(false)} />
+        </Suspense>
+      )}
       <main className="vx-main">
         {support && !support.webcodecs && (
-          <p className="vx-alert">Ton navigateur ne prend pas en charge WebCodecs : utilise une version récente de Chrome, Edge, Safari ou Firefox.</p>
+          <p className="vx-alert">{tr("Ton navigateur ne prend pas en charge WebCodecs : utilise une version récente de Chrome, Edge, Safari ou Firefox.")}</p>
         )}
 
         <section
@@ -227,14 +239,14 @@ export default function App() {
           onDrop={(e) => { e.preventDefault(); setDragOver(false); openFile(e.dataTransfer.files?.[0] || null); }}
         >
           <input ref={inputRef} type="file" accept="video/*,.mkv" style={{ display: "none" }} onChange={(e) => { openFile(e.target.files?.[0] || null); e.target.value = ""; }} />
-          <HudButton action="choose-file" compact label="Choisir une vidéo" onClick={() => inputRef.current?.click()} />
-          <span className="vx-muted">ou glisse-dépose une vidéo ici — elle reste sur ton appareil, rien n'est téléversé</span>
+          <HudButton action="choose-file" compact label={tr("Choisir une vidéo")} onClick={() => inputRef.current?.click()} />
+          <span className="vx-muted">{tr("ou glisse-dépose une vidéo ici — elle reste sur ton appareil, rien n'est téléversé")}</span>
           {file && <span className="vx-file">{file.name} · {fmtBytes(file.size)}</span>}
         </section>
 
         {url && (
           <section className={`vx-panel${tool === "text" ? " vx-panel--pin" : ""}`}>
-            <h3 className="vx-head"><b>01</b> / Aperçu</h3>
+            <h3 className="vx-head"><b>01</b> {tr("/ Aperçu")}</h3>
             <div className="vx-player">
               <video
                 ref={(el) => { videoRef.current = el; setVideoEl(el); }}
@@ -264,7 +276,7 @@ export default function App() {
         )}
 
         <section className="vx-panel">
-          <h3 className="vx-head"><b>02</b> / {current.label}</h3>
+          <h3 className="vx-head"><b>02</b> / {tr(current.label)}</h3>
           {tool === "rights" ? (
             file && info ? (
               <RightsPanel file={file} info={info} range={range} duration={duration} onPreview={setMarkPreview} onContinue={continueWith} />
@@ -299,7 +311,7 @@ export default function App() {
               <p className="vx-muted">{waitText}</p>
             )
           ) : tool === "thumb" ? (
-            file && url ? <ThumbPanel file={file} url={url} range={range} video={videoEl} /> : <p className="vx-muted">Choisis d'abord une vidéo.</p>
+            file && url ? <ThumbPanel file={file} url={url} range={range} video={videoEl} /> : <p className="vx-muted">{tr("Choisis d'abord une vidéo.")}</p>
           ) : tool === "web" ? (
             file && info ? (
               <WebReadyPanel file={file} info={info} range={range} video={videoEl} />
@@ -328,32 +340,30 @@ export default function App() {
           ) : tool === "cut" ? (
             <>
               <p className="vx-muted">
-                Choisis le passage à garder sur la timeline (glisse les poignées, ou I / O pendant la lecture).
-                La découpe est précise à l'image près ; la vidéo n'est réencodée qu'aux points de coupe quand c'est possible.
+                {tr("Choisis le passage à garder sur la timeline (glisse les poignées, ou I / O pendant la lecture). La découpe est précise à l'image près ; la vidéo n'est réencodée qu'aux points de coupe quand c'est possible.")}
               </p>
-              <p className="vx-muted">Extrait : <b style={{ color: "#3ddc84" }}>{fmtTime(range[0])} → {fmtTime(range[1])}</b> ({fmtTime(range[1] - range[0])})</p>
-              <div className="vx-modes" role="radiogroup" aria-label="Mode de coupe">
+              <p className="vx-muted">{tr("Extrait :")}{" "}<b style={{ color: "#3ddc84" }}>{fmtTime(range[0])} → {fmtTime(range[1])}</b> ({fmtTime(range[1] - range[0])})</p>
+              <div className="vx-modes" role="radiogroup" aria-label={tr("Mode de coupe")}>
                 <label><input type="radio" name="cutmode" checked={cutMode === "precise"} onChange={() => setCutMode("precise")} />
-                  <b>Précise</b> — à l'image près</label>
+                  <b>{tr("Précise")}</b> {tr("— à l'image près")}</label>
                 <label><input type="radio" name="cutmode" checked={cutMode === "fast"} onChange={() => setCutMode("fast")} />
-                  <b>Rapide, sans perte</b> — démarre à l'image clé la plus proche, aucune image réencodée</label>
+                  <b>{tr("Rapide, sans perte")}</b> {tr("— démarre à l'image clé la plus proche, aucune image réencodée")}</label>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <HudButton action="cut-video" disabled={!file || duration <= 0} busy={cutProgress !== null}
-                  busyLabel={cutProgress !== null ? `Découpe… ${Math.round(cutProgress * 100)} %` : undefined} onClick={runCut} />
+                  busyLabel={cutProgress !== null ? tr("Découpe… {a} %", { a: Math.round(cutProgress * 100) }) : undefined} onClick={runCut} />
                 {cutProgress !== null && (
                   <HudButton action="cancel" compact onClick={stopCut} />
                 )}
               </div>
               {cutResult && (
                 <div className="vx-result">
-                  <span>✓ Extrait de {fmtTime(cutResult.duration)} · {fmtBytes(cutResult.size)} · {cutResult.ext.toUpperCase()}</span>
+                  <span>{tr("✓ Extrait de")}{" "}{fmtTime(cutResult.duration)} · {fmtBytes(cutResult.size)} · {cutResult.ext.toUpperCase()}</span>
                   <HudLink action="download-result" compact href={cutResult.url} download={`${baseName}-extrait.${cutResult.ext}`} />
                   <HudButton action="continue" compact onClick={continueWithCut} />
                   {cutResult.duration - cutResult.requested > 0.5 && (
                     <p className="vx-alert" style={{ flexBasis: "100%", margin: 0 }}>
-                      Cette vidéo n'a pas d'image clé près du début choisi : l'extrait dure {fmtTime(cutResult.duration)} au lieu de {fmtTime(cutResult.requested)}.
-                      Utilise le mode Précise pour couper exactement.
+                      {tr("Cette vidéo n'a pas d'image clé près du début choisi : l'extrait dure")}{" "}{fmtTime(cutResult.duration)} {tr("au lieu de")}{" "}{fmtTime(cutResult.requested)}{tr(". Utilise le mode Précise pour couper exactement.")}
                     </p>
                   )}
                 </div>
@@ -361,12 +371,12 @@ export default function App() {
             </>
           ) : current.ready ? (
             <>
-              <p className="vx-muted">Format, codecs, durée, résolution, images/s, débit, audio et potentiel de compression — calculés localement.</p>
+              <p className="vx-muted">{tr("Format, codecs, durée, résolution, images/s, débit, audio et potentiel de compression — calculés localement.")}</p>
               <HudButton action="analyse" disabled={!file} busy={busy} onClick={runAnalyze} />
               {info && <AnalyzeReport info={info} />}
             </>
           ) : (
-            <p className="vx-muted">🛠 En construction — {current.plan}</p>
+            <p className="vx-muted">{tr("🛠 En construction —")}{" "}{current.plan}</p>
           )}
           {error && <p className="vx-alert" role="alert">{error}</p>}
           {error && needsReload && <HudButton action="reload-page" compact onClick={() => window.location.reload()} />}
@@ -374,7 +384,7 @@ export default function App() {
 
         {support && (
           <p className="vx-foot">
-            Encodeurs disponibles dans ce navigateur : H.264 {support.h264 ? "✓" : "✗"} · VP9 {support.vp9 ? "✓" : "✗"} · AV1 {support.av1 ? "✓" : "✗"}
+            {tr("Encodeurs disponibles dans ce navigateur : H.264")}{" "}{support.h264 ? "✓" : "✗"} {tr("· VP9")}{" "}{support.vp9 ? "✓" : "✗"} {tr("· AV1")}{" "}{support.av1 ? "✓" : "✗"}
           </p>
         )}
       </main>
@@ -386,18 +396,18 @@ function AnalyzeReport({ info }: { info: VideoInfo }) {
   const v = info.video;
   const a = info.audio;
   const rows: [string, string][] = [
-    ["Conteneur", `${info.container} (${info.mimeType})`],
-    ["Durée", fmtTime(info.duration)],
-    ["Poids", fmtBytes(info.size)],
-    ["Débit total", fmtBitrate((info.size * 8) / Math.max(info.duration, 0.001))],
+    [tr("Conteneur"), `${info.container} (${info.mimeType})`],
+    [tr("Durée"), fmtTime(info.duration)],
+    [tr("Poids"), fmtBytes(info.size)],
+    [tr("Débit total"), fmtBitrate((info.size * 8) / Math.max(info.duration, 0.001))],
   ];
   if (v) {
-    rows.push(["Vidéo", `${v.codec.toUpperCase()} · ${v.width} × ${v.height}${v.rotation ? ` (rotation ${v.rotation}°)` : ""}${v.hdr ? " · HDR" : ""}`]);
-    rows.push(["Images/s", `${v.fps}`]);
-    rows.push(["Débit vidéo", fmtBitrate(v.bitrate)]);
-    if (!v.decodable) rows.push(["⚠ Décodage", "ce codec vidéo n'est pas lisible par ce navigateur"]);
-  } else rows.push(["Vidéo", "aucune piste vidéo"]);
-  rows.push(["Audio", a ? `${a.codec.toUpperCase()} · ${a.channels === 1 ? "mono" : a.channels === 2 ? "stéréo" : `${a.channels} canaux`} · ${a.sampleRate / 1000} kHz · ${fmtBitrate(a.bitrate)}` : "aucune piste audio"]);
+    rows.push([tr("Vidéo"), `${v.codec.toUpperCase()} · ${v.width} × ${v.height}${v.rotation ? ` (rotation ${v.rotation}°)` : ""}${v.hdr ? tr(" · HDR") : ""}`]);
+    rows.push([tr("Images/s"), `${v.fps}`]);
+    rows.push([tr("Débit vidéo"), fmtBitrate(v.bitrate)]);
+    if (!v.decodable) rows.push([tr("⚠ Décodage"), tr("ce codec vidéo n'est pas lisible par ce navigateur")]);
+  } else rows.push([tr("Vidéo"), tr("aucune piste vidéo")]);
+  rows.push([tr("Audio"), a ? `${a.codec.toUpperCase()} · ${a.channels === 1 ? "mono" : a.channels === 2 ? tr("stéréo") : `${a.channels} canaux`} · ${a.sampleRate / 1000} kHz · ${fmtBitrate(a.bitrate)}` : tr("aucune piste audio")]);
 
   const gain = Math.max(0, 1 - info.estimatedSize / info.size);
   return (
@@ -408,11 +418,11 @@ function AnalyzeReport({ info }: { info: VideoInfo }) {
         ))}
       </dl>
       <div className={`vx-potential is-${info.potential}`}>
-        <b>Potentiel de compression : {info.potential}</b>
+        <b>{tr("Potentiel de compression :")}{" "}{info.potential}</b>
         <span>
           {info.potential === "faible"
-            ? "Cette vidéo est déjà bien compressée pour sa résolution."
-            : `Estimation pour le web : environ ${fmtBytes(info.estimatedSize)} (−${Math.round(gain * 100)} %) à qualité visuelle comparable.`}
+            ? tr("Cette vidéo est déjà bien compressée pour sa résolution.")
+            : tr("Estimation pour le web : environ {a} (−{b} %) à qualité visuelle comparable.", { a: fmtBytes(info.estimatedSize), b: Math.round(gain * 100) })}
         </span>
       </div>
     </div>

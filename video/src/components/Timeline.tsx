@@ -5,6 +5,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { HudButton } from "@hud/HudButton";
 import { fmtTime } from "../lib/probe";
 
+import { tr } from "../i18n";
 type Props = {
   video: HTMLVideoElement | null;
   duration: number;
@@ -107,9 +108,9 @@ export function Timeline({ video, duration, inPoint, outPoint, onChange }: Props
       <div className="vx-transport">
         <HudButton action={playing ? "pause" : "play"} iconOnly onClick={toggle} />
         <span className="vx-time">{fmtTime(time)} / {fmtTime(duration)}</span>
-        <HudButton action="set-in" compact label="Début" title="Début de la sélection (raccourci : I)" onClick={setIn} />
-        <HudButton action="set-out" compact label="Fin" title="Fin de la sélection (raccourci : O)" onClick={setOut} />
-        <span className="vx-sel">Sélection : {fmtTime(inPoint)} → {fmtTime(outPoint)} · <b>{fmtTime(outPoint - inPoint)}</b></span>
+        <HudButton action="set-in" compact label={tr("Début")} title={tr("Début de la sélection (raccourci : I)")} onClick={setIn} />
+        <HudButton action="set-out" compact label={tr("Fin")} title={tr("Fin de la sélection (raccourci : O)")} onClick={setOut} />
+        <span className="vx-sel">{tr("Sélection :")}{" "}{fmtTime(inPoint)} → {fmtTime(outPoint)} · <b>{fmtTime(outPoint - inPoint)}</b></span>
       </div>
       <div
         ref={bar}
@@ -118,7 +119,7 @@ export function Timeline({ video, duration, inPoint, outPoint, onChange }: Props
         onPointerMove={onMove}
         onPointerUp={onUp}
         role="slider"
-        aria-label="Position de lecture"
+        aria-label={tr("Position de lecture")}
         aria-valuemin={0}
         aria-valuemax={Math.round(duration)}
         aria-valuenow={Math.round(time)}
@@ -129,11 +130,11 @@ export function Timeline({ video, duration, inPoint, outPoint, onChange }: Props
         <div className="vx-out-left" style={{ width: `${pct(inPoint)}%` }} />
         <div className="vx-out-right" style={{ left: `${pct(outPoint)}%` }} />
         <div className="vx-range" style={{ left: `${pct(inPoint)}%`, width: `${pct(outPoint - inPoint)}%` }} />
-        <div className="vx-mark vx-mark-in" style={{ left: `${pct(inPoint)}%` }} onPointerDown={(e) => onDown(e, "in")} onPointerMove={onMove} onPointerUp={onUp} title="Début de la sélection" />
-        <div className="vx-mark vx-mark-out" style={{ left: `${pct(outPoint)}%` }} onPointerDown={(e) => onDown(e, "out")} onPointerMove={onMove} onPointerUp={onUp} title="Fin de la sélection" />
+        <div className="vx-mark vx-mark-in" style={{ left: `${pct(inPoint)}%` }} onPointerDown={(e) => onDown(e, "in")} onPointerMove={onMove} onPointerUp={onUp} title={tr("Début de la sélection")} />
+        <div className="vx-mark vx-mark-out" style={{ left: `${pct(outPoint)}%` }} onPointerDown={(e) => onDown(e, "out")} onPointerMove={onMove} onPointerUp={onUp} title={tr("Fin de la sélection")} />
         <div className="vx-playhead" style={{ left: `${pct(time)}%` }} />
       </div>
-      <p className="vx-hint">Espace : lecture · I / O : début / fin · ← → : ±1 s (Maj : ±0,1 s)</p>
+      <p className="vx-hint">{tr("Espace : lecture · I / O : début / fin · ← → : ±1 s (Maj : ±0,1 s)")}</p>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { NumberInput } from "../NumberInput";
 
+import { tr } from "../../i18n";
 type Props = {
   original: File;
   cutout: Blob;
@@ -97,7 +98,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
         setBrush(Math.max(10, Math.round(Math.max(w, h) * 0.04)));
         setReady(true);
       } catch {
-        if (!cancelled) setLoadError("Impossible de préparer la retouche de cette image.");
+        if (!cancelled) setLoadError(tr("Impossible de préparer la retouche de cette image."));
       }
     })();
     return () => {
@@ -427,16 +428,16 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center" }}>
-        <strong style={{ fontSize: 14 }}>Retoucher :</strong>
+        <strong style={{ fontSize: 14 }}>{tr("Retoucher :")}</strong>
         <HudButton action="erase" compact selected={mode === "erase" && !panMode} onClick={() => { setMode("erase"); setPanMode(false); }} />
         <HudButton action="restore" compact selected={mode === "restore" && !panMode} onClick={() => { setMode("restore"); setPanMode(false); }} />
-        <HudButton action="move" compact selected={panMode} onClick={() => setPanMode((v) => !v)} title="Déplacer l'image zoomée (ou maintiens la barre d'espace)" />
+        <HudButton action="move" compact selected={panMode} onClick={() => setPanMode((v) => !v)} title={tr("Déplacer l'image zoomée (ou maintiens la barre d'espace)")} />
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-          Taille <NumberInput label="Taille du pinceau" value={brush} onChange={setBrush} min={1} max={maxBrush} unit="px" />
+          {tr("Taille")}{" "}<NumberInput label={tr("Taille du pinceau")} value={brush} onChange={setBrush} min={1} max={maxBrush} unit="px" />
           <input type="range" min={1} max={maxBrush} value={brush} onChange={(e) => setBrush(Number(e.target.value))} />
         </label>
         <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-          Douceur <NumberInput label="Douceur du pinceau" value={softness} onChange={setSoftness} min={0} max={100} unit="%" />{softness === 0 && " (nette)"}
+          {tr("Douceur")}{" "}<NumberInput label={tr("Douceur du pinceau")} value={softness} onChange={setSoftness} min={0} max={100} unit="%" />{softness === 0 && " (nette)"}
           <input type="range" min={0} max={100} step={5} value={softness} onChange={(e) => setSoftness(Number(e.target.value))} />
         </label>
         <HudButton action="undo-mask" compact disabled={undoCount === 0} onClick={undo} />
@@ -444,7 +445,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginTop: 8 }}>
-        <strong style={{ fontSize: 14 }}>Zoom :</strong>
+        <strong style={{ fontSize: 14 }}>{tr("Zoom :")}</strong>
         <HudButton action="zoom-out" iconOnly disabled={zoom <= MIN_ZOOM} onClick={() => zoomTo(zoomRef.current / 1.5)} />
         <input
           type="range"
@@ -453,7 +454,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
           step={0.5}
           value={zoom}
           onChange={(e) => zoomTo(Number(e.target.value))}
-          aria-label="Niveau de zoom"
+          aria-label={tr("Niveau de zoom")}
         />
         <HudButton action="zoom-in" iconOnly disabled={zoom >= MAX_ZOOM} onClick={() => zoomTo(zoomRef.current * 1.5)} />
         <span style={{ fontSize: 13, minWidth: 44 }}>{zoom.toFixed(zoom < 10 ? 1 : 0)}×</span>
@@ -461,10 +462,8 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
       </div>
 
       <p style={{ fontSize: 12, color: "#888", margin: "6px 0 0" }}>
-        <strong>Effacer</strong> retire ce qui reste du fond, <strong>Restaurer</strong> fait revenir une partie du
-        sujet. Zoom : <strong>Ctrl + molette</strong> (centré sur la souris). Déplacement : maintiens la{" "}
-        <strong>barre d'espace</strong> en glissant, ou utilise ✋. Pour le travail au pixel près : douceur nette et
-        taille 1 à 3 px.
+        <strong>{tr("Effacer")}</strong> {tr("retire ce qui reste du fond,")}{" "}<strong>{tr("Restaurer")}</strong> {tr("fait revenir une partie du sujet. Zoom :")}{" "}<strong>{tr("Ctrl + molette")}</strong> {tr("(centré sur la souris). Déplacement : maintiens la")}{" "}
+        <strong>{tr("barre d'espace")}</strong> {tr("en glissant, ou utilise ✋. Pour le travail au pixel près : douceur nette et taille 1 à 3 px.")}
       </p>
 
       <div
@@ -480,7 +479,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
           lineHeight: 0,
         }}
       >
-        {!ready && <p style={{ padding: 20, lineHeight: 1.4, color: "#888" }}>Préparation de la retouche...</p>}
+        {!ready && <p style={{ padding: 20, lineHeight: 1.4, color: "#888" }}>{tr("Préparation de la retouche...")}</p>}
         <div style={{ position: "relative", width: `${zoom * 100}%` }}>
           <canvas
             ref={viewRef}
@@ -522,7 +521,7 @@ export function BgRefiner({ original, cutout, background, trim, format, onResult
       </div>
       {webpFallback && (
         <p style={{ fontSize: 12, color: "#c89b3c", margin: "6px 0 0" }}>
-          Ce navigateur ne sait pas encoder le WebP : le résultat est en PNG.
+          {tr("Ce navigateur ne sait pas encoder le WebP : le résultat est en PNG.")}
         </p>
       )}
     </div>

@@ -4,6 +4,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { cropRect, targetDims } from "../lib/reframe";
 import type { Aspect, ReframeMode } from "../lib/reframe";
 
+import { tr } from "../i18n";
 type Props = {
   video: HTMLVideoElement | null;
   src: { width: number; height: number };
@@ -102,7 +103,7 @@ export function FramePreview({ video, src, aspect, mode, focus, onFocus, width =
       ref={canvasRef}
       className="vx-reframe-preview"
       style={{ cursor: canMove ? "move" : "default" }}
-      aria-label={canMove ? `Cadrage ${aspect} : glisse pour déplacer la zone gardée` : `Aperçu ${aspect}`}
+      aria-label={canMove ? tr("Cadrage {a} : glisse pour déplacer la zone gardée", { a: aspect }) : tr("Aperçu {a}", { a: aspect })}
       onPointerDown={(e) => { if (!canMove) return; e.currentTarget.setPointerCapture(e.pointerId); dragging.current = true; moveTo(e); }}
       onPointerMove={(e) => { if (dragging.current) moveTo(e); }}
       onPointerUp={() => (dragging.current = false)}

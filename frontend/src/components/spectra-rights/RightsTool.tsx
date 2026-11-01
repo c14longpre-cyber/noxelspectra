@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { HudButton, HudLink } from "../hud/HudButton";
 import { apiFetch } from "../spectra-account/account";
 
+import { tr } from "../../i18n";
 type Fields = Record<string, string>;
 
 type Props = {
@@ -97,7 +98,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
       .then((data) => {
         if (cancelled || !data?.ok || !data.count) return;
         setF((prev) => ({ ...prev, ...data.rights }));
-        setPrefillNote(`${data.count} champ(s) déjà présent(s) dans l'image ont été repris dans le formulaire.`);
+        setPrefillNote(tr("{a} champ(s) déjà présent(s) dans l'image ont été repris dans le formulaire.", { a: data.count }));
       })
       .catch(() => undefined);
     return () => {
@@ -108,12 +109,12 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
   // Licence → conditions d'utilisation + page de la licence
   function licenseFields(): Fields {
     const choice = f.licenseChoice || "arr";
-    if (f.status === "public-domain") return { usageTerms: f.usageTerms || "Domaine public." };
-    if (choice === "arr") return { usageTerms: f.usageTerms || "Tous droits réservés.", webStatement: f.webStatement || "" };
+    if (f.status === "public-domain") return { usageTerms: f.usageTerms || tr("Domaine public.") };
+    if (choice === "arr") return { usageTerms: f.usageTerms || tr("Tous droits réservés."), webStatement: f.webStatement || "" };
     if (choice === "custom") return { usageTerms: f.usageTerms || "", webStatement: f.webStatement || "" };
     const cc = CC[choice];
     return {
-      usageTerms: `Cette œuvre est mise à disposition selon les termes de la licence Creative Commons ${cc.name} 4.0 International (CC ${cc.code.toUpperCase()} 4.0).`,
+      usageTerms: tr("Cette œuvre est mise à disposition selon les termes de la licence Creative Commons {a} 4.0 International (CC {b} 4.0).", { a: tr(cc.name), b: cc.code.toUpperCase() }),
       webStatement: `https://creativecommons.org/licenses/${cc.code}/4.0/`,
     };
   }
@@ -177,7 +178,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Intégration des droits échouée");
+      setError(err instanceof Error ? err.message : tr("Intégration des droits échouée"));
     } finally {
       setLoading(false);
     }
@@ -190,12 +191,12 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
       ? JSON.stringify(
           {
             "@context": "https://schema.org/",
-            "@type": "ImageObject",
+            "@type": tr("ImageObject"),
             contentUrl: "https://ton-site.com/chemin/image.webp",
             ...(lic.webStatement ? { license: lic.webStatement } : {}),
             ...(f.licensorUrl ? { acquireLicensePage: f.licensorUrl } : {}),
             ...(f.credit ? { creditText: f.credit } : {}),
-            ...(f.creator ? { creator: { "@type": "Person", name: f.creator } } : {}),
+            ...(f.creator ? { creator: { "@type": tr("Person"), name: f.creator } } : {}),
             ...(f.copyrightNotice ? { copyrightNotice: f.copyrightNotice } : {}),
           },
           null,
@@ -209,54 +210,51 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
   return (
     <div>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        Intègre l'auteur, les droits et la licence dans le fichier (standards IPTC et PLUS, lus par Lightroom,
-        les banques d'images et Google Images). Ces informations <strong>déclarent</strong> tes droits : elles ne
-        bloquent pas la copie et ne prouvent pas la propriété à elles seules. Les données privées de la photo (GPS,
-        appareil) sont retirées.
+        {tr("Intègre l'auteur, les droits et la licence dans le fichier (standards IPTC et PLUS, lus par Lightroom, les banques d'images et Google Images). Ces informations")}{" "}<strong>{tr("déclarent")}</strong> {tr("tes droits : elles ne bloquent pas la copie et ne prouvent pas la propriété à elles seules. Les données privées de la photo (GPS, appareil) sont retirées.")}
       </p>
       {prefillNote && <p style={{ fontSize: 13, color: "#3ddc84" }}>{prefillNote}</p>}
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Auteur / créateur
-          <input type="text" value={f.creator || ""} onChange={set("creator")} placeholder="Personne ou organisation" style={input} />
+          {tr("Auteur / créateur")}
+          <input type="text" value={f.creator || ""} onChange={set("creator")} placeholder={tr("Personne ou organisation")} style={input} />
         </label>
         <label>
-          Titulaire des droits
-          <input type="text" value={f.copyrightOwner || ""} onChange={set("copyrightOwner")} placeholder="Peut différer de l'auteur" style={input} />
+          {tr("Titulaire des droits")}
+          <input type="text" value={f.copyrightOwner || ""} onChange={set("copyrightOwner")} placeholder={tr("Peut différer de l'auteur")} style={input} />
         </label>
         <div>
           <label>
-            Mention copyright
+            {tr("Mention copyright")}
             <input type="text" value={f.copyrightNotice || ""} onChange={set("copyrightNotice")} placeholder={`© ${new Date().getFullYear()} Titulaire`} style={input} />
           </label>
           {/* Hors du <label> : sinon l'étiquette se rattacherait au bouton plutôt qu'au champ */}
           <button type="button" className="ghost-button" onClick={fillNotice} disabled={!f.copyrightOwner && !f.creator} style={{ fontSize: 12, padding: "2px 10px", marginTop: 4, cursor: "pointer" }}>
-            Générer « © {new Date().getFullYear()} {f.copyrightOwner || f.creator || "…"} »
+            {tr("Générer « ©")}{" "}{new Date().getFullYear()} {f.copyrightOwner || f.creator || "…"} »
           </button>
         </div>
         <label>
-          Crédit à afficher
-          <input type="text" value={f.credit || ""} onChange={set("credit")} placeholder="Photo : Nom / Studio" style={input} />
+          {tr("Crédit à afficher")}
+          <input type="text" value={f.credit || ""} onChange={set("credit")} placeholder={tr("Photo : Nom / Studio")} style={input} />
         </label>
         <label>
-          Statut des droits
+          {tr("Statut des droits")}
           <select value={f.status || "copyrighted"} onChange={set("status")} style={input}>
-            <option value="copyrighted">Sous droit d'auteur</option>
-            <option value="public-domain">Domaine public</option>
-            <option value="unknown">Inconnu / non renseigné</option>
+            <option value="copyrighted">{tr("Sous droit d'auteur")}</option>
+            <option value="public-domain">{tr("Domaine public")}</option>
+            <option value="unknown">{tr("Inconnu / non renseigné")}</option>
           </select>
         </label>
         {f.status !== "public-domain" && (
           <label>
-            Licence
+            {tr("Licence")}
             <select value={f.licenseChoice || "arr"} onChange={set("licenseChoice")} style={input}>
-              <option value="arr">Tous droits réservés</option>
-              <option value="custom">Licence personnalisée</option>
-              <optgroup label="Creative Commons 4.0">
+              <option value="arr">{tr("Tous droits réservés")}</option>
+              <option value="custom">{tr("Licence personnalisée")}</option>
+              <optgroup label={tr("Creative Commons 4.0")}>
                 {Object.entries(CC).map(([id, cc]) => (
                   <option key={id} value={id}>
-                    CC {cc.code.toUpperCase()} — {cc.name}
+                    {tr("CC")}{" "}{cc.code.toUpperCase()} — {tr(cc.name)}
                   </option>
                 ))}
               </optgroup>
@@ -269,19 +267,19 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
         <p style={{ fontSize: 13, color: "#aaa", margin: "10px 0 0" }}>
           {lic.usageTerms}{" "}
           <a href={lic.webStatement} target="_blank" rel="noreferrer">
-            Voir la licence officielle
+            {tr("Voir la licence officielle")}
           </a>
-          . Une licence Creative Commons n'est pas le domaine public : l'œuvre reste sous droit d'auteur.
+          {tr(". Une licence Creative Commons n'est pas le domaine public : l'œuvre reste sous droit d'auteur.")}
         </p>
       ) : (
         <div className="controls-grid" style={{ marginTop: 12 }}>
           <label>
-            Conditions d'utilisation
-            <input type="text" value={f.usageTerms || ""} onChange={set("usageTerms")} placeholder={f.status === "public-domain" ? "Domaine public." : "Tous droits réservés."} style={input} />
+            {tr("Conditions d'utilisation")}
+            <input type="text" value={f.usageTerms || ""} onChange={set("usageTerms")} placeholder={f.status === "public-domain" ? tr("Domaine public.") : tr("Tous droits réservés.")} style={input} />
           </label>
           {f.status !== "public-domain" && (
             <label>
-              Page des droits / licence (URL)
+              {tr("Page des droits / licence (URL)")}
               <input type="text" value={f.webStatement || ""} onChange={set("webStatement")} placeholder="https://…" style={input} />
             </label>
           )}
@@ -290,83 +288,82 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
 
       <div className="controls-grid" style={{ marginTop: 12 }}>
         <label>
-          Contact : courriel
+          {tr("Contact : courriel")}
           <input type="text" value={f.contactEmail || ""} onChange={set("contactEmail")} placeholder="pro@exemple.com" style={input} />
         </label>
         <label>
-          Contact : site
+          {tr("Contact : site")}
           <input type="text" value={f.contactUrl || ""} onChange={set("contactUrl")} placeholder="https://…" style={input} />
         </label>
         <label>
-          Responsable des licences
-          <input type="text" value={f.licensorName || ""} onChange={set("licensorName")} placeholder="Qui peut autoriser une utilisation" style={input} />
+          {tr("Responsable des licences")}
+          <input type="text" value={f.licensorName || ""} onChange={set("licensorName")} placeholder={tr("Qui peut autoriser une utilisation")} style={input} />
         </label>
         <label>
-          Obtenir une autorisation (URL)
-          <input type="text" value={f.licensorUrl || ""} onChange={set("licensorUrl")} placeholder="https://… (contact ou achat de licence)" style={input} />
+          {tr("Obtenir une autorisation (URL)")}
+          <input type="text" value={f.licensorUrl || ""} onChange={set("licensorUrl")} placeholder={tr("https://… (contact ou achat de licence)")} style={input} />
         </label>
       </div>
 
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <button type="button" className="ghost-button" onClick={() => setOrigin((v) => !v)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-          {origin ? "▾" : "▸"} Origine de l'image (titre, date, IA…)
+          {origin ? "▾" : "▸"} {tr("Origine de l'image (titre, date, IA…)")}
         </button>
         <button type="button" className="ghost-button" onClick={() => setAdvanced((v) => !v)} style={{ padding: "4px 12px", fontSize: 13, cursor: "pointer" }}>
-          {advanced ? "▾" : "▸"} Options avancées (licences, autorisations, IA)
+          {advanced ? "▾" : "▸"} {tr("Options avancées (licences, autorisations, IA)")}
         </button>
       </div>
 
       {origin && (
         <div className="controls-grid" style={{ marginTop: 12 }}>
           <label>
-            Titre
+            {tr("Titre")}
             <input type="text" value={f.title || ""} onChange={set("title")} style={input} />
           </label>
           <label>
-            Date de création connue
+            {tr("Date de création connue")}
             <input type="date" value={f.dateCreated || ""} onChange={set("dateCreated")} style={input} />
           </label>
           <label>
-            Identifiant unique
-            <input type="text" value={f.identifier || ""} onChange={set("identifier")} placeholder="Ex. : NOX-0001" style={input} />
+            {tr("Identifiant unique")}
+            <input type="text" value={f.identifier || ""} onChange={set("identifier")} placeholder={tr("Ex. : NOX-0001")} style={input} />
           </label>
           <label>
-            Type de source
+            {tr("Type de source")}
             <select value={f.sourceType || ""} onChange={set("sourceType")} style={input}>
-              <option value="">Non renseigné</option>
-              <option value="digitalCapture">Photographie</option>
-              <option value="digitalCreation">Illustration / création logicielle</option>
-              <option value="trainedAlgorithmicMedia">Générée par IA</option>
-              <option value="compositeWithTrainedAlgorithmicMedia">Composition avec éléments IA</option>
-              <option value="composite">Composition / montage</option>
+              <option value="">{tr("Non renseigné")}</option>
+              <option value="digitalCapture">{tr("Photographie")}</option>
+              <option value="digitalCreation">{tr("Illustration / création logicielle")}</option>
+              <option value="trainedAlgorithmicMedia">{tr("Générée par IA")}</option>
+              <option value="compositeWithTrainedAlgorithmicMedia">{tr("Composition avec éléments IA")}</option>
+              <option value="composite">{tr("Composition / montage")}</option>
             </select>
           </label>
           <label style={{ gridColumn: "1 / -1" }}>
-            Description
+            {tr("Description")}
             <input type="text" value={f.description || ""} onChange={set("description")} style={input} />
           </label>
           {isAI && (
             <>
               <label>
-                Outil IA
-                <input type="text" value={f.aiSystem || ""} onChange={set("aiSystem")} placeholder="Ex. : Midjourney" style={input} />
+                {tr("Outil IA")}
+                <input type="text" value={f.aiSystem || ""} onChange={set("aiSystem")} placeholder={tr("Ex. : Midjourney")} style={input} />
               </label>
               <label>
-                Version de l'outil
+                {tr("Version de l'outil")}
                 <input type="text" value={f.aiSystemVersion || ""} onChange={set("aiSystemVersion")} style={input} />
               </label>
               <label>
-                Auteur du prompt
+                {tr("Auteur du prompt")}
                 <input type="text" value={f.aiPromptWriter || ""} onChange={set("aiPromptWriter")} style={input} />
               </label>
               <label>
-                Prompt (facultatif)
+                {tr("Prompt (facultatif)")}
                 <input type="text" value={f.aiPrompt || ""} onChange={set("aiPrompt")} style={input} />
               </label>
               {f.sourceType === "trainedAlgorithmicMedia" && (
                 <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#c89b3c", margin: 0 }}>
-                  Pour une image entièrement générée, les recommandations IPTC suggèrent de laisser « Auteur » vide et
-                  de renseigner ces champs IA : l'auteur du prompt n'est pas automatiquement l'auteur juridique de l'image.
+                  {tr("Pour une image entièrement générée, les recommandations IPTC suggèrent de laisser « Auteur » vide et de renseigner ces champs IA : l'auteur du prompt n'est pas automatiquement l'auteur juridique de l'image.")}
                 </p>
               )}
             </>
@@ -377,100 +374,99 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
       {advanced && (
         <div className="controls-grid" style={{ marginTop: 12 }}>
           <label>
-            Identifiant de licence
+            {tr("Identifiant de licence")}
             <input type="text" value={f.licenseId || ""} onChange={set("licenseId")} style={input} />
           </label>
           <label>
-            Bénéficiaire de la licence
-            <input type="text" value={f.licensee || ""} onChange={set("licensee")} placeholder="Client autorisé" style={input} />
+            {tr("Bénéficiaire de la licence")}
+            <input type="text" value={f.licensee || ""} onChange={set("licensee")} placeholder={tr("Client autorisé")} style={input} />
           </label>
           <label>
-            Début de licence
+            {tr("Début de licence")}
             <input type="date" value={f.licenseStart || ""} onChange={set("licenseStart")} style={input} />
           </label>
           <label>
-            Fin de licence
+            {tr("Fin de licence")}
             <input type="date" value={f.licenseEnd || ""} onChange={set("licenseEnd")} style={input} />
           </label>
           <label>
-            Restrictions territoriales
-            <input type="text" value={f.regionConstraints || ""} onChange={set("regionConstraints")} placeholder="Ex. : Canada seulement" style={input} />
+            {tr("Restrictions territoriales")}
+            <input type="text" value={f.regionConstraints || ""} onChange={set("regionConstraints")} placeholder={tr("Ex. : Canada seulement")} style={input} />
           </label>
           <label>
-            Restrictions de supports
-            <input type="text" value={f.mediaConstraints || ""} onChange={set("mediaConstraints")} placeholder="Ex. : Web, pas d'impression" style={input} />
+            {tr("Restrictions de supports")}
+            <input type="text" value={f.mediaConstraints || ""} onChange={set("mediaConstraints")} placeholder={tr("Ex. : Web, pas d'impression")} style={input} />
           </label>
           <label>
-            Restrictions de modification
-            <input type="text" value={f.alterationConstraints || ""} onChange={set("alterationConstraints")} placeholder="Ex. : pas de recadrage" style={input} />
+            {tr("Restrictions de modification")}
+            <input type="text" value={f.alterationConstraints || ""} onChange={set("alterationConstraints")} placeholder={tr("Ex. : pas de recadrage")} style={input} />
           </label>
           <label>
-            Conditions supplémentaires
+            {tr("Conditions supplémentaires")}
             <input type="text" value={f.otherConstraints || ""} onChange={set("otherConstraints")} style={input} />
           </label>
           <label>
-            Autorisation des personnes photographiées
+            {tr("Autorisation des personnes photographiées")}
             <select value={f.modelReleaseStatus || ""} onChange={set("modelReleaseStatus")} style={input}>
-              <option value="">Non renseigné</option>
-              <option value="MR-NON">Aucune</option>
-              <option value="MR-NAP">Sans objet</option>
-              <option value="MR-UMR">Autorisations complètes</option>
-              <option value="MR-LMR">Autorisations limitées</option>
+              <option value="">{tr("Non renseigné")}</option>
+              <option value="MR-NON">{tr("Aucune")}</option>
+              <option value="MR-NAP">{tr("Sans objet")}</option>
+              <option value="MR-UMR">{tr("Autorisations complètes")}</option>
+              <option value="MR-LMR">{tr("Autorisations limitées")}</option>
             </select>
           </label>
           <label>
-            Référence (personnes)
+            {tr("Référence (personnes)")}
             <input type="text" value={f.modelReleaseId || ""} onChange={set("modelReleaseId")} style={input} />
           </label>
           <label>
-            Autorisation des biens représentés
+            {tr("Autorisation des biens représentés")}
             <select value={f.propertyReleaseStatus || ""} onChange={set("propertyReleaseStatus")} style={input}>
-              <option value="">Non renseigné</option>
-              <option value="PR-NON">Aucune</option>
-              <option value="PR-NAP">Sans objet</option>
-              <option value="PR-UPR">Autorisations complètes</option>
-              <option value="PR-LPR">Autorisations limitées</option>
+              <option value="">{tr("Non renseigné")}</option>
+              <option value="PR-NON">{tr("Aucune")}</option>
+              <option value="PR-NAP">{tr("Sans objet")}</option>
+              <option value="PR-UPR">{tr("Autorisations complètes")}</option>
+              <option value="PR-LPR">{tr("Autorisations limitées")}</option>
             </select>
           </label>
           <label>
-            Référence (biens)
+            {tr("Référence (biens)")}
             <input type="text" value={f.propertyReleaseId || ""} onChange={set("propertyReleaseId")} style={input} />
           </label>
           <label>
-            Conditions contractuelles (texte)
+            {tr("Conditions contractuelles (texte)")}
             <input type="text" value={f.termsText || ""} onChange={set("termsText")} style={input} />
           </label>
           <label>
-            Lien du contrat (URL)
+            {tr("Lien du contrat (URL)")}
             <input type="text" value={f.termsUrl || ""} onChange={set("termsUrl")} placeholder="https://…" style={input} />
           </label>
           <label>
-            Fouille de données / entraînement IA
+            {tr("Fouille de données / entraînement IA")}
             <select value={f.dataMining || ""} onChange={set("dataMining")} style={input}>
-              <option value="">Non renseigné</option>
-              <option value="DMI-ALLOWED">Autorisé</option>
-              <option value="DMI-PROHIBITED-AIMLTRAINING">Interdit pour l'entraînement IA</option>
-              <option value="DMI-PROHIBITED-GENAIMLTRAINING">Interdit pour l'entraînement d'IA générative</option>
-              <option value="DMI-PROHIBITED-EXCEPTSEARCHENGINEINDEXING">Interdit, sauf indexation par les moteurs de recherche</option>
-              <option value="DMI-PROHIBITED">Interdit</option>
+              <option value="">{tr("Non renseigné")}</option>
+              <option value="DMI-ALLOWED">{tr("Autorisé")}</option>
+              <option value="DMI-PROHIBITED-AIMLTRAINING">{tr("Interdit pour l'entraînement IA")}</option>
+              <option value="DMI-PROHIBITED-GENAIMLTRAINING">{tr("Interdit pour l'entraînement d'IA générative")}</option>
+              <option value="DMI-PROHIBITED-EXCEPTSEARCHENGINEINDEXING">{tr("Interdit, sauf indexation par les moteurs de recherche")}</option>
+              <option value="DMI-PROHIBITED">{tr("Interdit")}</option>
             </select>
           </label>
           <p style={{ gridColumn: "1 / -1", fontSize: 12, color: "#888", margin: 0 }}>
-            Ces champs décrivent des autorisations ou des restrictions ; ils ne remplacent pas les documents
-            correspondants. Une restriction d'entraînement IA inscrite ici n'est pas un blocage technique.
+            {tr("Ces champs décrivent des autorisations ou des restrictions ; ils ne remplacent pas les documents correspondants. Une restriction d'entraînement IA inscrite ici n'est pas un blocage technique.")}
           </p>
         </div>
       )}
 
       <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 14, fontSize: 13 }}>
         <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-        Mémoriser mon identité et ma licence pour la prochaine fois (dans ce navigateur seulement)
+        {tr("Mémoriser mon identité et ma licence pour la prochaine fois (dans ce navigateur seulement)")}
       </label>
 
       <HudButton
         action="protect"
-        label="Intégrer les droits"
-        busyLabel="Intégration…"
+        label={tr("Intégrer les droits")}
+        busyLabel={tr("Intégration…")}
         disabled={!file}
         busy={loading}
         onClick={handleEmbed}
@@ -483,36 +479,33 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
         <div style={{ marginTop: 16, padding: 12, background: "rgba(255,255,255,0.06)", borderRadius: 8, fontSize: 14 }}>
           {report.xmp ? (
             <div style={{ color: "#3ddc84", fontWeight: 600 }}>
-              ✓ {report.embedded} champ(s) intégré(s) et vérifié(s) dans le fichier exporté
+              ✓ {report.embedded} {tr("champ(s) intégré(s) et vérifié(s) dans le fichier exporté")}
             </div>
           ) : (
             <div style={{ color: "#c89b3c" }}>
-              Le format {report.format.toUpperCase()} ne prend pas en charge ces métadonnées. Convertis d'abord l'image en
-              PNG, WebP, JPEG ou AVIF.
+              {tr("Le format")}{" "}{report.format.toUpperCase()} {tr("ne prend pas en charge ces métadonnées. Convertis d'abord l'image en PNG, WebP, JPEG ou AVIF.")}
             </div>
           )}
           {report.xmp && report.missing.length > 0 && (
             <div style={{ color: "#c89b3c", marginTop: 4 }}>
-              Non pris en charge par ce format : {report.missing.map((k) => LABELS[k] || k).join(", ")}
+              {tr("Non pris en charge par ce format :")}{" "}{report.missing.map((k) => LABELS[k] || k).join(", ")}
             </div>
           )}
           <div style={{ fontSize: 12, color: "#888", marginTop: 6 }}>
-            Astuce : fais cette étape en dernier. Les autres outils retirent les métadonnées ; dans une recette de lot,
-            les droits sont réintégrés automatiquement à la fin.
+            {tr("Astuce : fais cette étape en dernier. Les autres outils retirent les métadonnées ; dans une recette de lot, les droits sont réintégrés automatiquement à la fin.")}
           </div>
           <div style={{ marginTop: 10, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <HudLink action="download-protected" compact label="Télécharger l'image avec ses métadonnées" href={resultUrl} download={`image-droits.${ext}`} />
-            {renderContinueButton(resultUrl, "Droits")}
+            <HudLink action="download-protected" compact label={tr("Télécharger l'image avec ses métadonnées")} href={resultUrl} download={`image-droits.${ext}`} />
+            {renderContinueButton(resultUrl, tr("Droits"))}
           </div>
         </div>
       )}
 
       {jsonLd && (
         <details style={{ marginTop: 16 }}>
-          <summary style={{ cursor: "pointer", fontSize: 13 }}>Pour Google Images : extrait JSON-LD à placer sur la page qui publie l'image</summary>
+          <summary style={{ cursor: "pointer", fontSize: 13 }}>{tr("Pour Google Images : extrait JSON-LD à placer sur la page qui publie l'image")}</summary>
           <p style={{ fontSize: 12, color: "#888" }}>
-            Google peut afficher la licence et le lien d'autorisation à partir de ces informations, sans garantie
-            d'affichage ni de meilleur classement. Remplace « contentUrl » par l'adresse réelle de l'image.
+            {tr("Google peut afficher la licence et le lien d'autorisation à partir de ces informations, sans garantie d'affichage ni de meilleur classement. Remplace « contentUrl » par l'adresse réelle de l'image.")}
           </p>
           <pre style={{ fontSize: 12, background: "rgba(255,255,255,0.06)", padding: 10, borderRadius: 8, overflowX: "auto" }}>
             {`<script type="application/ld+json">\n${jsonLd}\n</script>`}
@@ -520,7 +513,7 @@ export function RightsTool({ file, apiUrl, renderContinueButton, registerRecipeP
           <HudButton
             action="copy-srcset"
             compact
-            label={jsonCopied ? "Copié !" : "Copier l'extrait"}
+            label={jsonCopied ? tr("Copié !") : tr("Copier l'extrait")}
             onClick={() =>
               navigator.clipboard.writeText(`<script type="application/ld+json">\n${jsonLd}\n</script>`).then(() => {
                 setJsonCopied(true);

@@ -7,6 +7,7 @@ import { HudButton } from "../hud/HudButton";
 import type { ImageMetadata } from "../../utils/exifUtils";
 import "./exif-notice.css";
 
+import { tr } from "../../i18n";
 export type ExifNoticeItem = { name: string; meta: ImageMetadata };
 
 type Props = {
@@ -40,32 +41,32 @@ function DetailList({ meta }: { meta: ImageMetadata }) {
     <ul className="exif-notice__list">
       {meta.gps && (
         <li>
-          <span aria-hidden="true">📍</span> Position GPS : {meta.gps.lat.toFixed(4)}, {meta.gps.lng.toFixed(4)}
+          <span aria-hidden="true">📍</span> {tr("Position GPS :")}{" "}{meta.gps.lat.toFixed(4)}, {meta.gps.lng.toFixed(4)}
         </li>
       )}
       {!meta.gps && meta.gpsUnreadable && (
         <li>
-          <span aria-hidden="true">📍</span> Données GPS
+          <span aria-hidden="true">📍</span> {tr("Données GPS")}
         </li>
       )}
       {meta.dateTime && (
         <li>
-          <span aria-hidden="true">📅</span> Date de prise de vue : {formatExifDate(meta.dateTime)}
+          <span aria-hidden="true">📅</span> {tr("Date de prise de vue :")}{" "}{formatExifDate(meta.dateTime)}
         </li>
       )}
       {camera && (
         <li>
-          <span aria-hidden="true">📷</span> Appareil : {camera}
+          <span aria-hidden="true">📷</span> {tr("Appareil :")}{" "}{camera}
         </li>
       )}
       {meta.software && (
         <li>
-          <span aria-hidden="true">💻</span> Logiciel : {meta.software}
+          <span aria-hidden="true">💻</span> {tr("Logiciel :")}{" "}{meta.software}
         </li>
       )}
       {others.length > 0 && (
         <li>
-          <span aria-hidden="true">🗂</span> Autres métadonnées ({others.join(", ")})
+          <span aria-hidden="true">🗂</span> {tr("Autres métadonnées (")}{others.join(", ")})
         </li>
       )}
     </ul>
@@ -125,48 +126,45 @@ export function ExifNotice({ items, total, busy = false, onStrip, onKeep }: Prop
         aria-describedby="exif-notice-desc"
       >
         <h2 id="exif-notice-title" className="exif-notice__title">
-          Métadonnées détectées
+          {tr("Métadonnées détectées")}
         </h2>
         {single ? (
           <DetailList meta={items[0].meta} />
         ) : (
           <>
             <p className="exif-notice__summary">
-              {items.length === 1 ? "1 image contient" : `${items.length} images contiennent`} des métadonnées
-              {withGps > 0 && ` (dont ${withGps} avec position GPS)`}
-              {total > items.length && ` sur ${total} chargées`}.
+              {items.length === 1 ? "1 image contient" : tr("{a} images contiennent", { a: items.length })} {tr("des métadonnées")}
+              {withGps > 0 && tr(" (dont {a} avec position GPS)", { a: withGps })}
+              {total > items.length && tr(" sur {a} chargées", { a: total })}.
             </p>
             <ul className="exif-notice__files">
               {items.slice(0, 6).map((i, k) => (
                 <li key={k}>
-                  {i.meta.gps || i.meta.gpsUnreadable ? <span aria-label="avec position GPS">📍 </span> : null}
+                  {i.meta.gps || i.meta.gpsUnreadable ? <span aria-label={tr("avec position GPS")}>📍 </span> : null}
                   {i.name}
                 </li>
               ))}
-              {items.length > 6 && <li>… et {items.length - 6} autre{items.length - 6 > 1 ? "s" : ""}</li>}
+              {items.length > 6 && <li>{tr("… et")}{" "}{items.length - 6} {tr("autre")}{items.length - 6 > 1 ? "s" : ""}</li>}
             </ul>
           </>
         )}
         <p id="exif-notice-desc" className="exif-notice__text">
-          Ces informations peuvent révéler où et quand la photo a été prise. Si vous les gardez, elles restent dans le
-          fichier d'origine conservé dans votre navigateur (et dans l'export .zip du projet) et sont envoyées à notre
-          serveur avec l'image pour le traitement. Les images produites par nos outils ne les contiennent pas.
+          {tr("Ces informations peuvent révéler où et quand la photo a été prise. Si vous les gardez, elles restent dans le fichier d'origine conservé dans votre navigateur (et dans l'export .zip du projet) et sont envoyées à notre serveur avec l'image pour le traitement. Les images produites par nos outils ne les contiennent pas.")}
         </p>
         <p className="exif-notice__hint">
-          La suppression se fait dans votre navigateur, sans recompresser l'image : qualité, couleurs et transparence
-          sont intactes.
+          {tr("La suppression se fait dans votre navigateur, sans recompresser l'image : qualité, couleurs et transparence sont intactes.")}
         </p>
         <div className="exif-notice__actions">
           <span data-primary>
             <HudButton
               action="clean-metadata"
-              label="Supprimer les métadonnées"
+              label={tr("Supprimer les métadonnées")}
               busy={busy}
-              busyLabel="Suppression…"
+              busyLabel={tr("Suppression…")}
               onClick={onStrip}
             />
           </span>
-          <HudButton action="continue" label="Continuer sans supprimer" disabled={busy} onClick={onKeep} />
+          <HudButton action="continue" label={tr("Continuer sans supprimer")} disabled={busy} onClick={onKeep} />
         </div>
       </div>
     </div>,

@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes, AnchorHTMLAttributes } from 'react';
 import { HUD_MARKUP, HUD_ACTIONS, type HudAction } from './hud-data';
 import './hud-buttons.css';
 
+import { tr } from '../../i18n';
 type VisualProps = {
   action: HudAction;
   label?: string;
@@ -32,8 +33,8 @@ function classes(compact?:boolean,iconOnly?:boolean,className?:string) {
   return ['noxel-hud',compact && 'noxel-hud--compact',iconOnly && 'noxel-hud--icon-only',className].filter(Boolean).join(' ');
 }
 export function HudButton({action,label,compact,iconOnly,busy=false,busyLabel,progress,selected,className,disabled,type='button',...rest}:HudButtonProps) {
-  const text=label??HUD_ACTIONS[action].label;
-  const pending=busyLabel??(HUD_ACTIONS[action].busyLabel || 'En cours…');
+  const text=label??tr(HUD_ACTIONS[action].label);
+  const pending=busyLabel??(HUD_ACTIONS[action].busyLabel ? tr(HUD_ACTIONS[action].busyLabel) : tr('En cours…'));
   const finiteProgress=typeof progress==='number' && Number.isFinite(progress) ? Math.min(100,Math.max(0,Math.round(progress))) : undefined;
   return <button {...rest} type={type} className={classes(compact,iconOnly,className)} disabled={disabled || busy}
     aria-busy={busy || undefined} aria-pressed={selected} aria-label={busy ? `${pending}${finiteProgress===undefined?'':` ${finiteProgress}%`}` : text} title={iconOnly ? text : rest.title}>
@@ -44,7 +45,7 @@ export function HudButton({action,label,compact,iconOnly,busy=false,busyLabel,pr
 
 /** Les téléchargements gardent leur sémantique de lien et leur attribut download. */
 export function HudLink({action,label,compact,iconOnly,className,...rest}:VisualProps & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'children'> & {href:string}) {
-  const text=label??HUD_ACTIONS[action].label;
+  const text=label??tr(HUD_ACTIONS[action].label);
   return <a {...rest} className={classes(compact,iconOnly,className)} aria-label={text} title={iconOnly ? text : rest.title}>
     <Graphic action={action}/><span className="noxel-hud__label">{text}</span>
   </a>;

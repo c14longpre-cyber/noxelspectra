@@ -19,6 +19,7 @@ import type { VideoInfo } from "../lib/probe";
 import { useCancel } from "../lib/useCancel";
 import "../textlogo.css";
 
+import { tr } from "../i18n";
 type Props = {
   file: File;
   info: VideoInfo;
@@ -83,13 +84,13 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
       const { image, ratio } = await loadLogo(f);
       setMark((m) => ({ ...m, kind: "logo", logo: { image, ratio, fileName: f.name } }));
     } catch {
-      setError("Cette image n'a pas pu être lue par le navigateur (essaie un PNG, JPG, WebP ou SVG).");
+      setError(tr("Cette image n'a pas pu être lue par le navigateur (essaie un PNG, JPG, WebP ou SVG)."));
     }
   }
 
   const container = containerFor(info.video?.codec);
   const codecName = container === "webm" ? "VP9" : "H.264";
-  const formatName = container === "webm" ? "WebM" : "MP4";
+  const formatName = container === "webm" ? tr("WebM") : "MP4";
   const emptySelection = range[1] - range[0] < 0.05;
   const canEncode = !support || (container === "webm" ? support.webm : support.mp4);
   const bitrate = Math.round((info.video?.bitrate || 2e6) * 0.95);
@@ -108,7 +109,7 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
       urls.current.push(url);
       setResult({ ...r, url, source: sourceBytes });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Filigrane impossible : ${e.message}` : "Filigrane impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Filigrane impossible : ${e.message}` : tr("Filigrane impossible."));
     } finally {
       setProgress(null);
       job.end();
@@ -120,87 +121,85 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
   return (
     <div className="vx-rights">
       <p className="vx-muted">
-        Applique un filigrane texte ou logo sur toute la sélection de la timeline. Il est dans l'image : il reste visible même si la vidéo est réencodée,
-        mais un recadrage peut le couper s'il est dans un coin (« Répété sur toute l'image » protège mieux).
+        {tr("Applique un filigrane texte ou logo sur toute la sélection de la timeline. Il est dans l'image : il reste visible même si la vidéo est réencodée, mais un recadrage peut le couper s'il est dans un coin (« Répété sur toute l'image » protège mieux).")}
       </p>
 
-      <div className="vx-modes" role="radiogroup" aria-label="Type de filigrane">
-        <label><input type="radio" name="wkind" checked={mark.kind === "text"} onChange={() => setMark((m) => ({ ...m, kind: "text", size: sizes.text }))} /><b>Texte</b></label>
-        <label><input type="radio" name="wkind" checked={mark.kind === "logo"} onChange={() => setMark((m) => ({ ...m, kind: "logo", size: sizes.logo }))} /><b>Logo</b> — une image, de préférence à fond transparent</label>
+      <div className="vx-modes" role="radiogroup" aria-label={tr("Type de filigrane")}>
+        <label><input type="radio" name="wkind" checked={mark.kind === "text"} onChange={() => setMark((m) => ({ ...m, kind: "text", size: sizes.text }))} /><b>{tr("Texte")}</b></label>
+        <label><input type="radio" name="wkind" checked={mark.kind === "logo"} onChange={() => setMark((m) => ({ ...m, kind: "logo", size: sizes.logo }))} /><b>{tr("Logo")}</b> {tr("— une image, de préférence à fond transparent")}</label>
       </div>
       <input ref={logoInput} type="file" accept="image/*,.svg" style={{ display: "none" }} onChange={(e) => { pickLogo(e.target.files?.[0] || null); e.target.value = ""; }} />
       <div className="vx-fields">
         {mark.kind === "text" ? (
           <>
-            <label>Texte
-              <input type="text" value={mark.text} maxLength={200} placeholder="© 2026 Ton nom" onChange={(e) => setMark((m) => ({ ...m, text: e.target.value }))} />
+            <label>{tr("Texte")}
+              <input type="text" value={mark.text} maxLength={200} placeholder={tr("© 2026 Ton nom")} onChange={(e) => setMark((m) => ({ ...m, text: e.target.value }))} />
             </label>
-            <div className="vx-font-field"><span>Police</span>
+            <div className="vx-font-field"><span>{tr("Police")}</span>
               <FontPicker value={mark.font || "sans"} onChange={(font) => setMark((m) => ({ ...m, font }))} onReady={() => setFontTick((n) => n + 1)} />
             </div>
-            <div className="vx-fill-field"><span>Couleur</span>
+            <div className="vx-fill-field"><span>{tr("Couleur")}</span>
               <FillEditor value={mark.fill ?? { kind: "solid", color: mark.color || "#ffffff" }}
                 onChange={(fill) => setMark((m) => ({ ...m, fill, ...(fill.kind === "solid" ? { color: fill.color } : {}) }))} />
             </div>
           </>
         ) : (
           <div className="vx-row">
-            <HudButton action="add-logo" compact label={mark.logo ? "Changer de logo" : "Choisir un logo"} onClick={() => logoInput.current?.click()} />
+            <HudButton action="add-logo" compact label={mark.logo ? tr("Changer de logo") : tr("Choisir un logo")} onClick={() => logoInput.current?.click()} />
             {mark.logo && <span className="vx-file">{mark.logo.fileName}</span>}
           </div>
         )}
-        <label>Position
+        <label>{tr("Position")}
           <select value={mark.place} onChange={(e) => setMark((m) => ({ ...m, place: e.target.value as Mark["place"], rotation: e.target.value === "tile" ? (m.rotation === 0 ? -25 : m.rotation) : m.place === "tile" && m.rotation === -25 ? 0 : m.rotation }))}>
-            {PLACES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            {PLACES.map((p) => <option key={p.id} value={p.id}>{tr(p.label)}</option>)}
           </select>
         </label>
-        <label>{mark.kind === "text" ? "Taille : " : "Largeur : "}
-          <NumberInput label={mark.kind === "text" ? "Taille du texte" : "Largeur du logo"} value={Number((mark.size * 100).toFixed(1))} onChange={(v) => setSize(v / 100)}
-            min={mark.kind === "text" ? 2 : 4} max={mark.kind === "text" ? 20 : 60} step={mark.kind === "text" ? 0.5 : 1} unit={mark.kind === "text" ? "% de la hauteur" : "% de l'image"} />
+        <label>{mark.kind === "text" ? tr("Taille : ") : tr("Largeur : ")}
+          <NumberInput label={mark.kind === "text" ? tr("Taille du texte") : tr("Largeur du logo")} value={Number((mark.size * 100).toFixed(1))} onChange={(v) => setSize(v / 100)}
+            min={mark.kind === "text" ? 2 : 4} max={mark.kind === "text" ? 20 : 60} step={mark.kind === "text" ? 0.5 : 1} unit={mark.kind === "text" ? tr("% de la hauteur") : tr("% de l'image")} />
           <input type="range" min={mark.kind === "text" ? 2 : 4} max={mark.kind === "text" ? 20 : 60} step={mark.kind === "text" ? 0.5 : 1} value={mark.size * 100} onChange={(e) => setSize(Number(e.target.value) / 100)} />
         </label>
-        <label>Opacité : <NumberInput label="Opacité du filigrane" value={pc(mark.opacity)} onChange={(v) => setMark((m) => ({ ...m, opacity: v / 100 }))} min={5} max={100} unit="%" />
+        <label>{tr("Opacité :")}{" "}<NumberInput label={tr("Opacité du filigrane")} value={pc(mark.opacity)} onChange={(v) => setMark((m) => ({ ...m, opacity: v / 100 }))} min={5} max={100} unit="%" />
           <input type="range" min={5} max={100} step={5} value={pc(mark.opacity)} onChange={(e) => setMark((m) => ({ ...m, opacity: Number(e.target.value) / 100 }))} />
         </label>
-        <label>Rotation : <NumberInput label="Rotation du filigrane" value={mark.rotation} onChange={(v) => setMark((m) => ({ ...m, rotation: v }))} min={-90} max={90} unit="°" />
+        <label>{tr("Rotation :")}{" "}<NumberInput label={tr("Rotation du filigrane")} value={mark.rotation} onChange={(v) => setMark((m) => ({ ...m, rotation: v }))} min={-90} max={90} unit="°" />
           <input type="range" min={-90} max={90} step={5} value={mark.rotation} onChange={(e) => setMark((m) => ({ ...m, rotation: Number(e.target.value) }))} />
         </label>
       </div>
 
-      <h4 className="vx-code-title">Ombre portée</h4>
+      <h4 className="vx-code-title">{tr("Ombre portée")}</h4>
       <label className="vx-check"><input type="checkbox" checked={shadowOn} onChange={(e) => setMark((m) => ({ ...m, shadow: e.target.checked }))} />
-        {" "}Ajouter une ombre{mark.kind === "logo" ? " (elle suit la forme du logo s'il a un fond transparent)" : ""}</label>
+        {" "}{tr("Ajouter une ombre")}{mark.kind === "logo" ? tr(" (elle suit la forme du logo s'il a un fond transparent)") : ""}</label>
       {shadowOn && (
         <div className="vx-fields">
-          <label>Décalage X : <NumberInput label="Décalage X de l'ombre" value={pc(sh.dx)} onChange={(v) => setSh({ dx: v / 100 })} min={-100} max={100} unit="%" />
+          <label>{tr("Décalage X :")}{" "}<NumberInput label={tr("Décalage X de l'ombre")} value={pc(sh.dx)} onChange={(v) => setSh({ dx: v / 100 })} min={-100} max={100} unit="%" />
             <input type="range" min={-50} max={50} value={pc(sh.dx)} onChange={(e) => setSh({ dx: Number(e.target.value) / 100 })} />
           </label>
-          <label>Décalage Y : <NumberInput label="Décalage Y de l'ombre" value={pc(sh.dy)} onChange={(v) => setSh({ dy: v / 100 })} min={-100} max={100} unit="%" />
+          <label>{tr("Décalage Y :")}{" "}<NumberInput label={tr("Décalage Y de l'ombre")} value={pc(sh.dy)} onChange={(v) => setSh({ dy: v / 100 })} min={-100} max={100} unit="%" />
             <input type="range" min={-50} max={50} value={pc(sh.dy)} onChange={(e) => setSh({ dy: Number(e.target.value) / 100 })} />
           </label>
-          <label>Flou : <NumberInput label="Flou de l'ombre" value={pc(sh.blur)} onChange={(v) => setSh({ blur: v / 100 })} min={0} max={100} unit="%" />
+          <label>{tr("Flou :")}{" "}<NumberInput label={tr("Flou de l'ombre")} value={pc(sh.blur)} onChange={(v) => setSh({ blur: v / 100 })} min={0} max={100} unit="%" />
             <input type="range" min={0} max={60} value={pc(sh.blur)} onChange={(e) => setSh({ blur: Number(e.target.value) / 100 })} />
           </label>
-          <label>Opacité : <NumberInput label="Opacité de l'ombre" value={pc(sh.opacity)} onChange={(v) => setSh({ opacity: v / 100 })} min={0} max={100} unit="%" />
+          <label>{tr("Opacité :")}{" "}<NumberInput label={tr("Opacité de l'ombre")} value={pc(sh.opacity)} onChange={(v) => setSh({ opacity: v / 100 })} min={0} max={100} unit="%" />
             <input type="range" min={0} max={100} value={pc(sh.opacity)} onChange={(e) => setSh({ opacity: Number(e.target.value) / 100 })} />
           </label>
-          <div className="vx-fill-field"><span>Couleur de l'ombre</span>
-            <FillEditor value={sh.fill} onChange={(fill) => setSh({ fill })} colors={SHADOW_COLORS} label="Couleur de l'ombre" />
+          <div className="vx-fill-field"><span>{tr("Couleur de l'ombre")}</span>
+            <FillEditor value={sh.fill} onChange={(fill) => setSh({ fill })} colors={SHADOW_COLORS} label={tr("Couleur de l'ombre")} />
           </div>
-          <p className="vx-muted" style={{ gridColumn: "1 / -1", margin: 0 }}>Décalages et flou en % de la taille {mark.kind === "text" ? "du texte" : "du logo"} : le rendu reste le même quelle que soit la résolution de la vidéo.</p>
+          <p className="vx-muted" style={{ gridColumn: "1 / -1", margin: 0 }}>{tr("Décalages et flou en % de la taille")}{" "}{mark.kind === "text" ? tr("du texte") : tr("du logo")} {tr(": le rendu reste le même quelle que soit la résolution de la vidéo.")}</p>
         </div>
       )}
-      {empty && <p className="vx-alert">{mark.kind === "text" ? "Le filigrane est vide : écris un texte." : "Aucun logo choisi."}</p>}
-      {layout.overflow && <p className="vx-alert">Le filigrane est plus grand que l'image : il sera coupé. Réduis sa taille ou raccourcis le texte.</p>}
+      {empty && <p className="vx-alert">{mark.kind === "text" ? tr("Le filigrane est vide : écris un texte.") : tr("Aucun logo choisi.")}</p>}
+      {layout.overflow && <p className="vx-alert">{tr("Le filigrane est plus grand que l'image : il sera coupé. Réduis sa taille ou raccourcis le texte.")}</p>}
 
       <p className="vx-muted">
-        Le filigrane est visible sur l'aperçu. L'incruster impose de réencoder l'image ({codecName}, en visant {fmtBitrate(bitrate)}, un peu sous le débit de la source) :
-        l'image perd légèrement en qualité. Le son est recopié tel quel quand le format le permet.
-        {" "}Seule la sélection de la timeline ({fmtTime(range[1] - range[0])}) est traitée ; le fichier produit est un {formatName}.
-        {" "}Pour un texte animé ou à un moment précis, utilise l'outil Texte & logo.
+        {tr("Le filigrane est visible sur l'aperçu. L'incruster impose de réencoder l'image (")}{codecName}{tr(", en visant")}{" "}{fmtBitrate(bitrate)}{tr(", un peu sous le débit de la source) : l'image perd légèrement en qualité. Le son est recopié tel quel quand le format le permet.")}
+        {" "}{tr("Seule la sélection de la timeline (")}{fmtTime(range[1] - range[0])}{tr(") est traitée ; le fichier produit est un")}{" "}{formatName}.
+        {" "}{tr("Pour un texte animé ou à un moment précis, utilise l'outil Texte & logo.")}
       </p>
-      {emptySelection && <p className="vx-alert">La sélection de la timeline est vide : cette vidéo n'a pas pu être lue correctement.</p>}
-      {!canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder en {codecName} : le filigrane n'est pas possible ici pour cette vidéo.</p>}
+      {emptySelection && <p className="vx-alert">{tr("La sélection de la timeline est vide : cette vidéo n'a pas pu être lue correctement.")}</p>}
+      {!canEncode && <p className="vx-alert">{tr("Ce navigateur ne sait pas encoder en")}{" "}{codecName} {tr(": le filigrane n'est pas possible ici pour cette vidéo.")}</p>}
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <HudButton action="apply-watermark" disabled={empty || !canEncode || emptySelection} busy={progress !== null}
@@ -211,12 +210,12 @@ export function WatermarkPanel({ file, info, range, duration, onPreview, onConti
 
       {result && (
         <div className="vx-result">
-          <span>✓ {result.width} × {result.height} · {fmtTime(result.duration)} · {fmtBytes(result.blob.size)} · {result.ext === "webm" ? "WebM" : "MP4"}</span>
+          <span>✓ {result.width} × {result.height} · {fmtTime(result.duration)} · {fmtBytes(result.blob.size)} · {result.ext === "webm" ? tr("WebM") : "MP4"}</span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-filigrane.${result.ext}`} />
           <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, "filigrane")} />
           {result.blob.size > result.source * 1.02 && (
             <p className="vx-alert" style={{ flexBasis: "100%", margin: 0 }}>
-              Ce fichier pèse plus que l'extrait d'origine ({fmtBytes(result.source)}) : l'encodeur de ce navigateur ne descend pas au débit de cette vidéo.
+              {tr("Ce fichier pèse plus que l'extrait d'origine (")}{fmtBytes(result.source)}{tr(") : l'encodeur de ce navigateur ne descend pas au débit de cette vidéo.")}
             </p>
           )}
         </div>

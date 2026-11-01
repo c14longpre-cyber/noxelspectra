@@ -1,3 +1,4 @@
+import { tr } from "../i18n";
 // NOXEL SPECTRA Vidéo — analyse d'une vidéo, entièrement dans le navigateur.
 // Mediabunny lit seulement les en-têtes des paquets (pas les images) : même une
 // grosse vidéo s'analyse vite, sans téléversement. Le débit est mesuré sur toute la durée.
@@ -45,7 +46,7 @@ async function loadEngine() {
     const { ALL_FORMATS, BlobSource, Input } = await import("mediabunny");
     return { ALL_FORMATS, BlobSource, Input };
   } catch {
-    throw new LoadError("le moteur vidéo n'a pas pu être téléchargé. Vérifie ta connexion, puis recharge la page (il faudra choisir ta vidéo de nouveau).");
+    throw new LoadError(tr("le moteur vidéo n'a pas pu être téléchargé. Vérifie ta connexion, puis recharge la page (il faudra choisir ta vidéo de nouveau)."));
   }
 }
 
@@ -56,7 +57,7 @@ export async function analyzeVideo(file: File): Promise<VideoInfo> {
   try {
     // Fichier illisible : message en français plutôt que celui du moteur
     const format = await input.getFormat().catch(() => {
-      throw new Error("ce fichier n'est pas une vidéo lisible, ou son format n'est pas pris en charge.");
+      throw new Error(tr("ce fichier n'est pas une vidéo lisible, ou son format n'est pas pris en charge."));
     });
     const duration = await input.computeDuration();
     const vt = await input.getPrimaryVideoTrack();

@@ -14,6 +14,7 @@ import { useCancel } from "../lib/useCancel";
 import { itemLabel } from "./OverlayTracks";
 import "../textlogo.css";
 
+import { tr } from "../i18n";
 type Props = {
   file: File;
   info: VideoInfo;
@@ -88,7 +89,7 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
       const { image, ratio } = await loadLogo(f);
       add(makeLogo(...span(true), image, ratio, f.name));
     } catch {
-      setError("Cette image n'a pas pu être lue par le navigateur (essaie un PNG, JPG, WebP ou SVG).");
+      setError(tr("Cette image n'a pas pu être lue par le navigateur (essaie un PNG, JPG, WebP ou SVG)."));
     }
   }
 
@@ -146,7 +147,7 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
       urls.current.push(url);
       setResult({ url, blob: r.blob, ext: r.ext, dims: `${r.width} × ${r.height}`, duration: r.duration, source: sourceBytes });
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Incrustation impossible : ${e.message}` : "Incrustation impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Incrustation impossible : ${e.message}` : tr("Incrustation impossible."));
     } finally {
       setProgress(null);
       job.end();
@@ -159,29 +160,29 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
   return (
     <div className="vx-textlogo">
       <div className="vx-text-add">
-        <HudButton action="add-text" compact label="Ajouter un texte" onClick={() => add(makeText(...span(false)))} />
+        <HudButton action="add-text" compact label={tr("Ajouter un texte")} onClick={() => add(makeText(...span(false)))} />
         <input ref={logoInput} type="file" accept="image/*,.svg" style={{ display: "none" }} onChange={(e) => { pickLogo(e.target.files?.[0] || null); e.target.value = ""; }} />
         <HudButton action="add-logo" compact onClick={() => logoInput.current?.click()} />
-        <span className="vx-muted">Le logo reste sur ton appareil, rien n'est téléversé.</span>
+        <span className="vx-muted">{tr("Le logo reste sur ton appareil, rien n'est téléversé.")}</span>
       </div>
-      <div className="vx-rot" role="group" aria-label="Modèles de texte">
-        <span className="vx-muted">Modèles :</span>
+      <div className="vx-rot" role="group" aria-label={tr("Modèles de texte")}>
+        <span className="vx-muted">{tr("Modèles :")}</span>
         {TEXT_TEMPLATES.map((t) => (
-          <button key={t.id} type="button" className="vx-chip" onClick={() => add(t.build(...span(!!t.whole)))}>{t.label}</button>
+          <button key={t.id} type="button" className="vx-chip" onClick={() => add(t.build(...span(!!t.whole)))}>{tr(t.label)}</button>
         ))}
       </div>
 
       {items.length === 0 ? (
-        <p className="vx-muted">Ajoute un texte, un logo ou un modèle : il apparaît sur l'aperçu, où tu peux le glisser et le redimensionner, et sur une piste sous la timeline, où tu règles son début et sa fin.</p>
+        <p className="vx-muted">{tr("Ajoute un texte, un logo ou un modèle : il apparaît sur l'aperçu, où tu peux le glisser et le redimensionner, et sur une piste sous la timeline, où tu règles son début et sa fin.")}</p>
       ) : (
-        <ul className="vx-items" aria-label="Éléments, du fond vers le dessus">
+        <ul className="vx-items" aria-label={tr("Éléments, du fond vers le dessus")}>
           {items.map((it) => (
             <li key={it.id}>
               <button type="button" className={`vx-item${it.id === selectedId ? " is-on" : ""}`} aria-pressed={it.id === selectedId} onClick={() => onSelect(it.id)}
-                aria-label={`${it.kind === "text" ? "Texte" : "Logo"} « ${itemLabel(it)} », de ${fmtTime(it.start)} à ${fmtTime(it.end)}${inRange(it) ? "" : ", hors de la sélection"}`}>
+                aria-label={tr("{a} « {b} », de {c} à {d}{e}", { a: it.kind === "text" ? tr("Texte") : tr("Logo"), b: itemLabel(it), c: fmtTime(it.start), d: fmtTime(it.end), e: inRange(it) ? "" : tr(", hors de la sélection") })}>
                 <b>{it.kind === "text" ? "TEXTE" : "LOGO"}</b>
                 <span>{itemLabel(it)}</span>
-                <small className={inRange(it) ? "" : "is-out"}>{fmtTime(it.start)} → {fmtTime(it.end)}{inRange(it) ? "" : " · hors sélection"}</small>
+                <small className={inRange(it) ? "" : "is-out"}>{fmtTime(it.start)} → {fmtTime(it.end)}{inRange(it) ? "" : tr(" · hors sélection")}</small>
               </button>
             </li>
           ))}
@@ -192,53 +193,53 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
         <div className="vx-editor">
           {sel.kind === "text" ? (
             <>
-              <h4 className="vx-code-title">Texte</h4>
+              <h4 className="vx-code-title">{tr("Texte")}</h4>
               <div className="vx-fields">
-                <label>Contenu (Entrée pour une nouvelle ligne)
+                <label>{tr("Contenu (Entrée pour une nouvelle ligne)")}
                   <textarea value={sel.text} rows={2} onChange={(e) => patchText({ text: e.target.value })} />
                 </label>
-                <div className="vx-font-field"><span>Police</span>
+                <div className="vx-font-field"><span>{tr("Police")}</span>
                   <FontPicker value={sel.font} onChange={(font) => patchText({ font })} />
                 </div>
-                <label>Graisse
+                <label>{tr("Graisse")}
                   <select value={sel.weight} onChange={(e) => patchText({ weight: Number(e.target.value) as TextItem["weight"] })}>
-                    <option value={400}>Normale</option>
-                    <option value={700}>Grasse</option>
-                    <option value={900}>Très grasse</option>
+                    <option value={400}>{tr("Normale")}</option>
+                    <option value={700}>{tr("Grasse")}</option>
+                    <option value={900}>{tr("Très grasse")}</option>
                   </select>
                 </label>
-                <label>Taille : {pc(sel.size)} % de la hauteur
+                <label>{tr("Taille :")}{" "}{pc(sel.size)} {tr("% de la hauteur")}
                   <input type="range" min={2} max={50} step={1} value={pc(sel.size)} onChange={(e) => patchText({ size: Number(e.target.value) / 100 })} />
                 </label>
-                <label>Alignement des lignes
+                <label>{tr("Alignement des lignes")}
                   <select value={sel.align} onChange={(e) => patchText({ align: e.target.value as TextItem["align"] })}>
-                    <option value="left">À gauche</option>
-                    <option value="center">Centré</option>
-                    <option value="right">À droite</option>
+                    <option value="left">{tr("À gauche")}</option>
+                    <option value="center">{tr("Centré")}</option>
+                    <option value="right">{tr("À droite")}</option>
                   </select>
                 </label>
-                <label className="vx-check"><input type="checkbox" checked={sel.italic} onChange={(e) => patchText({ italic: e.target.checked })} /> Italique</label>
+                <label className="vx-check"><input type="checkbox" checked={sel.italic} onChange={(e) => patchText({ italic: e.target.checked })} /> {tr("Italique")}</label>
               </div>
 
-              <h4 className="vx-code-title">Couleur</h4>
+              <h4 className="vx-code-title">{tr("Couleur")}</h4>
               <FillEditor value={sel.fill} onChange={(fill) => patchText({ fill })} colors={COLORS} />
               <div className="vx-fields" style={{ marginTop: 12 }}>
-                <label className="vx-check"><input type="checkbox" checked={sel.shadow} onChange={(e) => patchText({ shadow: e.target.checked })} /> Ombre portée</label>
+                <label className="vx-check"><input type="checkbox" checked={sel.shadow} onChange={(e) => patchText({ shadow: e.target.checked })} /> {tr("Ombre portée")}</label>
                 <label className="vx-check">
-                  <input type="checkbox" checked={!!sel.stroke} onChange={(e) => patchText({ stroke: e.target.checked ? { color: "#07090f", width: 0.06 } : null })} /> Contour
-                  {sel.stroke && <input type="color" aria-label="Couleur du contour" value={sel.stroke.color} onChange={(e) => patchText({ stroke: { ...sel.stroke!, color: e.target.value } })} />}
+                  <input type="checkbox" checked={!!sel.stroke} onChange={(e) => patchText({ stroke: e.target.checked ? { color: "#07090f", width: 0.06 } : null })} /> {tr("Contour")}
+                  {sel.stroke && <input type="color" aria-label={tr("Couleur du contour")} value={sel.stroke.color} onChange={(e) => patchText({ stroke: { ...sel.stroke!, color: e.target.value } })} />}
                 </label>
                 {sel.stroke && (
-                  <label>Épaisseur du contour : {pc(sel.stroke.width)} %
+                  <label>{tr("Épaisseur du contour :")}{" "}{pc(sel.stroke.width)} %
                     <input type="range" min={1} max={20} step={1} value={pc(sel.stroke.width)} onChange={(e) => patchText({ stroke: { ...sel.stroke!, width: Number(e.target.value) / 100 } })} />
                   </label>
                 )}
                 <label className="vx-check">
-                  <input type="checkbox" checked={!!sel.box} onChange={(e) => patchText({ box: e.target.checked ? { color: "#07090f", opacity: 0.72 } : null })} /> Fond arrondi
-                  {sel.box && <input type="color" aria-label="Couleur du fond" value={sel.box.color} onChange={(e) => patchText({ box: { ...sel.box!, color: e.target.value } })} />}
+                  <input type="checkbox" checked={!!sel.box} onChange={(e) => patchText({ box: e.target.checked ? { color: "#07090f", opacity: 0.72 } : null })} /> {tr("Fond arrondi")}
+                  {sel.box && <input type="color" aria-label={tr("Couleur du fond")} value={sel.box.color} onChange={(e) => patchText({ box: { ...sel.box!, color: e.target.value } })} />}
                 </label>
                 {sel.box && (
-                  <label>Opacité du fond : {pc(sel.box.opacity)} %
+                  <label>{tr("Opacité du fond :")}{" "}{pc(sel.box.opacity)} %
                     <input type="range" min={10} max={100} step={5} value={pc(sel.box.opacity)} onChange={(e) => patchText({ box: { ...sel.box!, opacity: Number(e.target.value) / 100 } })} />
                   </label>
                 )}
@@ -246,78 +247,74 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
             </>
           ) : (
             <>
-              <h4 className="vx-code-title">Logo</h4>
+              <h4 className="vx-code-title">{tr("Logo")}</h4>
               <div className="vx-fields">
-                <label>Largeur : {pc(sel.width)} % de l'image
+                <label>{tr("Largeur :")}{" "}{pc(sel.width)} {tr("% de l'image")}
                   <input type="range" min={3} max={100} step={1} value={Math.min(100, pc(sel.width))} onChange={(e) => patch({ width: Number(e.target.value) / 100 })} />
                 </label>
               </div>
-              <p className="vx-muted">{sel.fileName} — un PNG ou un SVG à fond transparent donne le meilleur résultat.</p>
+              <p className="vx-muted">{sel.fileName} {tr("— un PNG ou un SVG à fond transparent donne le meilleur résultat.")}</p>
             </>
           )}
 
-          <h4 className="vx-code-title">Position</h4>
+          <h4 className="vx-code-title">{tr("Position")}</h4>
           <div className="vx-fields">
-            <label>Horizontale : {pc(sel.x)} %
+            <label>{tr("Horizontale :")}{" "}{pc(sel.x)} %
               <input type="range" min={0} max={100} step={1} value={pc(sel.x)} onChange={(e) => patch({ x: Number(e.target.value) / 100 })} />
             </label>
-            <label>Verticale : {pc(sel.y)} %
+            <label>{tr("Verticale :")}{" "}{pc(sel.y)} %
               <input type="range" min={0} max={100} step={1} value={pc(sel.y)} onChange={(e) => patch({ y: Number(e.target.value) / 100 })} />
             </label>
-            <label>Opacité : {pc(sel.opacity)} %
+            <label>{tr("Opacité :")}{" "}{pc(sel.opacity)} %
               <input type="range" min={5} max={100} step={5} value={pc(sel.opacity)} onChange={(e) => patch({ opacity: Number(e.target.value) / 100 })} />
             </label>
-            <label>Rotation : {sel.rotation}°
+            <label>{tr("Rotation :")}{" "}{sel.rotation}°
               <input type="range" min={-180} max={180} step={1} value={sel.rotation} onChange={(e) => patch({ rotation: Number(e.target.value) })} />
             </label>
           </div>
 
-          <h4 className="vx-code-title">Moment</h4>
+          <h4 className="vx-code-title">{tr("Moment")}</h4>
           <div className="vx-fields">
-            <TimeField key={`s${sel.id}`} label="Début (s)" value={sel.start} onCommit={(v) => setTime("start", v)} />
-            <TimeField key={`e${sel.id}`} label="Fin (s)" value={sel.end} onCommit={(v) => setTime("end", v)} />
+            <TimeField key={`s${sel.id}`} label={tr("Début (s)")} value={sel.start} onCommit={(v) => setTime("start", v)} />
+            <TimeField key={`e${sel.id}`} label={tr("Fin (s)")} value={sel.end} onCommit={(v) => setTime("end", v)} />
           </div>
           <div className="vx-row">
-            <HudButton action="set-in" compact label="Début à la tête de lecture" disabled={!video} onClick={() => video && setTime("start", video.currentTime)} />
-            <HudButton action="set-out" compact label="Fin à la tête de lecture" disabled={!video} onClick={() => video && setTime("end", video.currentTime)} />
-            <button type="button" className="vx-chip" onClick={() => patch({ start: range[0], end: range[1] })}>Toute la sélection</button>
+            <HudButton action="set-in" compact label={tr("Début à la tête de lecture")} disabled={!video} onClick={() => video && setTime("start", video.currentTime)} />
+            <HudButton action="set-out" compact label={tr("Fin à la tête de lecture")} disabled={!video} onClick={() => video && setTime("end", video.currentTime)} />
+            <button type="button" className="vx-chip" onClick={() => patch({ start: range[0], end: range[1] })}>{tr("Toute la sélection")}</button>
           </div>
 
-          <h4 className="vx-code-title">Animation</h4>
+          <h4 className="vx-code-title">{tr("Animation")}</h4>
           <div className="vx-fields">
-            <label>Apparition
+            <label>{tr("Apparition")}
               <select value={sel.animIn} onChange={(e) => patch({ animIn: e.target.value as Anim })}>
-                {anims(sel.kind === "text").map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                {anims(sel.kind === "text").map((a) => <option key={a.id} value={a.id}>{tr(a.label)}</option>)}
               </select>
             </label>
-            <label>Disparition
+            <label>{tr("Disparition")}
               <select value={sel.animOut} onChange={(e) => patch({ animOut: e.target.value as Anim })}>
-                {anims(sel.kind === "text").map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                {anims(sel.kind === "text").map((a) => <option key={a.id} value={a.id}>{tr(a.label)}</option>)}
               </select>
             </label>
-            <label>Durée de l'animation : {sel.animDuration.toFixed(1)} s
+            <label>{tr("Durée de l'animation :")}{" "}{sel.animDuration.toFixed(1)} s
               <input type="range" min={0.1} max={2} step={0.1} value={sel.animDuration} onChange={(e) => patch({ animDuration: Number(e.target.value) })} />
             </label>
           </div>
 
           <div className="vx-item-actions">
             <HudButton action="duplicate-layer" compact onClick={duplicate} />
-            <HudButton action="layer-up" compact label="Passer devant" disabled={index >= items.length - 1} onClick={() => reorder(1)} />
-            <HudButton action="layer-down" compact label="Passer derrière" disabled={index <= 0} onClick={() => reorder(-1)} />
+            <HudButton action="layer-up" compact label={tr("Passer devant")} disabled={index >= items.length - 1} onClick={() => reorder(1)} />
+            <HudButton action="layer-down" compact label={tr("Passer derrière")} disabled={index <= 0} onClick={() => reorder(-1)} />
             <HudButton action="delete-layer" compact onClick={remove} />
           </div>
         </div>
       )}
 
       <p className="vx-muted">
-        Incruster un texte ou un logo impose de réencoder l'image ({webm ? "VP9" : "H.264"}, en visant {fmtBitrate(bitrate)}, un peu sous le débit de la source) :
-        c'est plus long qu'une recopie et l'image perd en qualité, légèrement pour une vidéo ordinaire. Une vidéo déjà très légère peut ressortir plus lourde et moins nette,
-        parce que l'encodeur du navigateur a un débit minimal. Le son est recopié tel quel quand le format le permet.
-        Seule la sélection de la timeline ({fmtTime(range[1] - range[0])}) est exportée, en {info.video?.width} × {info.video?.height}.
-        Les polices de la liste sont hébergées par Spectra (aucune requête vers Google) et se chargent au premier choix ; l'aperçu montre exactement ce qui sera incrusté.
+        {tr("Incruster un texte ou un logo impose de réencoder l'image (")}{webm ? "VP9" : "H.264"}{tr(", en visant")}{" "}{fmtBitrate(bitrate)}{tr(", un peu sous le débit de la source) : c'est plus long qu'une recopie et l'image perd en qualité, légèrement pour une vidéo ordinaire. Une vidéo déjà très légère peut ressortir plus lourde et moins nette, parce que l'encodeur du navigateur a un débit minimal. Le son est recopié tel quel quand le format le permet. Seule la sélection de la timeline (")}{fmtTime(range[1] - range[0])}{tr(") est exportée, en")}{" "}{info.video?.width} × {info.video?.height}{tr(". Les polices de la liste sont hébergées par Spectra (aucune requête vers Google) et se chargent au premier choix ; l'aperçu montre exactement ce qui sera incrusté.")}
       </p>
-      {outside > 0 && <p className="vx-alert">{outside > 1 ? `${outside} éléments sont hors de la sélection de la timeline : ils n'apparaîtront pas` : "1 élément est hors de la sélection de la timeline : il n'apparaîtra pas"} dans la vidéo produite.</p>}
-      {!canEncode && <p className="vx-alert">Ce navigateur ne sait pas encoder en {webm ? "VP9" : "H.264"} : l'incrustation n'est pas possible ici pour cette vidéo.</p>}
+      {outside > 0 && <p className="vx-alert">{outside > 1 ? tr("{a} éléments sont hors de la sélection de la timeline : ils n'apparaîtront pas", { a: outside }) : tr("1 élément est hors de la sélection de la timeline : il n'apparaîtra pas")} {tr("dans la vidéo produite.")}</p>}
+      {!canEncode && <p className="vx-alert">{tr("Ce navigateur ne sait pas encoder en")}{" "}{webm ? "VP9" : "H.264"} {tr(": l'incrustation n'est pas possible ici pour cette vidéo.")}</p>}
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <HudButton action="burn-overlays" disabled={!visible || !canEncode} busy={progress !== null}
@@ -332,7 +329,7 @@ export function TextLogoPanel({ file, info, range, duration, video, items, setIt
           <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext, "texte")} />
           {result.blob.size > result.source * 1.02 && (
             <p className="vx-alert" style={{ flexBasis: "100%", margin: 0 }}>
-              Ce fichier pèse plus que l'extrait d'origine ({fmtBytes(result.source)}) : l'encodeur de ce navigateur ne descend pas au débit de cette vidéo.
+              {tr("Ce fichier pèse plus que l'extrait d'origine (")}{fmtBytes(result.source)}{tr(") : l'encodeur de ce navigateur ne descend pas au débit de cette vidéo.")}
             </p>
           )}
         </div>

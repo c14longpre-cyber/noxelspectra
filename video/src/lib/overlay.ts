@@ -4,6 +4,7 @@
 import { PRESETS } from "../../../frontend/src/components/spectra-gradient/gradient-engine";
 import { ensureFont, isFontReady } from "../../../frontend/src/components/spectra-editor/font-library";
 
+import { tr } from "../i18n";
 export type Anim = "none" | "fade" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "zoom" | "typewriter";
 export const ANIMS: { id: Anim; label: string; textOnly?: boolean }[] = [
   { id: "none", label: "Aucune" },
@@ -134,16 +135,16 @@ export const newOverlayId = () => `o${Date.now().toString(36)}${(seq++).toString
 
 export function makeText(start: number, end: number, partial: Partial<TextItem> = {}): TextItem {
   return {
-    id: newOverlayId(), kind: "text", name: "Texte", start, end, x: 0.5, y: 0.5, opacity: 1, rotation: 0,
+    id: newOverlayId(), kind: "text", name: tr("Texte"), start, end, x: 0.5, y: 0.5, opacity: 1, rotation: 0,
     animIn: "fade", animOut: "fade", animDuration: 0.5,
-    text: "Ton texte", font: "sans", weight: 700, italic: false, size: 0.09, align: "center",
+    text: tr("Ton texte"), font: "sans", weight: 700, italic: false, size: 0.09, align: "center",
     fill: { kind: "solid", color: "#ffffff" }, stroke: null, shadow: true, box: null,
     ...partial,
   };
 }
 export function makeLogo(start: number, end: number, image: CanvasImageSource, ratio: number, fileName: string, partial: Partial<LogoItem> = {}): LogoItem {
   return {
-    id: newOverlayId(), kind: "logo", name: "Logo", start, end, x: 0.86, y: 0.12, opacity: 1, rotation: 0,
+    id: newOverlayId(), kind: "logo", name: tr("Logo"), start, end, x: 0.86, y: 0.12, opacity: 1, rotation: 0,
     animIn: "fade", animOut: "fade", animDuration: 0.5,
     image, ratio, width: 0.18, fileName,
     ...partial,
@@ -153,10 +154,10 @@ export function makeLogo(start: number, end: number, image: CanvasImageSource, r
 // ── Modèles : dispositions prêtes à l'emploi ───────────────────────────
 // whole : présent sur toute la sélection ; sinon quelques secondes à partir de la tête de lecture
 export const TEXT_TEMPLATES: { id: string; label: string; whole?: boolean; build: (start: number, end: number) => TextItem }[] = [
-  { id: "title", label: "Titre centré", build: (s, e) => makeText(s, e, { name: "Titre", text: "Ton titre", font: "impact", weight: 900, size: 0.14, fill: { kind: "gradient", id: "noxel" }, stroke: { color: "#07090f", width: 0.06 }, animIn: "zoom", animOut: "fade" }) },
-  { id: "lower", label: "Bandeau en bas", build: (s, e) => makeText(s, e, { name: "Bandeau", text: "Nom · Fonction", size: 0.06, y: 0.86, box: { color: "#07090f", opacity: 0.72 }, shadow: false, animIn: "slide-up", animOut: "slide-down" }) },
-  { id: "signature", label: "Signature dans un coin", whole: true, build: (s, e) => makeText(s, e, { name: "Signature", text: "@moncompte", size: 0.04, x: 0.84, y: 0.93, weight: 400, opacity: 0.85, animIn: "fade", animOut: "fade" }) },
-  { id: "watermark", label: "Filigrane", whole: true, build: (s, e) => makeText(s, e, { name: "Filigrane", text: "© Mon nom", size: 0.045, x: 0.5, y: 0.5, weight: 700, opacity: 0.28, rotation: -20, shadow: false, animIn: "none", animOut: "none" }) },
+  { id: "title", label: "Titre centré", build: (s, e) => makeText(s, e, { name: tr("Titre"), text: tr("Ton titre"), font: "impact", weight: 900, size: 0.14, fill: { kind: "gradient", id: "noxel" }, stroke: { color: "#07090f", width: 0.06 }, animIn: "zoom", animOut: "fade" }) },
+  { id: "lower", label: "Bandeau en bas", build: (s, e) => makeText(s, e, { name: tr("Bandeau"), text: tr("Nom · Fonction"), size: 0.06, y: 0.86, box: { color: "#07090f", opacity: 0.72 }, shadow: false, animIn: "slide-up", animOut: "slide-down" }) },
+  { id: "signature", label: "Signature dans un coin", whole: true, build: (s, e) => makeText(s, e, { name: tr("Signature"), text: "@moncompte", size: 0.04, x: 0.84, y: 0.93, weight: 400, opacity: 0.85, animIn: "fade", animOut: "fade" }) },
+  { id: "watermark", label: "Filigrane", whole: true, build: (s, e) => makeText(s, e, { name: tr("Filigrane"), text: tr("© Mon nom"), size: 0.045, x: 0.5, y: 0.5, weight: 700, opacity: 0.28, rotation: -20, shadow: false, animIn: "none", animOut: "none" }) },
 ];
 
 // ── Dessin ──────────────────────────────────────────────────────────────

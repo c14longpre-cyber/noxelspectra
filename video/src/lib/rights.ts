@@ -10,6 +10,7 @@ import type { OverlayItem, Fill, ShadowStyle } from "./overlay";
 import { burnOverlays } from "./textlogo";
 import { assertNoLostTrack } from "./tracks";
 
+import { tr } from "../i18n";
 export type Container = "mp4" | "webm";
 
 export type Rights = {
@@ -78,20 +79,20 @@ export function planRights(r: Rights, container: Container): { tags: MetadataTag
   const mp4 = container === "mp4";
   // Une licence n'a de sens que si quelqu'un est nommé : sans titulaire ni auteur, elle n'est pas écrite
   const named = !!notice || !!v.creator;
-  add("Titre", v.title, mp4 ? "titre (©nam)" : "TITLE", (t) => t.title, () => { tags.title = v.title; });
-  add("Auteur", v.creator, mp4 ? "artiste (©ART)" : "ARTIST", (t) => t.artist, () => { tags.artist = v.creator; });
-  add("Mention de droits", notice, mp4 ? "copyright (cprt)" : "COPYRIGHT", raw(mp4 ? "cprt" : "COPYRIGHT"), () => { tags.raw![mp4 ? "cprt" : "COPYRIGHT"] = notice; });
+  add(tr("Titre"), v.title, mp4 ? tr("titre (©nam)") : "TITLE", (t) => t.title, () => { tags.title = v.title; });
+  add(tr("Auteur"), v.creator, mp4 ? tr("artiste (©ART)") : "ARTIST", (t) => t.artist, () => { tags.artist = v.creator; });
+  add(tr("Mention de droits"), notice, mp4 ? tr("copyright (cprt)") : "COPYRIGHT", raw(mp4 ? "cprt" : "COPYRIGHT"), () => { tags.raw![mp4 ? "cprt" : "COPYRIGHT"] = notice; });
   // MP4 : atome « desc », celui que lisent ffprobe et les lecteurs (le champ normalisé irait dans « ©des »)
-  if (mp4) add("Description", v.description, "description (desc)", (t) => t.raw?.desc ?? t.description, () => { tags.raw!.desc = v.description; });
-  else add("Description", v.description, "DESCRIPTION", (t) => t.description, () => { tags.description = v.description; });
+  if (mp4) add(tr("Description"), v.description, tr("description (desc)"), (t) => t.raw?.desc ?? t.description, () => { tags.raw!.desc = v.description; });
+  else add(tr("Description"), v.description, "DESCRIPTION", (t) => t.description, () => { tags.description = v.description; });
   if (mp4) {
     const parts = [named && lic.text && `Licence : ${lic.text}`, named && lic.url && `Conditions : ${lic.url}`, v.website && `Site : ${v.website}`, v.contact && `Contact : ${v.contact}`].filter(Boolean);
-    add("Licence, conditions, site et contact", parts.join(" | "), "commentaire (©cmt)", (t) => t.comment, () => { tags.comment = parts.join(" | "); });
+    add(tr("Licence, conditions, site et contact"), parts.join(" | "), tr("commentaire (©cmt)"), (t) => t.comment, () => { tags.comment = parts.join(" | "); });
   } else {
-    add("Licence", named ? lic.text : "", "LICENSE", raw("LICENSE"), () => { tags.raw!.LICENSE = lic.text; });
-    add("Conditions d'utilisation", named ? lic.url : "", "TERMS_OF_USE", raw("TERMS_OF_USE"), () => { tags.raw!.TERMS_OF_USE = lic.url; });
-    add("Site web", v.website, "URL", raw("URL"), () => { tags.raw!.URL = v.website; });
-    add("Contact", v.contact, "EMAIL", raw("EMAIL"), () => { tags.raw!.EMAIL = v.contact; });
+    add(tr("Licence"), named ? lic.text : "", "LICENSE", raw("LICENSE"), () => { tags.raw!.LICENSE = lic.text; });
+    add(tr("Conditions d'utilisation"), named ? lic.url : "", "TERMS_OF_USE", raw("TERMS_OF_USE"), () => { tags.raw!.TERMS_OF_USE = lic.url; });
+    add(tr("Site web"), v.website, "URL", raw("URL"), () => { tags.raw!.URL = v.website; });
+    add(tr("Contact"), v.contact, "EMAIL", raw("EMAIL"), () => { tags.raw!.EMAIL = v.contact; });
   }
   return { tags, fields };
 }
@@ -122,15 +123,15 @@ async function readTags(input: Input): Promise<FoundRights> {
     const s = text(value);
     if (s) fields.push({ label, value: s });
   };
-  push("Titre", t.title, "©nam", "TITLE", "title");
-  push("Auteur", t.artist, "©ART", "ARTIST", "artist");
-  push("Mention de droits", t.raw?.cprt ?? t.raw?.["©cpy"] ?? t.raw?.COPYRIGHT ?? t.raw?.copyright ?? t.raw?.["com.apple.quicktime.copyright"], "cprt", "©cpy", "COPYRIGHT", "copyright", "com.apple.quicktime.copyright");
-  push("Licence", t.raw?.LICENSE, "LICENSE");
-  push("Conditions d'utilisation", t.raw?.TERMS_OF_USE, "TERMS_OF_USE");
-  push("Site web", t.raw?.URL, "URL");
-  push("Contact", t.raw?.EMAIL, "EMAIL");
-  push("Description", t.raw?.desc ?? t.description, "desc", "©des", "DESCRIPTION", "description");
-  push("Commentaire", t.comment, "©cmt", "COMMENT", "comment");
+  push(tr("Titre"), t.title, "©nam", "TITLE", "title");
+  push(tr("Auteur"), t.artist, "©ART", "ARTIST", "artist");
+  push(tr("Mention de droits"), t.raw?.cprt ?? t.raw?.["©cpy"] ?? t.raw?.COPYRIGHT ?? t.raw?.copyright ?? t.raw?.["com.apple.quicktime.copyright"], "cprt", "©cpy", "COPYRIGHT", "copyright", "com.apple.quicktime.copyright");
+  push(tr("Licence"), t.raw?.LICENSE, "LICENSE");
+  push(tr("Conditions d'utilisation"), t.raw?.TERMS_OF_USE, "TERMS_OF_USE");
+  push(tr("Site web"), t.raw?.URL, "URL");
+  push(tr("Contact"), t.raw?.EMAIL, "EMAIL");
+  push(tr("Description"), t.raw?.desc ?? t.description, "desc", "©des", "DESCRIPTION", "description");
+  push(tr("Commentaire"), t.comment, "©cmt", "COMMENT", "comment");
   const others = new Set<string>();
   const sensitive = new Set<string>();
   for (const key of Object.keys(t.raw || {})) {
@@ -215,8 +216,8 @@ export function layoutMark(m: Mark, start: number, end: number, W: number, H: nu
   const base = { opacity: m.opacity, rotation: m.rotation, animIn: "none" as const, animOut: "none" as const };
   const make = (x: number, y: number): OverlayItem =>
     m.kind === "logo"
-      ? makeLogo(start, end, m.logo!.image, m.logo!.ratio, m.logo!.fileName, { ...base, x, y, width: m.size, name: "Filigrane", ...(m.shadow === true ? { shadowStyle: m.shadowStyle ?? DEFAULT_SHADOW } : {}) })
-      : makeText(start, end, { ...base, x, y, text: m.text.trim(), font: m.font || "sans", size: m.size, weight: 700, shadow: m.shadow ?? true, name: "Filigrane", fill: m.fill ?? { kind: "solid" as const, color: m.color || "#ffffff" }, ...(m.shadowStyle ? { shadowStyle: m.shadowStyle } : {}) });
+      ? makeLogo(start, end, m.logo!.image, m.logo!.ratio, m.logo!.fileName, { ...base, x, y, width: m.size, name: tr("Filigrane"), ...(m.shadow === true ? { shadowStyle: m.shadowStyle ?? DEFAULT_SHADOW } : {}) })
+      : makeText(start, end, { ...base, x, y, text: m.text.trim(), font: m.font || "sans", size: m.size, weight: 700, shadow: m.shadow ?? true, name: tr("Filigrane"), fill: m.fill ?? { kind: "solid" as const, color: m.color || "#ffffff" }, ...(m.shadowStyle ? { shadowStyle: m.shadowStyle } : {}) });
   // Place occupée, rotation comprise, en fraction de l'image
   probe ||= document.createElement("canvas").getContext("2d")!;
   const { w, h } = itemSize(probe, make(0.5, 0.5), W, H);
@@ -280,7 +281,7 @@ export async function writeRights(
       register?.(() => conversion.cancel());
       conversion.onProgress = (p) => onProgress(p);
       await conversion.execute();
-      if (!output.target.buffer) throw new Error("aucune donnée produite");
+      if (!output.target.buffer) throw new Error(tr("aucune donnée produite"));
       buffer = output.target.buffer;
     } finally {
       input.dispose();
@@ -292,14 +293,14 @@ export async function writeRights(
   try {
     const vt = await check.getPrimaryVideoTrack();
     const duration = vt ? await vt.computeDuration() : 0;
-    if (!vt || !(duration > 0)) throw new Error("le fichier produit ne contient aucune image");
+    if (!vt || !(duration > 0)) throw new Error(tr("le fichier produit ne contient aucune image"));
     const written = await check.getMetadataTags();
     const checks = plan.fields.map((f) => {
       const found = text(f.read(written));
       return { label: f.label, where: f.where, expected: f.value, found, ok: found === f.value };
     });
     const missing = checks.filter((c) => !c.ok);
-    if (missing.length) throw new Error(`${missing.length > 1 ? "des champs n'ont" : "un champ n'a"} pas été inscrit dans le fichier (${missing.map((c) => c.label).join(", ")})`);
+    if (missing.length) throw new Error(tr("{a} pas été inscrit dans le fichier ({b})", { a: missing.length > 1 ? tr("des champs n'ont") : tr("un champ n'a"), b: missing.map((c) => c.label).join(", ") }));
     return {
       blob: new Blob([buffer], { type: ext === "webm" ? "video/webm" : "video/mp4" }),
       ext, width: await vt.getDisplayWidth(), height: await vt.getDisplayHeight(), duration, reencoded, checks, after: await readTags(check),

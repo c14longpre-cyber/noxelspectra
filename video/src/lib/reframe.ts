@@ -8,6 +8,7 @@ import { audioEncoding, audioOptions } from "./audio";
 import { assertNoLostTrack } from "./tracks";
 import type { CompressFormat } from "./compress";
 
+import { tr } from "../i18n";
 export type Aspect = "9:16" | "1:1" | "4:5" | "16:9";
 export type ReframeMode = "crop" | "bars" | "blur";
 export const ASPECTS: { id: Aspect; label: string; use: string }[] = [
@@ -119,7 +120,7 @@ export async function reframeVideo(
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
     return { blob: new Blob([buffer], { type: mp4 ? "video/mp4" : "video/webm" }), ext: o.format, width: out.width, height: out.height };
   } finally {
     input.dispose();

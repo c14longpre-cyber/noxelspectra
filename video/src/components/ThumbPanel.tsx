@@ -9,6 +9,7 @@ import { FontPicker } from "./FontPicker";
 import { FillEditor } from "./FillEditor";
 import { FONTS } from "../lib/overlay";
 
+import { tr } from "../i18n";
 type Props = { file: File; url: string; range: [number, number]; video: HTMLVideoElement | null };
 const COLORS = ["#ffffff", "#3ddc84", "#a855f7", "#ffd23f"];
 
@@ -69,13 +70,13 @@ export function ThumbPanel({ file, url, range, video }: Props) {
     <div className="vx-thumb">
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
         <HudButton action="suggest-frames" compact busy={scanning} onClick={suggest} />
-        <span className="vx-muted">ou place la tête de lecture sur l'image voulue.</span>
+        <span className="vx-muted">{tr("ou place la tête de lecture sur l'image voulue.")}</span>
       </div>
       {suggestions && (
         <div className="vx-suggestions">
           {suggestions.map((s) => (
             <button key={s.time} type="button" className="vx-suggestion" onClick={() => { if (video) { video.pause(); video.currentTime = s.time; } }}
-              aria-label={`Utiliser l'image à ${fmtTime(s.time)}`}>
+              aria-label={tr("Utiliser l'image à {a}", { a: fmtTime(s.time) })}>
               <img src={s.thumb} alt="" />
               <span>{fmtTime(s.time)}</span>
             </button>
@@ -85,48 +86,48 @@ export function ThumbPanel({ file, url, range, video }: Props) {
 
       <div className="vx-reframe-body">
         <div>
-          <canvas ref={preview} className="vx-reframe-preview" aria-label="Aperçu de la miniature" />
-          <p className="vx-hint">Aperçu : image à la position actuelle de la timeline.</p>
+          <canvas ref={preview} className="vx-reframe-preview" aria-label={tr("Aperçu de la miniature")} />
+          <p className="vx-hint">{tr("Aperçu : image à la position actuelle de la timeline.")}</p>
         </div>
         <div className="vx-fields" style={{ alignContent: "start" }}>
-          <label>Format
+          <label>{tr("Format")}
             <select value={aspect} onChange={(e) => setAspect(e.target.value as ThumbAspect)}>
-              {Object.entries(THUMB_SIZES).map(([id, s]) => <option key={id} value={id}>{s.label}</option>)}
-              <option value="original">Original ({video?.videoWidth || "?"} × {video?.videoHeight || "?"})</option>
+              {Object.entries(THUMB_SIZES).map(([id, s]) => <option key={id} value={id}>{tr(s.label)}</option>)}
+              <option value="original">{tr("Original (")}{video?.videoWidth || "?"} × {video?.videoHeight || "?"})</option>
             </select>
           </label>
-          <label>Titre (facultatif)
-            <input type="text" value={title.text} maxLength={80} placeholder="Ex. : 5 erreurs SEO à éviter"
+          <label>{tr("Titre (facultatif)")}
+            <input type="text" value={title.text} maxLength={80} placeholder={tr("Ex. : 5 erreurs SEO à éviter")}
               onChange={(e) => setTitle({ ...title, text: e.target.value })} />
           </label>
           {title.text.trim() && (
             <>
-              <div className="vx-font-field"><span>Police</span>
+              <div className="vx-font-field"><span>{tr("Police")}</span>
                 <FontPicker value={title.font} onChange={(font) => setTitle({ ...title, font })} onReady={draw} />
               </div>
-              <label>Position
+              <label>{tr("Position")}
                 <select value={title.position} onChange={(e) => setTitle({ ...title, position: e.target.value as TitleStyle["position"] })}>
-                  <option value="top">En haut</option>
-                  <option value="center">Au centre</option>
-                  <option value="bottom">En bas</option>
+                  <option value="top">{tr("En haut")}</option>
+                  <option value="center">{tr("Au centre")}</option>
+                  <option value="bottom">{tr("En bas")}</option>
                 </select>
               </label>
-              <label>Taille : {title.size} %
+              <label>{tr("Taille :")}{" "}{title.size} %
                 <input type="range" min={4} max={16} value={title.size} onChange={(e) => setTitle({ ...title, size: Number(e.target.value) })} />
               </label>
-              <label className="vx-check"><input type="checkbox" checked={title.shadow !== false} onChange={(e) => setTitle({ ...title, shadow: e.target.checked })} /> Ombre portée</label>
-              <div className="vx-fill-field"><span>Couleur</span>
+              <label className="vx-check"><input type="checkbox" checked={title.shadow !== false} onChange={(e) => setTitle({ ...title, shadow: e.target.checked })} /> {tr("Ombre portée")}</label>
+              <div className="vx-fill-field"><span>{tr("Couleur")}</span>
                 <FillEditor value={title.fill ?? { kind: "solid", color: title.color }} colors={COLORS.map((c) => [c, c] as [string, string])}
                   onChange={(fill) => setTitle({ ...title, fill, ...(fill.kind === "solid" ? { color: fill.color } : {}) })} />
               </div>
-              <label className="vx-check"><input type="checkbox" checked={title.band} onChange={(e) => setTitle({ ...title, band: e.target.checked })} /> Bande de fond NOXEL (meilleure lisibilité)</label>
+              <label className="vx-check"><input type="checkbox" checked={title.band} onChange={(e) => setTitle({ ...title, band: e.target.checked })} /> {tr("Bande de fond NOXEL (meilleure lisibilité)")}</label>
             </>
           )}
-          <label>Fichier
+          <label>{tr("Fichier")}
             <select value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-              <option value="image/jpeg">JPEG — accepté partout (YouTube, réseaux)</option>
-              <option value="image/webp">WebP — plus léger, pour le web</option>
-              <option value="image/png">PNG — sans perte</option>
+              <option value="image/jpeg">{tr("JPEG — accepté partout (YouTube, réseaux)")}</option>
+              <option value="image/webp">{tr("WebP — plus léger, pour le web")}</option>
+              <option value="image/png">{tr("PNG — sans perte")}</option>
             </select>
           </label>
         </div>

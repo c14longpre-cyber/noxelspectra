@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { HudButton } from "../hud/HudButton";
 import { API_URL, TIER_COLORS, TIER_MEDAL, allerVers, apiFetch, openLogin, useAccount, type PlanInfo } from "./account";
 
+import { tr, locale } from "../../i18n";
 interface PlansReponse { plans: PlanInfo[]; creditPack: { credits: number; priceCad: number; available: boolean } }
 
-const prix = (n: number) => n.toLocaleString("fr-CA", { style: "currency", currency: "CAD", maximumFractionDigits: n % 1 ? 2 : 0 });
+const prix = (n: number) => n.toLocaleString(locale(), { style: "currency", currency: "CAD", maximumFractionDigits: n % 1 ? 2 : 0 });
 
 export function PricingPage() {
   const { account } = useAccount();
@@ -16,7 +17,7 @@ export function PricingPage() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch(`${API_URL}/api/plans`).then((r) => r.json()).then(setData).catch(() => setErreur("Forfaits indisponibles pour le moment."));
+    apiFetch(`${API_URL}/api/plans`).then((r) => r.json()).then(setData).catch(() => setErreur(tr("Forfaits indisponibles pour le moment.")));
   }, []);
 
   async function choisir(p: PlanInfo) {
@@ -24,7 +25,7 @@ export function PricingPage() {
     if (!account) { openLogin(); return; }
     setBusy(p.tier); setErreur(null);
     try { await allerVers("/api/billing/checkout", { tier: p.tier, cycle }); }
-    catch (e) { setErreur(e instanceof Error ? e.message : "Paiement impossible"); }
+    catch (e) { setErreur(e instanceof Error ? e.message : tr("Paiement impossible")); }
     finally { setBusy(null); }
   }
 
@@ -32,7 +33,7 @@ export function PricingPage() {
     if (!account) { openLogin(); return; }
     setBusy("credits"); setErreur(null);
     try { await allerVers("/api/billing/credits"); }
-    catch (e) { setErreur(e instanceof Error ? e.message : "Paiement impossible"); }
+    catch (e) { setErreur(e instanceof Error ? e.message : tr("Paiement impossible")); }
     finally { setBusy(null); }
   }
 
@@ -42,11 +43,11 @@ export function PricingPage() {
     <div className="nx-page" style={{ padding: "8px 0 24px", maxWidth: "none" }}>
       <div className="nx-cycle">
         <div className="nx-cycle__track">
-          <button type="button" className="nx-cycle__btn" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>Mensuel</button>
-          <button type="button" className="nx-cycle__btn" aria-pressed={cycle === "annual"} onClick={() => setCycle("annual")}>Annuel <span className="nx-save">−17 %</span></button>
+          <button type="button" className="nx-cycle__btn" aria-pressed={cycle === "monthly"} onClick={() => setCycle("monthly")}>{tr("Mensuel")}</button>
+          <button type="button" className="nx-cycle__btn" aria-pressed={cycle === "annual"} onClick={() => setCycle("annual")}>{tr("Annuel")}{" "}<span className="nx-save">−17 %</span></button>
         </div>
       </div>
-      <div className="nx-price-note">Prix en dollars canadiens (CAD). Les outils d'images et l'outil vidéo sont inclus dans tous les forfaits.</div>
+      <div className="nx-price-note">{tr("Prix en dollars canadiens (CAD). Les outils d'images et l'outil vidéo sont inclus dans tous les forfaits.")}</div>
       {erreur && <p className="sp-error" role="alert" style={{ textAlign: "center" }}>{erreur}</p>}
 
       <div className="nx-pricing-grid">
@@ -55,27 +56,27 @@ export function PricingPage() {
           const montant = cycle === "annual" ? p.annual / 12 : p.monthly;
           return (
             <div key={p.tier} className={`nx-pcard${p.tier === "gold" ? " nx-pcard--featured" : ""}${estActuel && account ? " nx-pcard--active" : ""}`}>
-              {estActuel && account ? <div className="nx-pcard__flag">✓ Forfait actuel</div> : p.tier === "gold" ? <div className="nx-pcard__flag">Le plus choisi</div> : null}
+              {estActuel && account ? <div className="nx-pcard__flag">{tr("✓ Forfait actuel")}</div> : p.tier === "gold" ? <div className="nx-pcard__flag">{tr("Le plus choisi")}</div> : null}
               <div className="nx-pcard__head">
                 <img src={TIER_MEDAL(p.tier)} alt="" width={48} height={48} />
                 <div className="nx-pcard__name" style={{ color: TIER_COLORS[p.tier] }}>{p.name.toUpperCase()}</div>
               </div>
               <div className="nx-pcard__price">
-                {p.monthly === 0 ? "Gratuit" : prix(montant)}
-                {p.monthly > 0 && <span className="nx-pcard__period">/mois</span>}
+                {p.monthly === 0 ? tr("Gratuit") : prix(montant)}
+                {p.monthly > 0 && <span className="nx-pcard__period">{tr("/mois")}</span>}
               </div>
-              {p.monthly > 0 && cycle === "annual" && <div className="nx-pcard__sub">Facturé {prix(p.annual)} par an</div>}
-              <div className="nx-pcard__note">{p.aiCredits > 0 ? `${p.aiCredits} crédits de dessin IA par mois` : "Sans compte"}</div>
+              {p.monthly > 0 && cycle === "annual" && <div className="nx-pcard__sub">{tr("Facturé")}{" "}{prix(p.annual)} {tr("par an")}</div>}
+              <div className="nx-pcard__note">{p.aiCredits > 0 ? tr("{a} crédits de dessin IA par mois", { a: p.aiCredits }) : tr("Sans compte")}</div>
               <ul className="nx-pcard__items">
                 {p.features.fr.map((f) => <li key={f}><span style={{ color: TIER_COLORS[p.tier] }}>✓</span>{f}</li>)}
               </ul>
               <div className="nx-pcard__cta">
                 {p.tier === "bronze" ? (
-                  <HudButton action="ok" compact label={estActuel ? "Inclus" : "Gratuit"} disabled />
+                  <HudButton action="ok" compact label={estActuel ? tr("Inclus") : tr("Gratuit")} disabled />
                 ) : (
                   <HudButton action="continue" compact busy={busy === p.tier}
                     disabled={(estActuel && !!account) || !p.available || (cycle === "annual" && !p.annualAvailable)}
-                    label={estActuel && account ? "Forfait actuel" : !p.available ? "Bientôt" : `Choisir ${p.name}`}
+                    label={estActuel && account ? tr("Forfait actuel") : !p.available ? tr("Bientôt") : `Choisir ${p.name}`}
                     onClick={() => choisir(p)} />
                 )}
               </div>
@@ -86,15 +87,14 @@ export function PricingPage() {
 
       <div className="nx-info" style={{ display: "flex", gap: 16, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
         <div>
-          <div className="nx-info__title">Crédits de dessin IA</div>
+          <div className="nx-info__title">{tr("Crédits de dessin IA")}</div>
           <div className="nx-info__desc">
-            Une image dessinée par l'IA (FLUX.2 [pro]) coûte 1 crédit. Les crédits inclus reviennent le 1er de chaque mois ;
-            les crédits achetés n'expirent pas. {data?.creditPack ? `Paquet de ${data.creditPack.credits} crédits : ${prix(data.creditPack.priceCad)}.` : ""}
-            {account ? ` Il te reste ${account.credits.total} crédit${account.credits.total > 1 ? "s" : ""}.` : ""}
+            {tr("Une image dessinée par l'IA (FLUX.2 [pro]) coûte 1 crédit. Les crédits inclus reviennent le 1er de chaque mois ; les crédits achetés n'expirent pas.")}{" "}{data?.creditPack ? tr("Paquet de {a} crédits : {b}.", { a: data.creditPack.credits, b: prix(data.creditPack.priceCad) }) : ""}
+            {account ? tr(" Il te reste {a} crédit{b}.", { a: account.credits.total, b: account.credits.total > 1 ? "s" : "" }) : ""}
           </div>
         </div>
         <HudButton action="continue" compact busy={busy === "credits"} disabled={!data?.creditPack.available}
-          label={data?.creditPack.available ? `Acheter ${data.creditPack.credits} crédits` : "Bientôt"} onClick={acheterCredits} />
+          label={data?.creditPack.available ? tr("Acheter {a} crédits", { a: data.creditPack.credits }) : tr("Bientôt")} onClick={acheterCredits} />
       </div>
     </div>
   );

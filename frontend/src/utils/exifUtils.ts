@@ -1,3 +1,4 @@
+import { tr } from "../i18n";
 // NOXEL SPECTRA — lecture et retrait des métadonnées d'une image, sans dépendance.
 //
 // readMetadata() repère ce qu'un fichier JPEG, PNG, WebP ou AVIF révèle (position GPS,
@@ -332,7 +333,7 @@ function parseJpeg(b: Uint8Array): ImageMetadata | null {
     } else if (s.marker === 0xed) {
       meta.hasIptc = true;
     } else if (s.marker === 0xfe) {
-      if (!meta.textKeys.includes("Commentaire")) meta.textKeys.push("Commentaire");
+      if (!meta.textKeys.includes("Commentaire")) meta.textKeys.push(tr("Commentaire"));
     }
   }
   return meta;

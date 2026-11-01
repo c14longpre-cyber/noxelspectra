@@ -6,6 +6,7 @@
 // Généré par tools/fonts-gen (catalogue.json + fichiers).
 import "./font-picker.css";
 
+import { tr } from "../../i18n";
 export type FontCategory = "sans-serif" | "serif" | "display" | "handwriting" | "monospace";
 export interface FontEntry { id: string; family: string; category: FontCategory; bold: boolean; accents: boolean }
 
@@ -142,9 +143,9 @@ export function openFontPicker(anchor: HTMLElement, current: string, onPick: (va
   const panel = document.createElement("div");
   panel.className = "sp-font-panel";
   panel.setAttribute("role", "dialog");
-  panel.setAttribute("aria-label", "Choisir une police");
+  panel.setAttribute("aria-label", tr("Choisir une police"));
   panel.innerHTML = `<input type="search" class="sp-font-search" placeholder="Rechercher une police…" aria-label="Rechercher une police" autocomplete="off" spellcheck="false">
-    <div class="sp-font-cats" role="group" aria-label="Style">${[["", "Toutes"], ...Object.entries(CATEGORY_LABELS)]
+    <div class="sp-font-cats" role="group" aria-label="Style">${[["", tr("Toutes")], ...Object.entries(CATEGORY_LABELS)]
       .map(([k, l]) => `<button type="button" data-cat="${k}" aria-pressed="${k === "" ? "true" : "false"}">${l}</button>`).join("")}</div>
     <div class="sp-font-list" role="listbox" aria-label="Polices" tabindex="-1"><p class="sp-font-msg">Chargement des polices…</p></div>
     <p class="sp-font-count" aria-live="polite"></p>`;
@@ -186,7 +187,7 @@ export function openFontPicker(anchor: HTMLElement, current: string, onPick: (va
   const option = (f: FontEntry, idSuffix: string) =>
     `<div role="option" id="spf-${f.id}${idSuffix}" class="sp-font-opt" data-family="${esc(f.family)}" aria-selected="${f.family === current}">
       <span class="sp-font-preview" style="font-family:${previewFamily(f)}, system-ui">${esc(f.family)}</span>
-      <span class="sp-font-label">${esc(f.family)} · ${CATEGORY_LABELS[f.category]}${f.accents ? "" : " · sans accents"}</span></div>`;
+      <span class="sp-font-label">${esc(f.family)} · ${CATEGORY_LABELS[f.category]}${f.accents ? "" : tr(" · sans accents")}</span></div>`;
 
   const render = () => {
     if (!catalogue) return;
@@ -196,10 +197,10 @@ export function openFontPicker(anchor: HTMLElement, current: string, onPick: (va
     const recent = !q && !category ? readRecent().map((n) => byFamily.get(n)).filter((f): f is FontEntry => !!f) : [];
     const ex = !category ? extras.filter((x) => !q || fold(x.label).includes(q)) : [];
     if (ex.length) html += `<p class="sp-font-head">Polices de l'appareil</p>${ex.map((x, i) => `<div role="option" id="spf-x${i}" class="sp-font-opt" data-family="${esc(x.value)}" data-extra="1" aria-selected="${x.value === current}">
-      <span class="sp-font-preview" style="font-family:${esc(x.css)}">${esc(x.label)}</span><span class="sp-font-label">Installée sur cet appareil</span></div>`).join("")}`;
-    if (recent.length) html += `<p class="sp-font-head">Récentes</p>${recent.map((f) => option(f, "-r")).join("")}`;
-    if (ex.length || recent.length) html += `<p class="sp-font-head">Toutes les polices</p>`;
-    html += match.map((f) => option(f, "")).join("") || `<p class="sp-font-msg">Aucune police ne correspond à « ${esc(search.value)} ».</p>`;
+      <span class="sp-font-preview" style="font-family:${esc(x.css)}">${esc(x.label)}</span><span class="sp-font-label">${tr("Installée sur cet appareil")}</span></div>`).join("")}`;
+    if (recent.length) html += `<p class="sp-font-head">${tr("Récentes")}</p>${recent.map((f) => option(f, "-r")).join("")}`;
+    if (ex.length || recent.length) html += tr("<p class=\"sp-font-head\">Toutes les polices</p>");
+    html += match.map((f) => option(f, "")).join("") || `<p class="sp-font-msg">${esc(tr("Aucune police ne correspond à « {a} ».", { a: search.value }))}</p>`;
     list.innerHTML = html;
     rows = [...list.querySelectorAll<HTMLElement>("[role=option]")];
     rows.forEach((r) => io.observe(r));
@@ -267,6 +268,6 @@ export function openFontPicker(anchor: HTMLElement, current: string, onPick: (va
   search.focus();
 
   loadCatalogue().then(render).catch(() => {
-    list.innerHTML = `<p class="sp-font-msg">La liste des polices n'a pas pu être chargée. Vérifiez votre connexion, puis rouvrez le menu.</p>`;
+    list.innerHTML = tr("<p class=\"sp-font-msg\">La liste des polices n'a pas pu être chargée. Vérifiez votre connexion, puis rouvrez le menu.</p>");
   });
 }

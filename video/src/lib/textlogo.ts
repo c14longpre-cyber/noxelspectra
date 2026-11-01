@@ -7,6 +7,7 @@ import { drawOverlays, loadItemFonts } from "./overlay";
 import type { OverlayItem } from "./overlay";
 import { assertNoLostTrack } from "./tracks";
 
+import { tr } from "../i18n";
 export type BurnResult = { blob: Blob; ext: "mp4" | "webm"; width: number; height: number; duration: number };
 
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
@@ -24,7 +25,7 @@ export async function burnOverlays(
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const vt = await input.getPrimaryVideoTrack();
-    if (!vt) throw new Error("cette vidéo n'a aucune piste vidéo");
+    if (!vt) throw new Error(tr("cette vidéo n'a aucune piste vidéo"));
     const codec = await vt.getCodec();
     // WebM n'accepte que VP8, VP9 et AV1 : sinon (H.264, HEVC…) on produit un MP4
     const webm = codec === "vp8" || codec === "vp9" || codec === "av1";
@@ -66,14 +67,14 @@ export async function burnOverlays(
     conversion.onProgress = (p) => onProgress(p);
     await conversion.execute();
     const buffer = output.target.buffer;
-    if (!buffer) throw new Error("aucune donnée produite");
+    if (!buffer) throw new Error(tr("aucune donnée produite"));
 
     // Mesure du fichier produit : dimensions et durée réelles
     const check = new Input({ source: new BufferSource(buffer), formats: ALL_FORMATS });
     try {
       const out = await check.getPrimaryVideoTrack();
       const duration = out ? await out.computeDuration() : 0;
-      if (!out || !(duration > 0)) throw new Error("le fichier produit ne contient aucune image");
+      if (!out || !(duration > 0)) throw new Error(tr("le fichier produit ne contient aucune image"));
       return {
         blob: new Blob([buffer], { type: webm ? "video/webm" : "video/mp4" }),
         ext: webm ? "webm" : "mp4",

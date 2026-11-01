@@ -8,6 +8,7 @@ import { fmtBitrate, fmtBytes, fmtTime } from "../lib/probe";
 import { useCancel } from "../lib/useCancel";
 import type { VideoInfo } from "../lib/probe";
 
+import { tr } from "../i18n";
 type Props = {
   file: File;
   info: VideoInfo;
@@ -112,7 +113,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       let opts = options;
       let note = "";
       const floored = (lower: typeof opts) => {
-        note = `Résolution réduite à ${lower.shortSide}p : l'encodeur de ce navigateur ne descend pas au débit prévu pour une image plus grande.`;
+        note = tr("Résolution réduite à {a}p : l'encodeur de ce navigateur ne descend pas au débit prévu pour une image plus grande.", { a: lower.shortSide });
         return lower;
       };
       // Taille cible serrée : essai de quelques secondes avant le vrai passage. Certains encodeurs ne
@@ -121,7 +122,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       // suite, avant un long encodage.
       if (trialUseful) {
         setTrying(true);
-        setStatus("Essai de l'encodeur sur quelques secondes…");
+        setStatus(tr("Essai de l'encodeur sur quelques secondes…"));
         // Débit vidéo qui tient dans la cible (3 % de marge pour le conteneur)
         const allowed = ((targetMb * MB * 8) / duration) * 0.97 - opts.audioBitrate;
         const len = Math.min(TRIAL_SECONDS, duration);
@@ -159,13 +160,13 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
         // L'essai surestime un peu le débit d'un passage complet : on ne renonce qu'au-delà de 20 %
         if (best.actual > allowed * 1.2) {
           const size = (((best.actual + opts.audioBitrate) * duration) / 8 / MB).toFixed(1);
-          setError(`Cible de ${targetMb} Mo hors de portée${format === "mp4" ? " en MP4" : ""} pour cette sélection : à l'essai, l'encodeur de ce navigateur produit environ ${fmtBitrate(best.actual)} de vidéo, soit un fichier d'environ ${size} Mo. ${format === "mp4" ? "Le format WebM tient parfois une cible plus basse ; sinon, essaie un" : "Essaie un"} extrait plus court ou une cible plus grande.`);
+          setError(tr("Cible de {a} Mo hors de portée{b} pour cette sélection : à l'essai, l'encodeur de ce navigateur produit environ {c} de vidéo, soit un fichier d'environ {d} Mo. {e} extrait plus court ou une cible plus grande.", { a: targetMb, b: format === "mp4" ? tr(" en MP4") : "", c: fmtBitrate(best.actual), d: size, e: format === "mp4" ? tr("Le format WebM tient parfois une cible plus basse ; sinon, essaie un") : tr("Essaie un") }));
           setStatus(null);
           return;
         }
         if (best.o.shortSide !== opts.shortSide) opts = floored(best.o);
         else opts = best.o; // même résolution, débit éventuellement ajusté
-        setStatus(note ? `L'encodeur ne tient pas le débit prévu à une taille d'image plus grande : compression en ${opts.shortSide}p pour respecter les ${targetMb} Mo…` : null);
+        setStatus(note ? tr("L'encodeur ne tient pas le débit prévu à une taille d'image plus grande : compression en {a}p pour respecter les {b} Mo…", { a: opts.shortSide, b: targetMb }) : null);
         setProgress(0);
       }
       let r = await compressVideo(file, src, opts, setProgress, job.register);
@@ -175,10 +176,10 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
         const actual = (r.blob.size * 8) / duration - opts.audioBitrate;
         const lower = actual > opts.videoBitrate * 1.15 ? nextLowerResolution(src, opts) : null;
         if (lower) {
-          setStatus(`Au-dessus de la cible : l'encodeur ne descend pas assez bas, nouvel essai en ${lower.shortSide}p…`);
+          setStatus(tr("Au-dessus de la cible : l'encodeur ne descend pas assez bas, nouvel essai en {a}p…", { a: lower.shortSide }));
           opts = floored(lower);
         } else {
-          setStatus("Légèrement au-dessus de la cible : second passage plus serré…");
+          setStatus(tr("Légèrement au-dessus de la cible : second passage plus serré…"));
           const ratio = (targetMb * MB) / r.blob.size;
           opts = { ...opts, videoBitrate: Math.round(opts.videoBitrate * ratio * 0.93) };
         }
@@ -196,7 +197,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
           videoBitrate: Math.min(Math.round(opts.videoBitrate * boost), Math.round(src.videoBitrate * 0.95)),
         };
         if (higher.shortSide !== opts.shortSide) {
-          setStatus(`Il reste du budget : nouvel essai en ${higher.shortSide ? `${higher.shortSide}p` : "résolution originale"} pour une image plus nette…`);
+          setStatus(tr("Il reste du budget : nouvel essai en {a} pour une image plus nette…", { a: higher.shortSide ? `${higher.shortSide}p` : tr("résolution originale") }));
           setProgress(0);
           const r2 = await compressVideo(file, src, higher, setProgress, job.register);
           if (r2.blob.size <= targetMb * MB) {
@@ -214,7 +215,7 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
       setResult({ url, blob: r.blob, ext: r.ext, size: r.blob.size, dims: `${outRes.width} × ${outRes.height}`, delta, source: sourceBytes, target: mode === "target" ? targetMb : null, note });
       setStatus(null);
     } catch (e) {
-      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Compression impossible : ${e.message}` : "Compression impossible.");
+      if (!(e instanceof Error && /cancel/i.test(e.message))) setError(e instanceof Error ? `Compression impossible : ${e.message}` : tr("Compression impossible."));
       setStatus(null);
     } finally {
       setTrying(false);
@@ -230,30 +231,30 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
 
   return (
     <div className="vx-compress">
-      <div className="vx-modes" role="radiogroup" aria-label="Mode de compression">
-        <label><input type="radio" name="cmode" checked={mode === "quality"} onChange={() => setMode("quality")} /><b>Qualité</b> — tu choisis le niveau, le poids suit</label>
-        <label><input type="radio" name="cmode" checked={mode === "target"} onChange={() => setMode("target")} /><b>Taille cible</b> — tu choisis le poids, Spectra ajuste le reste</label>
+      <div className="vx-modes" role="radiogroup" aria-label={tr("Mode de compression")}>
+        <label><input type="radio" name="cmode" checked={mode === "quality"} onChange={() => setMode("quality")} /><b>{tr("Qualité")}</b> {tr("— tu choisis le niveau, le poids suit")}</label>
+        <label><input type="radio" name="cmode" checked={mode === "target"} onChange={() => setMode("target")} /><b>{tr("Taille cible")}</b> {tr("— tu choisis le poids, Spectra ajuste le reste")}</label>
       </div>
 
       <div className="vx-fields">
         {mode === "quality" ? (
           <>
-            <label>Niveau
+            <label>{tr("Niveau")}
               <select value={level} onChange={(e) => setLevel(e.target.value as typeof level)}>
-                <option value="high">Haute — quasi identique</option>
-                <option value="balanced">Équilibrée — recommandé pour le web</option>
-                <option value="light">Légère — le plus petit possible</option>
+                <option value="high">{tr("Haute — quasi identique")}</option>
+                <option value="balanced">{tr("Équilibrée — recommandé pour le web")}</option>
+                <option value="light">{tr("Légère — le plus petit possible")}</option>
               </select>
             </label>
-            <label>Résolution
+            <label>{tr("Résolution")}
               <select value={shortSide ?? 0} onChange={(e) => setShortSide(Number(e.target.value) || null)}>
-                <option value={0}>Originale ({src.width} × {src.height})</option>
+                <option value={0}>{tr("Originale (")}{src.width} × {src.height})</option>
                 {resOptions.map((r) => <option key={r} value={r}>{r}p</option>)}
               </select>
             </label>
           </>
         ) : (
-          <label>Taille cible (Mo)
+          <label>{tr("Taille cible (Mo)")}
             <input type="number" min={1} max={4000} value={targetMb} onChange={(e) => setTargetMb(Math.max(1, Number(e.target.value) || 1))} />
             <span className="vx-chips">
               {[8, 10, 16, 25, 50, 100].map((m) => (
@@ -262,50 +263,50 @@ export function CompressPanel({ file, info, range, initialTargetMb, onContinue }
             </span>
           </label>
         )}
-        <label>Format
+        <label>{tr("Format")}
           <select value={format} onChange={(e) => setFormat(e.target.value as CompressFormat)}>
-            <option value="mp4" disabled={support ? !support.mp4 : false}>MP4 (H.264) — compatible partout{support && !support.mp4 ? (reencodesAudio ? " — son AAC non disponible ici (coche « Retirer le son »)" : " — non disponible ici") : ""}</option>
-            <option value="webm" disabled={support ? !support.webm : false}>WebM (VP9) — plus léger, pour le web</option>
+            <option value="mp4" disabled={support ? !support.mp4 : false}>{tr("MP4 (H.264) — compatible partout")}{support && !support.mp4 ? (reencodesAudio ? tr(" — son AAC non disponible ici (coche « Retirer le son »)") : tr(" — non disponible ici")) : ""}</option>
+            <option value="webm" disabled={support ? !support.webm : false}>{tr("WebM (VP9) — plus léger, pour le web")}</option>
           </select>
         </label>
         {src.fps > 31 && (
-          <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> Limiter à 30 images/s (source : {src.fps}) — gros gain de poids</label>
+          <label className="vx-check"><input type="checkbox" checked={fps30} onChange={(e) => setFps30(e.target.checked)} /> {tr("Limiter à 30 images/s (source :")}{" "}{src.fps}{tr(") — gros gain de poids")}</label>
         )}
         {src.hasAudio && (
-          <label className="vx-check"><input type="checkbox" checked={removeAudio} onChange={(e) => setRemoveAudio(e.target.checked)} /> Retirer le son</label>
+          <label className="vx-check"><input type="checkbox" checked={removeAudio} onChange={(e) => setRemoveAudio(e.target.checked)} /> {tr("Retirer le son")}</label>
         )}
       </div>
 
       <div className="vx-estimate">
-        <span>Sortie : <b>{outDims.width} × {outDims.height}</b>{fps30 && src.fps > 31 ? " · 30 i/s" : ""} · vidéo {fmtBitrate(options.videoBitrate)}{options.audioBitrate ? ` · audio ${fmtBitrate(options.audioBitrate)}` : ""}</span>
-        <span>Poids estimé : <b>{fmtBytes(estimate)}</b> (source : {fmtBytes(sourceBytes)}{range[1] - range[0] < info.duration - 0.05 ? `, extrait de ${fmtTime(duration)}` : ""})</span>
-        {plan && !plan.feasible && <span className="vx-alert">Cible très basse pour cette durée : la qualité sera fortement dégradée. Coupe un extrait plus court ou augmente la taille.</span>}
-        {plan && plan.feasible && plan.shortSide && <span className="vx-muted">Pour tenir dans {targetMb} Mo, la résolution est ajustée à {plan.shortSide}p.</span>}
-        {trialUseful && <span className="vx-muted">Au lancement, un essai de quelques secondes vérifie que l'encodeur tient ce débit. Sinon la résolution est réduite pour respecter la cible, ou l'outil s'arrête en disant pourquoi elle est hors de portée.</span>}
+        <span>{tr("Sortie :")}{" "}<b>{outDims.width} × {outDims.height}</b>{fps30 && src.fps > 31 ? " · 30 i/s" : ""} {tr("· vidéo")}{" "}{fmtBitrate(options.videoBitrate)}{options.audioBitrate ? ` · audio ${fmtBitrate(options.audioBitrate)}` : ""}</span>
+        <span>{tr("Poids estimé :")}{" "}<b>{fmtBytes(estimate)}</b> {tr("(source :")}{" "}{fmtBytes(sourceBytes)}{range[1] - range[0] < info.duration - 0.05 ? tr(", extrait de {a}", { a: fmtTime(duration) }) : ""})</span>
+        {plan && !plan.feasible && <span className="vx-alert">{tr("Cible très basse pour cette durée : la qualité sera fortement dégradée. Coupe un extrait plus court ou augmente la taille.")}</span>}
+        {plan && plan.feasible && plan.shortSide && <span className="vx-muted">{tr("Pour tenir dans")}{" "}{targetMb} {tr("Mo, la résolution est ajustée à")}{" "}{plan.shortSide}p.</span>}
+        {trialUseful && <span className="vx-muted">{tr("Au lancement, un essai de quelques secondes vérifie que l'encodeur tient ce débit. Sinon la résolution est réduite pour respecter la cible, ou l'outil s'arrête en disant pourquoi elle est hors de portée.")}</span>}
       </div>
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <HudButton action="compress-video" label={mode === "target" ? `Compresser sous ${targetMb} Mo` : "Compresser"}
-          busy={progress !== null} busyLabel={progress !== null ? (trying ? "Essai de l'encodeur…" : `Compression… ${Math.round(progress * 100)} %`) : undefined}
+        <HudButton action="compress-video" label={mode === "target" ? `Compresser sous ${targetMb} Mo` : tr("Compresser")}
+          busy={progress !== null} busyLabel={progress !== null ? (trying ? tr("Essai de l'encodeur…") : `Compression… ${Math.round(progress * 100)} %`) : undefined}
           disabled={!support || (!support.mp4 && !support.webm)} onClick={run} />
         {progress !== null && <HudButton action="cancel" compact onClick={job.stop} />}
       </div>
       {status && <p className="vx-muted">{status}</p>}
       {error && <p className="vx-alert">{error}</p>}
 
-      {result && result.note && <p className="vx-muted">{result.note}</p>}
-      {result && result.size > result.source * 1.02 && <p className="vx-alert">Ce fichier pèse plus que l'extrait d'origine ({fmtBytes(result.source)}) : sur une sélection très courte ou une vidéo déjà légère, cet encodeur ne fait pas mieux que l'original.</p>}
+      {result && result.note && <p className="vx-muted">{tr(result.note)}</p>}
+      {result && result.size > result.source * 1.02 && <p className="vx-alert">{tr("Ce fichier pèse plus que l'extrait d'origine (")}{fmtBytes(result.source)}{tr(") : sur une sélection très courte ou une vidéo déjà légère, cet encodeur ne fait pas mieux que l'original.")}</p>}
       {result && underTarget === false && (
         <p className="vx-alert">
-          Le fichier dépasse les {result.target} Mo : l'encodeur de ce navigateur ne descend pas assez bas pour cette durée.
-          {result.ext === "mp4" ? " Le format WebM tient parfois une cible plus basse ; sinon, coupe un extrait plus court ou augmente la taille cible." : " Coupe un extrait plus court ou augmente la taille cible."}
+          {tr("Le fichier dépasse les")}{" "}{result.target} {tr("Mo : l'encodeur de ce navigateur ne descend pas assez bas pour cette durée.")}
+          {result.ext === "mp4" ? tr(" Le format WebM tient parfois une cible plus basse ; sinon, coupe un extrait plus court ou augmente la taille cible.") : tr(" Coupe un extrait plus court ou augmente la taille cible.")}
         </p>
       )}
       {result && (
         <div className="vx-result">
           <span>
-            {underTarget === false ? "Cible non atteinte ·" : "✓"} {fmtBytes(result.size)} · {result.dims} · {result.delta > 0 ? "+" : result.delta < 0 ? "−" : ""}{Math.abs(result.delta)} %
-            {underTarget !== null && (underTarget ? ` · sous les ${result.target} Mo` : ` · au-dessus des ${result.target} Mo`)}
+            {underTarget === false ? tr("Cible non atteinte ·") : "✓"} {fmtBytes(result.size)} · {result.dims} · {result.delta > 0 ? "+" : result.delta < 0 ? "−" : ""}{Math.abs(result.delta)} %
+            {underTarget !== null && (underTarget ? tr(" · sous les {a} Mo", { a: result.target }) : tr(" · au-dessus des {a} Mo", { a: result.target }))}
           </span>
           <HudLink action="download-result" compact href={result.url} download={`${base}-compresse.${result.ext}`} />
           <HudButton action="continue" compact onClick={() => onContinue(result.blob, result.ext)} />

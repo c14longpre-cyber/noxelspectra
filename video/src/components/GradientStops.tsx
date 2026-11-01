@@ -6,6 +6,7 @@ import { HudButton } from "@hud/HudButton";
 import { MAX_STOPS, MIN_STOPS } from "../../../frontend/src/components/spectra-gradient/gradient-engine";
 import type { Stop } from "../lib/overlay";
 
+import { tr } from "../i18n";
 const pct = (v: number) => Math.round(v * 100);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -57,25 +58,25 @@ export function GradientStops({ stops, onChange }: { stops: Stop[]; onChange: (s
       <div className="vx-stops-bar" ref={bar} style={{ background: css }}>
         {stops.map((s, i) => (
           <button key={i} type="button" className={`vx-stop-handle${i === active ? " is-on" : ""}`} style={{ left: `${s.at * 100}%`, background: s.color }}
-            aria-label={`Couleur ${i + 1}, emplacement ${pct(s.at)} %. Flèches pour déplacer (Maj : 10 %).`}
+            aria-label={tr("Couleur {a}, emplacement {b} %. Flèches pour déplacer (Maj : 10 %).", { a: i + 1, b: pct(s.at) })}
             onPointerDown={drag(i)} onKeyDown={nudge(i)} onFocus={() => setActive(i)} />
         ))}
       </div>
       <div className="vx-stops-rows">
         {stops.map((s, i) => (
           <div key={i} className={`vx-stop-row${i === active ? " is-on" : ""}`} onFocus={() => setActive(i)}>
-            <input type="color" value={s.color} aria-label={`Couleur ${i + 1}`} onChange={(e) => set(i, { color: e.target.value })} />
-            <input type="range" min={0} max={100} step={1} value={pct(s.at)} aria-label={`Emplacement de la couleur ${i + 1}`} onChange={(e) => set(i, { at: Number(e.target.value) / 100 })} />
-            <span className="vx-stop-num"><input type="number" min={0} max={100} step={1} value={pct(s.at)} aria-label={`Emplacement de la couleur ${i + 1} en %`}
+            <input type="color" value={s.color} aria-label={tr("Couleur {a}", { a: i + 1 })} onChange={(e) => set(i, { color: e.target.value })} />
+            <input type="range" min={0} max={100} step={1} value={pct(s.at)} aria-label={tr("Emplacement de la couleur {a}", { a: i + 1 })} onChange={(e) => set(i, { at: Number(e.target.value) / 100 })} />
+            <span className="vx-stop-num"><input type="number" min={0} max={100} step={1} value={pct(s.at)} aria-label={tr("Emplacement de la couleur {a} en %", { a: i + 1 })}
               onChange={(e) => set(i, { at: clamp01((Number(e.target.value) || 0) / 100) })} /> %</span>
-            <HudButton action="remove-image" compact iconOnly label={`Retirer la couleur ${i + 1}`} disabled={stops.length <= MIN_STOPS} onClick={() => remove(i)} />
+            <HudButton action="remove-image" compact iconOnly label={tr("Retirer la couleur {a}", { a: i + 1 })} disabled={stops.length <= MIN_STOPS} onClick={() => remove(i)} />
           </div>
         ))}
       </div>
       <div className="vx-row">
-        <HudButton action="add-color" compact label="+ Couleur" disabled={stops.length >= MAX_STOPS} onClick={add} />
-        <HudButton action="reverse-stops" compact iconOnly label="Inverser les couleurs" onClick={reverse} />
-        <HudButton action="spread-stops" compact iconOnly label="Répartir les couleurs" onClick={spread} />
+        <HudButton action="add-color" compact label={tr("+ Couleur")} disabled={stops.length >= MAX_STOPS} onClick={add} />
+        <HudButton action="reverse-stops" compact iconOnly label={tr("Inverser les couleurs")} onClick={reverse} />
+        <HudButton action="spread-stops" compact iconOnly label={tr("Répartir les couleurs")} onClick={spread} />
       </div>
     </div>
   );
