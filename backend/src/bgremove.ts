@@ -45,10 +45,22 @@ export function bgModelAvailable(): boolean {
   return fs.existsSync(BG_MODEL_PATH);
 }
 
-// File d'attente : une suppression d'arrière-plan à la fois
+// File d'attente : une suppression d'arrière-plan à la fois (≈ 1,8 Go en pointe), et au plus
+// BG_QUEUE_MAX demandes en attente. Au-delà, refus immédiat (503) plutôt qu'une file sans fin
+// qui ferait expirer toutes les requêtes et garderait leurs images en mémoire.
+const BG_QUEUE_MAX = Math.max(1, Number(process.env.BG_QUEUE_MAX) || 4);
 let queue: Promise<unknown> = Promise.resolve();
+let enAttente = 0;
+
+export class BgOccupe extends Error {
+  constructor() { super("Le détourage est très demandé en ce moment. Réessaie dans une minute."); }
+}
+
 function exclusive<T>(fn: () => Promise<T>): Promise<T> {
-  const run = queue.then(fn, fn);
+  if (enAttente >= BG_QUEUE_MAX) return Promise.reject(new BgOccupe());
+  enAttente++;
+  const tache = () => { enAttente--; return fn(); };
+  const run = queue.then(tache, tache);
   queue = run.catch(() => undefined);
   return run;
 }
