@@ -1543,6 +1543,8 @@ const en: Record<string, string> = {
  "Champs manquants": "Missing fields",
  "Aucune session": "No session",
  "Erreur {a}": "Error {a}",
- "Choisir {a}": "Choose {a}"
+ "Choisir {a}": "Choose {a}",
+ "Paysage 16:9": "Landscape 16:9",
+ "Bannière 3:1": "Banner 3:1"
 };
 export default en;
