@@ -40,6 +40,10 @@ import { tr, locale } from "./i18n";
 import { trServeur } from "./i18n/serveur";
 import { useLang } from "./i18n/useLang";
 import { SOCIAL_GROUPS, SOCIAL_PRESETS, ratioLabel } from "./socialPresets";
+import { sectionDepuisChemin, useSectionUrl } from "./useSectionUrl";
+
+// Adresse de chaque onglet (app.noxelspectra.com/<adresse>) ; mêmes adresses dans frontend/vercel.json
+export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
 import { LangPill } from "./components/spectra-nexus/LangPill";
 const NexusSelector = lazy(() => import("./components/spectra-nexus/NexusSelector"));
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
@@ -445,7 +449,7 @@ export default function App() {
   const projectFileInputRef = useRef<HTMLInputElement | null>(null);
   const bgSectionRef = useRef<HTMLDivElement | null>(null);
 
-  const [activeSection, setActiveSection] = useState("analyze");
+  const [activeSection, setActiveSection] = useState(() => sectionDepuisChemin(SECTION_SLUGS, "analyze"));
   const [loginOpen, setLoginOpen] = useState(false);
   const [avisCompte, setAvisCompte] = useState<{ texte: string; erreur?: boolean } | null>(null);
 
@@ -547,7 +551,10 @@ export default function App() {
     { id: "watermark", label: tr("Filigrane"), icon: "⛆", ref: watermarkSectionRef },
     { id: "copyright", label: tr("Auteur et droits"), icon: "©", ref: copyrightSectionRef },
     { id: "pricing", label: tr("Forfaits"), icon: "$", ref: pricingSectionRef },
-  ];
+  ];  const sectionLabel = NAV_ITEMS.find((n) => n.id === activeSection)?.label;
+  useSectionUrl(activeSection, setActiveSection, SECTION_SLUGS, "analyze",
+    sectionLabel ? `${sectionLabel} — NOXEL SPECTRA` : tr("NOXEL SPECTRA — convertir, compresser et vectoriser des images"));
+
 
   function goToSection(id: string) {
     setActiveSection(id);

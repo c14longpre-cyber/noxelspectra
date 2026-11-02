@@ -3,10 +3,30 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
-        { "key": "X-Content-Type-Options", "value": "nosniff" }
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
       ]
     },
-    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/:onglet(analyze|audio|compress|convert|copyright|crop-resize|export|ready-for-my-site|rotate-flip|social-media|speed|text-logo|thumbnail|trim|under-25-mb|watermark)",
+      "destination": "/index.html"
+    }
   ]
 }
