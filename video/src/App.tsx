@@ -11,6 +11,10 @@ import { OverlayStage } from "./components/OverlayStage";
 import { OverlayTracks } from "./components/OverlayTracks";
 
 import { tr, useLang } from "./i18n";
+import { sectionDepuisChemin, useSectionUrl } from "../../frontend/src/useSectionUrl";
+
+// Adresse de chaque outil (video.noxelspectra.com/<adresse>) ; mêmes adresses dans video/vercel.json
+const TOOL_SLUGS: Record<string, string> = {"analyze": "analyze", "under25": "under-25-mb", "web": "ready-for-my-site", "social": "social-media", "convert": "convert", "compress": "compress", "cut": "trim", "crop": "crop-resize", "rotate": "rotate-flip", "speed": "speed", "audio": "audio", "text": "text-logo", "watermark": "watermark", "rights": "copyright", "thumb": "thumbnail", "export": "export"};
 import { LangPill } from "../../frontend/src/components/spectra-nexus/LangPill";
 const NexusSelector = lazy(() => import("../../frontend/src/components/spectra-nexus/NexusSelector"));
 // Chaque outil (et le moteur vidéo qu'il utilise) est téléchargé quand on l'ouvre, pas au premier affichage
@@ -56,7 +60,9 @@ export default function App() {
   const [url, setUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [range, setRange] = useState<[number, number]>([0, 0]);
-  const [tool, setTool] = useState("analyze");
+  const [tool, setTool] = useState(() => sectionDepuisChemin(TOOL_SLUGS, "analyze"));
+  const toolLabel = TOOLS.find((t) => t.id === tool)?.label;
+  useSectionUrl(tool, setTool, TOOL_SLUGS, "analyze", toolLabel ? `${tr(toolLabel)} — ${tr("NOXEL SPECTRA Vidéo")}` : tr("NOXEL SPECTRA Vidéo"));
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
