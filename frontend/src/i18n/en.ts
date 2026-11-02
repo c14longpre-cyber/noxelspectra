@@ -1550,6 +1550,13 @@ const en: Record<string, string> = {
  "Annuler@@défaire": "Undo",
  "Besoin de plus de crédits ? Achète un paquet (sans date limite) ou choisis un forfait qui en inclut chaque mois, dans la section Forfaits.": "Need more credits? Buy a pack (no expiry date) or choose a plan that includes credits every month, in the Plans section.",
  "Acheter des crédits →": "Buy credits →",
- "Astuce : pour un mot écrit dans l'image (enseigne, titre), mets-le entre guillemets, par exemple « NOXEL ».": "Tip: for a word written in the image (a sign, a title), put it in quotes, for example “NOXEL”."
+ "Astuce : pour un mot écrit dans l'image (enseigne, titre), mets-le entre guillemets, par exemple « NOXEL ».": "Tip: for a word written in the image (a sign, a title), put it in quotes, for example “NOXEL”.",
+ "Pour :": "For:",
+ "Format libre": "Free format",
+ "Image :": "Image:",
+ "L'IA dessine directement aux proportions de {a} ({b}), puis l'image est mise aux dimensions exactes : {c} × {d} px, prête à téléverser.": "The AI draws directly in the proportions of {a} ({b}), then the image is set to the exact size: {c} × {d} px, ready to upload.",
+ "Ce réseau affiche cette image en rond : décris un sujet centré, avec de la marge autour.": "This network shows this image as a circle: describe a centered subject with space around it.",
+ "Grande image : {a} crédits.": "Large image: {a} credits.",
+ "Sur un téléphone, seul le centre ({a} × {b} px) reste visible : décris un sujet centré et garde les côtés pour le décor.": "On a phone, only the center ({a} × {b} px) stays visible: describe a centered subject and keep the sides for the background."
 };
 export default en;

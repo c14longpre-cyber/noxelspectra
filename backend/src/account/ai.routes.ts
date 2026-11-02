@@ -5,6 +5,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireUser, type Demandeur } from "./middleware";
 import { creditsRestants, depenserCredit, getMember, rendreCredit } from "./members";
+import sharp from "sharp";
 import { AI_COST_PER_IMAGE } from "./plans";
 
 export const aiRouter = Router();
@@ -22,10 +23,38 @@ export const AI_FORMATS: Record<string, { label: string; width: number; height: 
   banniere: { label: "Bannière 3:1", width: 1536, height: 512 },
 };
 
+// Taille exacte demandée (formats des réseaux sociaux) : FLUX dessine aux mêmes proportions, en multiples
+// de 16, puis l'image est mise aux dimensions exactes (sharp, cover). Coût : 1 crédit jusqu'à 1,5 mégapixel
+// demandé (dessin d'environ 1 MP), 2 crédits au-delà (dessin jusqu'à 2 MP, la taille conseillée par BFL).
+export const AI_SIZE_RULE = { oneCreditUpToMP: 1.5, maxCredits: 2, minSide: 64, maxSide: 4096, maxRatio: 8 };
+
+export function coutPourTaille(width: number, height: number): number {
+  return (width * height) / 1e6 > AI_SIZE_RULE.oneCreditUpToMP ? 2 : 1;
+}
+
+/** Dimensions de dessin (multiples de 16) aux proportions de la cible : environ 1 MP pour 1 crédit,
+ *  jusqu'à 2 MP pour 2 crédits. Une petite cible est dessinée plus grand puis réduite (plus net). */
+export function tailleDeDessin(width: number, height: number): { width: number; height: number } {
+  const mp = (coutPourTaille(width, height) === 1 ? 1.0 : Math.min(2.0, (width * height) / 1e6)) * 1e6;
+  const r = width / height;
+  const h = Math.sqrt(mp / r);
+  const bas16 = (n: number) => Math.max(64, Math.floor(n / 16) * 16);
+  return { width: bas16(h * r), height: bas16(h) };
+}
+
+export function lireTaille(v: unknown): { width: number; height: number } | null {
+  const o = v as { width?: unknown; height?: unknown } | null;
+  const w = Number(o?.width), h = Number(o?.height);
+  const { minSide, maxSide, maxRatio } = AI_SIZE_RULE;
+  if (!Number.isInteger(w) || !Number.isInteger(h) || w < minSide || h < minSide || w > maxSide || h > maxSide) return null;
+  if (Math.max(w / h, h / w) > maxRatio) return null;
+  return { width: w, height: h };
+}
+
 const enCours = new Set<string>();  // une génération à la fois par compte
 
 aiRouter.get("/ai/info", (_req, res) => {
-  res.json({ ok: true, enabled: !!process.env.BFL_API_KEY, costPerImage: AI_COST_PER_IMAGE, model: "FLUX.2 [pro]", formats: AI_FORMATS });
+  res.json({ ok: true, enabled: !!process.env.BFL_API_KEY, costPerImage: AI_COST_PER_IMAGE, model: "FLUX.2 [pro]", formats: AI_FORMATS, sizeRule: AI_SIZE_RULE });
 });
 
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -79,7 +108,12 @@ aiRouter.post("/ai/generate", requireUser, async (req: Request, res: Response) =
   const d = (req as any).demandeur as Demandeur;
   const userId = d.user!.id;
   const prompt = String((req.body as any)?.prompt ?? "").trim();
-  const format = AI_FORMATS[String((req.body as any)?.format ?? "carre")] ?? AI_FORMATS.carre;
+  const body = req.body as any;
+  const cible = body?.size != null ? lireTaille(body.size) : null;
+  if (body?.size != null && !cible) return res.status(400).json({ ok: false, code: "bad_size", error: "Dimensions invalides." });
+  const format = AI_FORMATS[String(body?.format ?? "carre")] ?? AI_FORMATS.carre;
+  const dessin = cible ? tailleDeDessin(cible.width, cible.height) : { width: format.width, height: format.height };
+  const cout = cible ? coutPourTaille(cible.width, cible.height) : AI_COST_PER_IMAGE;
   if (prompt.length < 3) return res.status(400).json({ ok: false, code: "prompt_required", error: "Décris l'image à dessiner." });
   if (prompt.length > 2000) return res.status(400).json({ ok: false, code: "prompt_too_long", error: "Description trop longue (2 000 caractères au plus)." });
   if (enCours.has(userId)) return res.status(429).json({ ok: false, code: "in_progress", error: "Une image est déjà en cours de création." });
@@ -88,23 +122,29 @@ aiRouter.post("/ai/generate", requireUser, async (req: Request, res: Response) =
   let reserve: "inclus" | "achete" | null = null;
   try {
     const m = await getMember(userId);
-    reserve = await depenserCredit(m, AI_COST_PER_IMAGE);
+    reserve = await depenserCredit(m, cout);
     if (!reserve) {
       const c = creditsRestants(m);
       return res.status(402).json({ ok: false, code: "no_credits", credits: c, error: c.parMois === 0
         ? "Le dessin IA est inclus à partir du forfait Silver, ou avec un paquet de crédits."
         : "Plus de crédits ce mois-ci : ils reviennent le 1er du mois, ou achète un paquet de crédits." });
     }
-    const img = await generer(prompt, format.width, format.height);
+    let img = await generer(prompt, dessin.width, dessin.height);
+    if (cible) {
+      // Mise aux dimensions exactes du réseau (les proportions sont déjà les bonnes, au pixel près)
+      const png = img.type.includes("png");
+      const out = sharp(img.buffer).resize(cible.width, cible.height, { fit: "cover", position: "centre", kernel: "lanczos3" });
+      img = { buffer: await (png ? out.png() : out.jpeg({ quality: 92, mozjpeg: true })).toBuffer(), type: png ? "image/png" : "image/jpeg" };
+    }
     const apres = creditsRestants(await getMember(userId));
     res.setHeader("Content-Type", img.type);
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Credits-Remaining", String(apres.total));
-    res.setHeader("X-Credits-Used", String(AI_COST_PER_IMAGE));
+    res.setHeader("X-Credits-Used", String(cout));
     res.setHeader("Access-Control-Expose-Headers", "X-Credits-Remaining, X-Credits-Used");
     return res.send(img.buffer);
   } catch (e: any) {
-    if (reserve) await rendreCredit(userId, reserve, AI_COST_PER_IMAGE);  // échec : le crédit est rendu
+    if (reserve) await rendreCredit(userId, reserve, cout);  // échec : le crédit est rendu
     if (e instanceof ErreurIA) return res.status(e.status).json({ ok: false, code: e.code, error: e.message });
     console.error("[spectra/ai/generate]", e?.message ?? e);
     return res.status(500).json({ ok: false, code: "server_error", error: "La génération a échoué. Ton crédit a été rendu." });
