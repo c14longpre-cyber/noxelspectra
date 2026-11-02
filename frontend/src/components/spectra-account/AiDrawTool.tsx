@@ -142,6 +142,7 @@ export function AiDrawTool({ onUseImage }: { onUseImage: (file: File) => void })
               onClick={() => onUseImage(new File([resultat.blob], nomFichier(), { type: resultat.blob.type }))} />
           </div>
           <p className="sp-ai__legal">{tr("Image générée par IA (FLUX.2 [pro]). Indique-le si tu la publies là où c'est exigé.")}</p>
+          <p className="sp-ai__legal">{tr("Logos, marques et personnages connus : l'IA peut les reproduire, mais leur usage commercial (publicité, page d'entreprise, produit) peut demander l'accord de leur propriétaire. Pour un usage personnel, aucun souci.")}</p>
         </div>
       )}
     </div>
