@@ -1560,6 +1560,25 @@ const en: Record<string, string> = {
  "Sur un téléphone, seul le centre ({a} × {b} px) reste visible : décris un sujet centré et garde les côtés pour le décor.": "On a phone, only the center ({a} × {b} px) stays visible: describe a centered subject and keep the sides for the background.",
  "Logos, marques et personnages connus : l'IA peut les reproduire, mais leur usage commercial (publicité, page d'entreprise, produit) peut demander l'accord de leur propriétaire. Pour un usage personnel, aucun souci.": "Logos, brands and well-known characters: the AI can reproduce them, but using them commercially (ads, a business page, a product) may require their owner's permission. For personal use, no problem.",
  "NOXEL SPECTRA Vidéo": "NOXEL SPECTRA Video",
- "NOXEL SPECTRA — convertir, compresser et vectoriser des images": "NOXEL SPECTRA — convert, compress and vectorize images"
+ "NOXEL SPECTRA — convertir, compresser et vectoriser des images": "NOXEL SPECTRA — convert, compress and vectorize images",
+ "Accéder à NOXEL SPECTRA": "Access NOXEL SPECTRA",
+ "Retour": "Back",
+ "Se connecter avec une passkey": "Sign in with Passkey",
+ "Créer une nouvelle passkey →": "Create a new passkey →",
+ "Se connecter par lien magique (sans mot de passe)": "Sign in with Magic Link (no password)",
+ "Se connecter par courriel / mot de passe": "Sign in with email / password",
+ "Lien magique": "Magic Link",
+ "Entre ton courriel : on t'envoie un lien de connexion sécurisé, sans mot de passe.": "Enter your email and we'll send you a secure sign-in link, no password needed.",
+ "Regarde tes courriels !": "Check your inbox!",
+ "Lien envoyé à {a}. Il est valide 15 minutes.": "Link sent to {a}. It's valid for 15 minutes.",
+ "ton@courriel.com": "your@email.com",
+ "Connexion par courriel": "Sign in with email",
+ "Créer un compte": "Create account",
+ "Mot de passe (8 caractères au moins)": "Password (at least 8 characters)",
+ "Mot de passe oublié ? Utilise plutôt le lien magique →": "Forgot your password? Use the Magic Link instead →",
+ "Créer une passkey": "Create a passkey",
+ "Ton appareil (empreinte, visage ou code) remplace le mot de passe. Entre ton courriel pour créer ton compte NOXEL avec une passkey.": "Your device (fingerprint, face or PIN) replaces the password. Enter your email to create your NOXEL account with a passkey.",
+ "En te connectant, tu acceptes nos conditions. Nous ne vendons jamais tes données.": "By signing in you agree to our Terms of Service. We never sell your data.",
+ "La fenêtre de Google ne s'ouvre pas ? Utilise ce bouton :": "Google window not opening? Use this button:"
 };
 export default en;
