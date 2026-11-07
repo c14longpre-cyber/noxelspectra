@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 // Qui fait la demande (session facultative) et quotas quotidiens des outils d'images
 import type { Request, Response, NextFunction } from "express";
 import { COOKIE_NAME, comptesActifs } from "./config";
@@ -58,8 +59,18 @@ setInterval(() => {
   for (const [k, v] of compteurs) if (v.jour !== j) compteurs.delete(k);
 }, 60 * 60_000).unref();
 
+// Appels serveur à serveur de l'app Shopify NOXEL SPECTRA (shopify/) : elle applique ses propres quotas
+// (forfaits Shopify), donc pas de quota par adresse IP ici. Jeton SPECTRA_SERVICE_TOKEN, comparé en temps constant.
+export function estServiceSpectra(req: Request): boolean {
+  const attendu = process.env.SPECTRA_SERVICE_TOKEN || "";
+  const recu = req.get("x-spectra-service") || "";
+  if (attendu.length < 32 || recu.length !== attendu.length) return false;
+  return timingSafeEqual(Buffer.from(recu), Buffer.from(attendu));
+}
+
 export function quotaOutils(cout: (req: Request) => number = () => 1) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (estServiceSpectra(req)) { next(); return; }
     const d = await lireDemandeur(req);
     (req as any).demandeur = d;
     const limite = PLANS[d.tier].opsPerDay;

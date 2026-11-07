@@ -1,0 +1,48 @@
+// NOXEL SPECTRA pour Shopify — base Postgres (DATABASE_URL).
+// Session : modèle exigé par @shopify/shopify-app-session-storage-prisma (ne pas renommer ses champs).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// Une ligne par image traitée : sert au quota du mois et à « Rétablir l'original » (copie gardée dans les Fichiers de la boutique).
+// Aucune donnée de client de la boutique n'est stockée.
+model Operation {
+  id           Int      @id @default(autoincrement())
+  shop         String
+  productId    String
+  mediaId      String
+  kind         String   // fond-blanc | carre | alleger | restaurer
+  backupFileId String?  // copie de l'original dans les Fichiers Shopify (avant la première modification)
+  bytesBefore  Int?
+  bytesAfter   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([shop, createdAt])
+  @@index([shop, mediaId])
+}
