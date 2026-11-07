@@ -19,6 +19,11 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 - **Pages 404** : `landing/404.html`, `frontend/public/404.html`, `video/public/404.html` (noindex).
 - Tests : `npm test` dans backend/.
 
+## App Shopify (`shopify/`)
+
+- NOXEL SPECTRA pour Shopify : app intégrée à l'admin Shopify (modèle officiel React Router), service Railway à part (`shopify/Dockerfile`, Postgres), domaine `shopify.noxelspectra.com`. Notes : `shopify/CLAUDE.md` ; plan et étapes : `shopify/PLAN.md`.
+- Elle utilise le détourage de l'API SPECTRA avec l'en-tête `x-spectra-service` (`SPECTRA_SERVICE_TOKEN`, même valeur dans les deux services) ; ces appels ne passent pas par le quota par adresse IP (`estServiceSpectra`). Facturation Shopify obligatoire (pas Stripe).
+
 ## Consentement cookies — NOXEL Consent 1.5.0 (commun aux sites NOXEL)
 
 - **Fichiers** : `landing/consent/` (vitrine) et `frontend/public/consent/` (app) (`noxel-consent.js`, `noxel-consent.css`, `sites.js`), chargés dans le `<head>` AVANT tout outil facultatif. Le même moteur est copié à l'identique dans noxel360, noxelseo, noxelforge et noxelspectra : toute modification se fait partout, version incrémentée dans l'en-tête du fichier.
