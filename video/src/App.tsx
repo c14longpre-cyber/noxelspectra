@@ -2,6 +2,7 @@
 // Tout le traitement se fait dans le navigateur (WebCodecs) : aucune vidéo n'est téléversée.
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
+import { SectionBadge } from "@hud/SectionBadge";
 import { Timeline } from "./components/Timeline";
 import { LoadError, analyzeVideo, encoderSupport, fmtBitrate, fmtBytes, fmtTime } from "./lib/probe";
 import type { VideoInfo } from "./lib/probe";
@@ -208,10 +209,10 @@ export default function App() {
   return (
     <div className="vx-shell">
       <aside className="vx-sidebar">
-        <div className="vx-brand">
-          <h1 className="vx-brand-name"><span className="vx-brand-mark">{tr("NOXEL")}</span> {tr("Spectra")}{" "}<b>{tr("Vidéo")}</b></h1>
-          <span className="vx-badge">{tr("TEST")}</span>
-        </div>
+        <h1 className="vx-brand">
+          <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA Vidéo")} className="vx-brand-logo" />
+        </h1>
+        <SectionBadge kind="video" label={tr("Vidéo")} badge={tr("TEST")} />
         <nav>
           {TOOLS.map((t) => (
             <button key={t.id} type="button" className={`vx-nav${t.id === tool ? " is-active" : ""}`} onClick={() => setTool(t.id)}>

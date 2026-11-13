@@ -143,6 +143,7 @@ const en: Record<string, string> = {
  "Rotation échouée": "Rotation failed",
  "Ouvrir le menu": "Open menu",
  "Vidéo": "Video",
+ "Images": "Images",
  "(test)": "(beta)",
  "Aide": "Help",
  "Fermer": "Close",
