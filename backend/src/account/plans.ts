@@ -20,8 +20,8 @@ export const PLANS: Record<Tier, Plan> = {
   bronze: {
     tier: "bronze", name: "Bronze", monthly: 0, annual: 0, opsPerDay: 50, aiCredits: 0, batchFiles: 10,
     features: {
-      fr: ["Tous les outils d'images", "50 opérations par jour", "Outil vidéo (test)", "Sans compte"],
-      en: ["Every image tool", "50 operations per day", "Video tool (beta)", "No account needed"],
+      fr: ["Tous les outils d'images", "50 opérations par jour", "Outil vidéo", "Sans compte"],
+      en: ["Every image tool", "50 operations per day", "Video tool", "No account needed"],
     },
   },
   silver: {

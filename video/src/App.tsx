@@ -1,4 +1,4 @@
-// NOXEL SPECTRA Vidéo — version de test (video.noxelspectra.com)
+// NOXEL SPECTRA Vidéo (video.noxelspectra.com)
 // Tout le traitement se fait dans le navigateur (WebCodecs) : aucune vidéo n'est téléversée.
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { HudButton, HudLink } from "@hud/HudButton";
@@ -213,7 +213,7 @@ export default function App() {
       <a className="nx-bar__brand" href="/" aria-label={tr("NOXEL SPECTRA Vidéo")}>
         <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA Vidéo")} className="nx-bar__logo" width={150} height={150} />
       </a>
-      <SectionBadge kind="video" label={tr("Vidéo")} badge={tr("TEST")} />
+      <SectionBadge kind="video" label={tr("Vidéo")} />
       <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="vx-mascot" width={225} height={150} />
       <div className="nx-bar__right vx-bar__right">
         <a className="nx-pill" href="https://app.noxelspectra.com/" rel="noopener">{tr("Images")}</a>

@@ -1959,7 +1959,7 @@ export default function App() {
         </div>
         <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="spectra-mascot" width={225} height={150} />
         <div className="nx-bar__right spectra-bar__right">
-          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}{" "}<span className="nx-pill__muted" style={{ display: "inline" }}>{tr("(test)")}</span></a>
+          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}</a>
           <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> {tr("Aide")}</a>
           <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("NOXEL360")}</a>
           <LangPill lang={lang} onClick={() => setShowLang(true)} />
