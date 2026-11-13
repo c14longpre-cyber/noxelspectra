@@ -256,6 +256,7 @@ const en: Record<string, string> = {
  "de métadonnées retirées)": "of metadata removed)",
  "{a} de métadonnées retirées": "{a} of metadata removed",
  "Aucune métadonnée trouvée dans le fichier": "No metadata found in the file",
+ "Aucune métadonnée trouvée : ton fichier est rendu tel quel, sans réencodage. Pour l'alléger, utilise Convertir ou Redimensionner.": "No metadata found: your file is returned as is, without re-encoding. To make it lighter, use Convert or Resize.",
  "Métadonnées": "Metadata",
  "Fonctionne mieux sur une image avec transparence (logo, icône vectorisée).": "Works best on an image with transparency (logo, vectorized icon).",
  "Décalage X :": "X offset:",
