@@ -1946,6 +1946,26 @@ export default function App() {
   }
 
   return (
+    <>
+      {/* NOXEL Shell 1.1 : barre du haut commune aux 4 sites, logo dans un carré de 150 × 150 px */}
+      <header className="nx-bar spectra-bar">
+        <a className="nx-bar__brand" href="/" aria-label={tr("NOXEL SPECTRA")}>
+          <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA")} className="nx-bar__logo" width={150} height={150} />
+        </a>
+        <SectionBadge kind="image" label={tr("Images")} />
+        <div className="spectra-bar__title">
+          <h2 className="nx-page-title" style={{ margin: 0 }}>{NAV_ITEMS.find((n) => n.id === activeSection)?.label ?? tr("NOXEL SPECTRA")}</h2>
+          <span className="nx-page-subtitle">{tr("NOXEL SPECTRA · images")}</span>
+        </div>
+        <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="spectra-mascot" width={225} height={150} />
+        <div className="nx-bar__right spectra-bar__right">
+          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}{" "}<span className="nx-pill__muted" style={{ display: "inline" }}>{tr("(test)")}</span></a>
+          <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> {tr("Aide")}</a>
+          <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("NOXEL360")}</a>
+          <LangPill lang={lang} onClick={() => setShowLang(true)} />
+          <AccountPill />
+        </div>
+      </header>
     <div className="app-shell">
       <button
         className="mobile-menu-btn"
@@ -1959,10 +1979,6 @@ export default function App() {
         onClick={() => setSidebarOpen(false)}
       />
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
-        <h1 className="sidebar-logo">
-          <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA")} className="sidebar-logo-img" />
-        </h1>
-        <SectionBadge kind="image" label={tr("Images")} />
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
             <button
@@ -1979,20 +1995,6 @@ export default function App() {
 
       <main className="app-main">
         <div style={{ width: "100%", fontFamily: "sans-serif" }}>
-      {/* Barre du haut commune NOXEL (noxel-shell.css), sur le modèle de NOXEL SEO */}
-      <div className="nx-page-header" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-          <h2 className="nx-page-title" style={{ margin: 0 }}>{NAV_ITEMS.find((n) => n.id === activeSection)?.label ?? tr("NOXEL SPECTRA")}</h2>
-          <span className="nx-page-subtitle">{tr("NOXEL SPECTRA · images")}</span>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}{" "}<span className="nx-pill__muted" style={{ display: "inline" }}>{tr("(test)")}</span></a>
-          <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> {tr("Aide")}</a>
-          <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("NOXEL360")}</a>
-          <LangPill lang={lang} onClick={() => setShowLang(true)} />
-          <AccountPill />
-        </div>
-      </div>
       {showLang && (
         <Suspense fallback={null}>
           <NexusSelector locale={lang} onChange={(l) => { setLang(l); setShowLang(false); }} onClose={() => setShowLang(false)} />
@@ -3935,5 +3937,6 @@ export default function App() {
         />
       )}
     </div>
+    </>
   );
 }
