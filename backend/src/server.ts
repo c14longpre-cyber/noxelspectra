@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { hasMetadata, metadataBytes } from "./metadataCheck";
 
 // Vie privée : aucune donnée personnelle envoyée à Sentry (pas d'IP, pas de
 // corps de requête, pas de cookies, pas de query string, pas d'utilisateur).
@@ -1164,14 +1165,27 @@ app.post("/api/strip-metadata", upload.single("file"), limiteImage, quotaOutils(
     }
 
     const meta = await oriented(req.file.buffer).metadata();
-    const metadataBytesRemoved =
-      (meta.exif ? meta.exif.length : 0) +
-      (meta.icc ? meta.icc.length : 0) +
-      (meta.iptc ? meta.iptc.length : 0) +
-      (meta.xmp ? meta.xmp.length : 0);
+    const metadataBytesRemoved = metadataBytes(meta);
 
     const allowedFormats = ["jpeg", "png", "webp", "avif", "gif"];
     const sourceFormat = detectFormat(meta, "png");
+
+    // Nothing to remove: send the file back exactly as it came. Re-encoding it anyway changed the
+    // pixels and the weight while the screen said "no metadata found" (Jordan_Roastme.avif:
+    // 115.7 KB → 95.6 KB), which contradicts the promise of this tool.
+    if (!hasMetadata(meta) && allowedFormats.includes(sourceFormat)) {
+      const mime = sourceFormat === "jpeg" ? "image/jpeg" : "image/" + sourceFormat;
+      res.setHeader("Content-Type", mime);
+      res.setHeader("Content-Disposition", 'attachment; filename="cleaned.' + sourceFormat + '"');
+      res.setHeader("X-Original-Size", String(req.file.size));
+      res.setHeader("X-Output-Size", String(req.file.size));
+      res.setHeader("X-Metadata-Bytes-Removed", "0");
+      res.setHeader("X-Grew-Larger", "false");
+      res.setHeader("X-Format", sourceFormat);
+      res.setHeader("X-Untouched", "true");
+      res.setHeader("Access-Control-Expose-Headers", "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger, X-Format, X-Untouched");
+      return res.send(req.file.buffer);
+    }
     const format: SupportedFormat = (allowedFormats.includes(sourceFormat) ? sourceFormat : "png") as SupportedFormat;
 
     // Sharp only carries over metadata when withMetadata() is called, so a
@@ -1232,7 +1246,7 @@ app.post("/api/strip-metadata", upload.single("file"), limiteImage, quotaOutils(
     res.setHeader("X-Format", format);
     res.setHeader(
       "Access-Control-Expose-Headers",
-      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger, X-Format"
+      "X-Original-Size, X-Output-Size, X-Metadata-Bytes-Removed, X-Grew-Larger, X-Format, X-Untouched"
     );
     return res.send(outputBuffer);
   } catch (err) {

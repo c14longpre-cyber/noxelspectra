@@ -153,6 +153,14 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 18px 0; }
   .card { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--purple); border-radius: 12px; padding: 18px 20px; }
   .card p { margin: 0; font-size: 15px; }
+  .case { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: start; margin: 18px 0; }
+  .case figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .case img { display: block; width: 100%; height: auto; }
+  .case figcaption { font-size: 13px; padding: 10px 14px; opacity: .8; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat b { display: block; font-size: 26px; color: var(--green, #3ddc84); }
+  @media (max-width: 760px) { .case { grid-template-columns: 1fr; } }
   .note { background: var(--panel); border: 1px solid rgba(168,85,247,0.4); border-radius: 12px; padding: 14px 18px; margin: 18px 0; }
   .more { font-weight: 700; text-decoration: none; }
   .policy { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 14px 0; }
@@ -226,6 +234,26 @@
     <div class="card"><h4>📦 Batch processing</h4><p>Apply the same operation to 20 images at once and download the results in one click.</p></div>
   </div>
   <p><a class="more" href="/en/images/">See all image tools →</a></p>
+
+  <h2 id="real-case">A real case: the Jordan Roastme image</h2>
+  <p>We test NOXEL SPECTRA on our own sites. On <a href="https://www.noxelseo.com/roast" rel="noopener">noxelseo.com/roast</a>, the NOXEL SEO audit flagged a slow display (LCP of 3.1 s): the main element was the portrait of Jordan Roastme, a 1024 × 1536 pixel file shown at 200 × 220 pixels. The browser was downloading an image five times larger than needed.</p>
+  <div class="stats">
+    <div class="stat"><b>1024 × 1536</b>before, 115.7 KB</div>
+    <div class="stat"><b>440 × 660</b>after Resize, 77.7 KB</div>
+    <div class="stat"><b>−39%</b>file put online: 71&nbsp;KB</div>
+    <div class="stat"><b>5×</b>fewer pixels to download</div>
+  </div>
+  <div class="case">
+    <figure>
+      <img src="/cas/jordan-avant-apres.webp" width="1200" height="620" loading="lazy" decoding="async" alt="Before / after comparison in NOXEL SPECTRA: the 1024 × 1536 pixel original on the left, the 440 × 660 pixel version on the right, with no visible difference.">
+      <figcaption>The NOXEL SPECTRA comparison slider: original on the left, lighter version on the right. No visible difference at display size.</figcaption>
+    </figure>
+    <figure>
+      <img src="/cas/jordan-redimensionner.webp" width="900" height="714" loading="lazy" decoding="async" alt="The NOXEL SPECTRA Resize tool: width 440 pixels, aspect ratio kept, before 1024 × 1536 pixels (115.7 KB), after 440 × 660 pixels (77.7 KB).">
+      <figcaption>The Resize tool: one width, aspect ratio kept, the weight before and after.</figcaption>
+    </figure>
+  </div>
+  <p>These figures come from our own sites, which we publish freely. The image is now preloaded by the page, and the next NOXEL SEO audit will measure the new display time.</p>
 
   <h2 id="video">Video tools</h2>
   <p>NOXEL SPECTRA Video works right in your browser — no software to download, no account required. Your video stays on your device the whole time you edit.</p>

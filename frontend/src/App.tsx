@@ -105,6 +105,8 @@ type AnalyzeResult = {
 };
 
 type MetaCleanStats = {
+  /** Nothing to remove: the server returned the file byte for byte */
+  untouched?: boolean;
   originalSize: number;
   outputSize: number;
   bytesRemoved: number;
@@ -1563,12 +1565,13 @@ export default function App() {
       const bytesRemoved = Number(res.headers.get("X-Metadata-Bytes-Removed") || 0);
       const grewLarger = res.headers.get("X-Grew-Larger") === "true";
       const cleanedFormat = res.headers.get("X-Format") || "";
+      const untouched = res.headers.get("X-Untouched") === "true";
 
       const blob = await res.blob();
       const outUrl = URL.createObjectURL(blob);
       recipeParts.current[outUrl] = {};
       setMetaCleanResultUrl(outUrl);
-      setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger, format: cleanedFormat });
+      setMetaCleanStats({ originalSize, outputSize, bytesRemoved, grewLarger, format: cleanedFormat, untouched });
     } catch (err) {
       setMetaCleanError(err instanceof Error ? err.message : tr("Nettoyage échoué"));
     } finally {
@@ -3186,7 +3189,9 @@ export default function App() {
             <div style={{ fontWeight: 600, color: "#2a8a4a" }}>
               {metaCleanStats.bytesRemoved > 0
                 ? tr("{a} de métadonnées retirées", { a: formatBytes(metaCleanStats.bytesRemoved) })
-                : tr("Aucune métadonnée trouvée dans le fichier")}
+                : metaCleanStats.untouched
+                  ? tr("Aucune métadonnée trouvée : ton fichier est rendu tel quel, sans réencodage. Pour l'alléger, utilise Convertir ou Redimensionner.")
+                  : tr("Aucune métadonnée trouvée dans le fichier")}
             </div>
           )}
         </div>
