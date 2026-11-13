@@ -1560,6 +1560,6 @@ const en: Record<string, string> = {
  "Sur un téléphone, seul le centre ({a} × {b} px) reste visible : décris un sujet centré et garde les côtés pour le décor.": "On a phone, only the center ({a} × {b} px) stays visible: describe a centered subject and keep the sides for the background.",
  "Logos, marques et personnages connus : l'IA peut les reproduire, mais leur usage commercial (publicité, page d'entreprise, produit) peut demander l'accord de leur propriétaire. Pour un usage personnel, aucun souci.": "Logos, brands and well-known characters: the AI can reproduce them, but using them commercially (ads, a business page, a product) may require their owner's permission. For personal use, no problem.",
  "NOXEL SPECTRA Vidéo": "NOXEL SPECTRA Video",
- "NOXEL SPECTRA — convertir, compresser et vectoriser des images": "NOXEL SPECTRA — convert, compress and vectorize images"
+ "NOXEL SPECTRA : convertir, compresser, vectoriser en ligne": "NOXEL SPECTRA: convert, compress and vectorize online"
 };
 export default en;

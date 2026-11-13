@@ -8,40 +8,129 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NOXEL SPECTRA — convertir, compresser et vectoriser des images</title>
-    <meta name="description" content="Convertis, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
+    <title>NOXEL SPECTRA : convertir, compresser, vectoriser en ligne</title>
+    <meta name="description" content="NOXEL SPECTRA convertit, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
     <link rel="canonical" href="https://app.noxelspectra.com/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="NOXEL SPECTRA" />
     <meta property="og:locale" content="fr_CA" />
-    <meta property="og:title" content="NOXEL SPECTRA — convertir, compresser et vectoriser des images" />
-    <meta property="og:description" content="Convertis, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
+    <meta property="og:title" content="NOXEL SPECTRA : convertir, compresser, vectoriser en ligne" />
+    <meta property="og:description" content="NOXEL SPECTRA convertit, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
     <meta property="og:url" content="https://app.noxelspectra.com/" />
     <meta property="og:image" content="https://app.noxelspectra.com/logo.png" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="NOXEL SPECTRA — convertir, compresser et vectoriser des images" />
-    <meta name="twitter:description" content="Convertis, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
+    <meta name="twitter:title" content="NOXEL SPECTRA : convertir, compresser, vectoriser en ligne" />
+    <meta name="twitter:description" content="NOXEL SPECTRA convertit, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées." />
     <meta name="twitter:image" content="https://app.noxelspectra.com/logo.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "NOXEL SPECTRA",
-        "url": "https://app.noxelspectra.com/",
-        "applicationCategory": "MultimediaApplication",
-        "operatingSystem": "Navigateur web",
-        "inLanguage": "fr",
-        "description": "Convertis, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées.",
-        "publisher": { "@type": "Organization", "name": "NOXEL", "url": "https://noxel360.com" }
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://noxel360.com/#organization",
+            "name": "NOXEL",
+            "url": "https://noxel360.com/",
+            "logo": "https://app.noxelspectra.com/logo.png",
+            "founder": { "@type": "Person", "name": "Christian Longpré", "url": "https://www.noxelseo.com/author/christian-longpre" },
+            "sameAs": ["https://www.noxelspectra.com/", "https://www.noxelseo.com/", "https://noxelforge.com/"]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://app.noxelspectra.com/#website",
+            "name": "NOXEL SPECTRA",
+            "url": "https://app.noxelspectra.com/",
+            "inLanguage": "fr",
+            "publisher": { "@id": "https://noxel360.com/#organization" }
+          },
+          {
+            "@type": "WebApplication",
+            "name": "NOXEL SPECTRA",
+            "url": "https://app.noxelspectra.com/",
+            "applicationCategory": "MultimediaApplication",
+            "operatingSystem": "Navigateur web",
+            "inLanguage": "fr",
+            "description": "NOXEL SPECTRA convertit, compresse, redimensionne, détoure et vectorise tes images en ligne, une à la fois ou par lots. Tes images ne sont pas conservées.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD", "description": "Forfait Bronze : gratuit, sans compte, 50 opérations par jour" },
+            "publisher": { "@id": "https://noxel360.com/#organization" }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "NOXEL SPECTRA", "item": "https://www.noxelspectra.com/" },
+              { "@type": "ListItem", "position": 2, "name": "Application", "item": "https://app.noxelspectra.com/" }
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "mainEntity": [
+              { "@type": "Question", "name": "Faut-il un compte pour utiliser NOXEL SPECTRA ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Le forfait Bronze est gratuit et sans compte : 50 opérations par jour. Un compte sert aux forfaits payants et au dessin IA." } },
+              { "@type": "Question", "name": "Mes images sont-elles conservées ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Chaque image est traitée par notre serveur, renvoyée à ton navigateur, puis oubliée. Les métadonnées EXIF, dont la position GPS, ne sont pas recopiées dans le fichier produit." } },
+              { "@type": "Question", "name": "Vers quels formats puis-je convertir ?", "acceptedAnswer": { "@type": "Answer", "text": "WebP, AVIF, JPEG, PNG et GIF. La vectorisation produit un SVG et l'outil Favicons un fichier .ico avec les tailles PNG courantes." } }
+            ]
+          }
+        ]
       }
     </script>
+    <style>
+      /* Contenu lisible sans JavaScript (moteurs, IA, lecteurs sans JS) ; React le remplace au démarrage. */
+      .nx-static{max-width:860px;margin:0 auto;padding:48px 24px 64px;font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif;color:#d8d8d8;background:#0b0b0b}
+      .nx-static h1{font-size:32px;line-height:1.25;color:#f5f5f5;margin:8px 0 16px}
+      .nx-static h2{font-size:21px;color:#f5f5f5;margin:32px 0 10px}
+      .nx-static h3{font-size:17px;color:#f5f5f5;margin:18px 0 4px}
+      .nx-static a{color:#3ddc84}
+      .nx-static .nx-brand{color:#A855F7;font-weight:800;letter-spacing:.12em;font-size:13px;margin:0}
+      .nx-static li{margin:4px 0}
+      html,body{background:#0b0b0b}
+    </style>
     <!-- NOXEL Consent 1.6.0 : chargé avant tout outil facultatif ; outils du réseau NOXEL déclarés dans public/consent/sites.js -->
     <link rel="stylesheet" href="/consent/noxel-consent.css">
-    <script src="/consent/sites.js"></script>
-    <script src="/consent/noxel-consent.js"></script>
+    <!-- defer : exécutés dans l'ordre, avant le module de l'app (même file d'attente), sans bloquer l'affichage -->
+    <script defer src="/consent/sites.js"></script>
+    <script defer src="/consent/noxel-consent.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="nx-static">
+        <p class="nx-brand">NOXEL SPECTRA</p>
+        <h1>Convertir, compresser et vectoriser tes images en ligne</h1>
+        <p>NOXEL SPECTRA est un atelier d'images dans le navigateur. Tu convertis, compresses, redimensionnes, détoures et vectorises tes images, une à la fois ou par lots, sans rien installer. Chaque image est traitée par notre serveur, renvoyée à ton navigateur, puis oubliée : nous ne conservons pas tes fichiers.</p>
+
+        <h2>Les outils</h2>
+        <ul>
+          <li><a href="/convert">Convertir</a> en WebP, AVIF, JPEG, PNG ou GIF, avec une taille de fichier cible pour JPEG, WebP et AVIF.</li>
+          <li><a href="/batch">Traiter par lots</a> : jusqu'à 10 fichiers à la fois sans compte, 20 avec un forfait payant.</li>
+          <li><a href="/resize">Redimensionner</a>, <a href="/crop">recadrer</a> et <a href="/rotate-flip">pivoter ou retourner</a> une image.</li>
+          <li><a href="/remove-background">Détourer</a> : retirer l'arrière-plan d'une photo de produit ou d'un portrait.</li>
+          <li><a href="/vectorize">Vectoriser</a> : transformer un logo ou un dessin en SVG net à toutes les tailles.</li>
+          <li><a href="/favicons">Créer des favicons</a> : le fichier .ico et les tailles PNG du web, d'iOS et des applications web.</li>
+          <li><a href="/responsive-images">Images adaptatives</a> : plusieurs largeurs prêtes pour l'attribut srcset.</li>
+          <li><a href="/clean-metadata">Nettoyer les métadonnées</a> : retirer les données EXIF, dont la position GPS, avant de publier une photo.</li>
+          <li><a href="/color-palette">Palette de couleurs</a>, <a href="/filters">filtres</a>, <a href="/watermark">filigrane</a>, <a href="/drop-shadow">ombre portée</a> et <a href="/social-media">formats des réseaux sociaux</a>.</li>
+          <li><a href="/editor">Éditeur de calques</a> avec près de 1 900 polices hébergées chez nous, et <a href="/ai-drawing">dessin IA</a> à partir d'un texte, payé en crédits.</li>
+        </ul>
+
+        <h2>Gratuit pour commencer</h2>
+        <p>Le forfait Bronze est gratuit et sans compte : 50 opérations par jour. Les forfaits Silver, Gold, Platinum et Diamond (de 5 $ à 80 $ CAD par mois) relèvent les limites et ajoutent des crédits de dessin IA. Le détail est sur la <a href="/pricing">page des forfaits</a>.</p>
+
+        <h2>Questions fréquentes</h2>
+        <h3>Faut-il un compte pour utiliser NOXEL SPECTRA ?</h3>
+        <p>Non. Le forfait Bronze est gratuit et sans compte : 50 opérations par jour. Un compte sert aux forfaits payants et au dessin IA.</p>
+        <h3>Mes images sont-elles conservées ?</h3>
+        <p>Non. Chaque image est traitée par notre serveur, renvoyée à ton navigateur, puis oubliée. Les métadonnées EXIF, dont la position GPS, ne sont pas recopiées dans le fichier produit.</p>
+        <h3>Vers quels formats puis-je convertir ?</h3>
+        <p>WebP, AVIF, JPEG, PNG et GIF. La vectorisation produit un SVG et l'outil Favicons un fichier .ico avec les tailles PNG courantes.</p>
+
+        <h2>Pour aller plus loin</h2>
+        <ul>
+          <li><a href="/learn/images/image-formats/what-is-png/" hreflang="en">Qu'est-ce que le format PNG ?</a> (en anglais)</li>
+          <li><a href="/learn/images/image-formats/what-is-svg/" hreflang="en">Qu'est-ce que le format SVG ?</a> (en anglais)</li>
+          <li><a href="/learn/images/web-images/what-is-a-favicon/" hreflang="en">Qu'est-ce qu'un favicon ?</a> (en anglais)</li>
+          <li><a href="https://video.noxelspectra.com/" rel="noopener">NOXEL SPECTRA Vidéo</a>, l'outil vidéo (en test)</li>
+          <li><a href="https://www.noxelspectra.com/" rel="noopener">Présentation de NOXEL SPECTRA</a> et <a href="https://www.noxelspectra.com/#confidentialite" rel="noopener">politique de confidentialité</a></li>
+        </ul>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
