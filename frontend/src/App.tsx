@@ -14,6 +14,7 @@ import "./components/spectra-account/spectra-account.css";
 import type { Zone } from "./components/spectra-social/SocialCropper";
 import "./components/spectra-social/spectra-social.css";
 import { readMetadata, stripMetadata, type ImageMetadata } from "./utils/exifUtils";
+import { GainEstimate } from "./components/GainEstimate";
 import {
   deleteProject,
   exportProject,
@@ -2301,6 +2302,7 @@ export default function App() {
                 ? tr("Réduction de {a}%", { a: stats.reductionPct })
                 : tr("Augmentation de {a}%", { a: Math.abs(stats.reductionPct) })}
             </div>
+            <GainEstimate before={stats.originalSize} after={stats.outputSize} />
             {mode === "targetSize" && (
               <div style={{ marginTop: 4, color: "#888" }}>
                 {tr("Qualité utilisée :")}{" "}{stats.qualityUsed}
@@ -2414,6 +2416,7 @@ export default function App() {
           <div>
             {tr("Après :")}{" "}{resizeStats.outputWidth}×{resizeStats.outputHeight}px ({formatBytes(resizeStats.outputSize)})
           </div>
+          <GainEstimate before={resizeStats.originalSize} after={resizeStats.outputSize} />
         </div>
       )}
 
@@ -3499,6 +3502,7 @@ export default function App() {
           <div>
             {tr("Après :")}{" "}{socialStats.outputWidth}×{socialStats.outputHeight}px ({formatBytes(socialStats.outputSize)})
           </div>
+          <GainEstimate before={socialStats.originalSize} after={socialStats.outputSize} />
         </div>
       )}
 
