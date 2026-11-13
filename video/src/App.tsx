@@ -207,12 +207,23 @@ export default function App() {
   const baseName = file ? file.name.replace(/\.[^.]+$/, "") : "video";
 
   return (
+    <>
+    {/* NOXEL Shell 1.1 : barre du haut commune aux 4 sites, logo dans un carré de 150 × 150 px */}
+    <header className="nx-bar vx-bar">
+      <a className="nx-bar__brand" href="/" aria-label={tr("NOXEL SPECTRA Vidéo")}>
+        <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA Vidéo")} className="nx-bar__logo" width={150} height={150} />
+      </a>
+      <SectionBadge kind="video" label={tr("Vidéo")} badge={tr("TEST")} />
+      <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="vx-mascot" width={225} height={150} />
+      <div className="nx-bar__right vx-bar__right">
+        <a className="nx-pill" href="https://app.noxelspectra.com/" rel="noopener">{tr("Images")}</a>
+        <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener"><span className="nx-pill__code">?</span> {tr("Aide")}</a>
+        <a className="nx-pill" href="https://noxel360.com/" rel="noopener">{tr("NOXEL360")}</a>
+        <LangPill lang={lang} onClick={() => setShowLang(true)} />
+      </div>
+    </header>
     <div className="vx-shell">
       <aside className="vx-sidebar">
-        <h1 className="vx-brand">
-          <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA Vidéo")} className="vx-brand-logo" />
-        </h1>
-        <SectionBadge kind="video" label={tr("Vidéo")} badge={tr("TEST")} />
         <nav>
           {TOOLS.map((t) => (
             <button key={t.id} type="button" className={`vx-nav${t.id === tool ? " is-active" : ""}`} onClick={() => setTool(t.id)}>
@@ -222,7 +233,6 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="vx-lang"><LangPill lang={lang} onClick={() => setShowLang(true)} /></div>
         <div className="vx-legal">
           <button type="button" className="vx-legal-btn" data-noxel-consent-settings>{tr("Préférences de confidentialité")}</button>
           <a href="https://www.noxelspectra.com/#confidentialite" target="_blank" rel="noopener">{tr("Confidentialité")}</a>
@@ -396,6 +406,7 @@ export default function App() {
         )}
       </main>
     </div>
+    </>
   );
 }
 

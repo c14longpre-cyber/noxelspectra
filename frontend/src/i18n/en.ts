@@ -144,6 +144,7 @@ const en: Record<string, string> = {
  "Ouvrir le menu": "Open menu",
  "Vidéo": "Video",
  "Images": "Images",
+ "Chroma, le caméléon de NOXEL SPECTRA": "Chroma, the NOXEL SPECTRA chameleon",
  "(test)": "(beta)",
  "Aide": "Help",
  "Fermer": "Close",

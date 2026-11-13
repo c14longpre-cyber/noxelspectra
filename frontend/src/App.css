@@ -460,3 +460,17 @@ a {
 .gs-stop-num { display: inline-flex; align-items: center; gap: 4px; color: #a7b8cd; font-size: 13px; }
 .gs-stop-num input { width: 58px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2); color: inherit; border-radius: 6px; padding: 4px 6px; font: inherit; }
 .gs-stops .gs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* ── NOXEL Shell 1.1 : barre du haut (logo 150 × 150, repère Images, titre, pastilles) ── */
+.spectra-bar { flex-wrap: wrap; row-gap: 8px; }
+.spectra-bar .nx-section-badge { margin: 0; }
+.spectra-bar__title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; margin-left: 8px; }
+.spectra-bar__right { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* Chroma, mascotte de SPECTRA : fond noir de l'image fondu dans la barre (screen) */
+.spectra-mascot { width: 225px; height: 150px; object-fit: contain; margin-left: auto; mix-blend-mode: screen; pointer-events: none; -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 46%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 60% 62% at 50% 46%, #000 62%, transparent 100%); }
+.spectra-mascot + .nx-bar__right { margin-left: 0; }
+@media (max-width: 1279px) { .spectra-mascot { display: none; } .spectra-mascot + .nx-bar__right { margin-left: auto; } }
+@media (max-width: 900px) {
+  .spectra-bar { padding: 8px 12px 8px 64px; }
+  .spectra-bar__title { display: none; }
+}
