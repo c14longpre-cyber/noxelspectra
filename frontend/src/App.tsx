@@ -3,6 +3,7 @@ import "./App.css";
 import { HudButton, HudLink } from "./components/hud/HudButton";
 import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
+import { SectionBadge } from "./components/hud/SectionBadge";
 import { NumberInput } from "./components/NumberInput";
 import { GradientStops, type Stop } from "./components/GradientStops";
 import { ExifNotice } from "./components/spectra-exif/ExifNotice";
@@ -1961,6 +1962,7 @@ export default function App() {
         <h1 className="sidebar-logo">
           <img src="/noxel_spectra_logo.svg" alt={tr("NOXEL SPECTRA")} className="sidebar-logo-img" />
         </h1>
+        <SectionBadge kind="image" label={tr("Images")} />
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => (
             <button
