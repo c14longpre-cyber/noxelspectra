@@ -1,22 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
-import { OverlayEditor } from "./components/spectra-editor/OverlayEditor";
-import { GradientTool } from "./components/spectra-gradient/GradientTool";
 import { HudButton, HudLink } from "./components/hud/HudButton";
 import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
 import { NumberInput } from "./components/NumberInput";
 import { GradientStops, type Stop } from "./components/GradientStops";
-import { RightsTool } from "./components/spectra-rights/RightsTool";
-import { BgRefiner } from "./components/spectra-bg/BgRefiner";
 import { ExifNotice } from "./components/spectra-exif/ExifNotice";
 import { AccountPill } from "./components/spectra-account/AccountPill";
 import { LoginModal } from "./components/spectra-account/LoginModal";
-import { PricingPage } from "./components/spectra-account/PricingPage";
-import { AiDrawTool } from "./components/spectra-account/AiDrawTool";
 import { apiFetch, rafraichirCompte, LOGIN_EVENT, PRICING_EVENT } from "./components/spectra-account/account";
 import "./components/spectra-account/spectra-account.css";
-import { SocialCropper, type Zone } from "./components/spectra-social/SocialCropper";
+import type { Zone } from "./components/spectra-social/SocialCropper";
 import "./components/spectra-social/spectra-social.css";
 import { readMetadata, stripMetadata, type ImageMetadata } from "./utils/exifUtils";
 import {
@@ -45,6 +39,14 @@ import { sectionDepuisChemin, useSectionUrl } from "./useSectionUrl";
 // Adresse de chaque onglet (app.noxelspectra.com/<adresse>) ; mêmes adresses dans frontend/vercel.json
 export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
 import { LangPill } from "./components/spectra-nexus/LangPill";
+// Outils lourds chargés à l'ouverture de leur onglet (moins de JavaScript au premier affichage)
+const OverlayEditor = lazy(() => import("./components/spectra-editor/OverlayEditor").then((m) => ({ default: m.OverlayEditor })));
+const GradientTool = lazy(() => import("./components/spectra-gradient/GradientTool").then((m) => ({ default: m.GradientTool })));
+const RightsTool = lazy(() => import("./components/spectra-rights/RightsTool").then((m) => ({ default: m.RightsTool })));
+const BgRefiner = lazy(() => import("./components/spectra-bg/BgRefiner").then((m) => ({ default: m.BgRefiner })));
+const PricingPage = lazy(() => import("./components/spectra-account/PricingPage").then((m) => ({ default: m.PricingPage })));
+const AiDrawTool = lazy(() => import("./components/spectra-account/AiDrawTool").then((m) => ({ default: m.AiDrawTool })));
+const SocialCropper = lazy(() => import("./components/spectra-social/SocialCropper").then((m) => ({ default: m.SocialCropper })));
 const NexusSelector = lazy(() => import("./components/spectra-nexus/NexusSelector"));
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
 type Format = (typeof FORMATS)[number];
@@ -553,7 +555,7 @@ export default function App() {
     { id: "pricing", label: tr("Forfaits"), icon: "$", ref: pricingSectionRef },
   ];  const sectionLabel = NAV_ITEMS.find((n) => n.id === activeSection)?.label;
   useSectionUrl(activeSection, setActiveSection, SECTION_SLUGS, "analyze",
-    sectionLabel ? `${sectionLabel} — NOXEL SPECTRA` : tr("NOXEL SPECTRA — convertir, compresser et vectoriser des images"));
+    sectionLabel ? `${sectionLabel} — NOXEL SPECTRA` : tr("NOXEL SPECTRA : convertir, compresser, vectoriser en ligne"));
 
 
   function goToSection(id: string) {
@@ -2582,6 +2584,7 @@ export default function App() {
       {bgError && <p style={{ color: "red", marginTop: 16 }}>{bgError}</p>}
 
       {bgCutout && file && (
+        <Suspense fallback={null}>
         <BgRefiner
           original={file}
           cutout={bgCutout}
@@ -2590,6 +2593,7 @@ export default function App() {
           format={bgFormat}
           onResult={handleBgRefined}
         />
+        </Suspense>
       )}
 
       {bgResultUrl && bgStats && (
@@ -3443,6 +3447,7 @@ export default function App() {
               {preset.note && <div className="sp-social-info__note">{tr(preset.note)}</div>}
             </div>
             {originalPreviewUrl ? (
+              <Suspense fallback={null}>
               <SocialCropper
                 key={`${originalPreviewUrl}|${ratio}`}
                 src={originalPreviewUrl}
@@ -3457,6 +3462,7 @@ export default function App() {
                   circle: tr("Affichée en rond"),
                 }}
               />
+              </Suspense>
             ) : (
               <p style={{ color: "#888", fontSize: 13 }}>{tr("Choisis une image en haut pour placer le cadre.")}</p>
             )}
@@ -3512,7 +3518,9 @@ export default function App() {
         {tr("Ajoute du texte, des stickers et des formes sur l'image sélectionnée en haut. Utilise le bouton \"Exporter PNG\" dans la barre d'outils pour télécharger le résultat.")}
       </p>
       <div style={{ marginTop: 12 }}>
+        <Suspense fallback={null}>
         <OverlayEditor key={lang} file={file} />
+        </Suspense>
       </div>
       </>
       )}
@@ -3526,7 +3534,9 @@ export default function App() {
         {tr("Superpose jusqu'à 8 calques — 11 géométries, répétition, 16 modes de fusion, grain — et exporte en PNG, SVG, CSS ou JSON.")}
       </p>
       <div style={{ marginTop: 12 }}>
+        <Suspense fallback={null}>
         <GradientTool />
+        </Suspense>
       </div>
       </>
       )}
@@ -3875,14 +3885,18 @@ export default function App() {
       <p style={{ color: "#888", fontSize: 13, marginTop: 16 }}>
         {tr("Décris une image et l'IA la dessine. Tu peux ensuite la retoucher, la redimensionner pour les réseaux ou la convertir avec les autres outils de NOXEL SPECTRA.")}
       </p>
+      <Suspense fallback={null}>
       <AiDrawTool onUseImage={(f) => { void loadMainFile(f); goToSection("adjust"); }} />
+      </Suspense>
       </>
       )}
 
       {activeSection === "pricing" && (
       <>
       <div ref={pricingSectionRef} />
+      <Suspense fallback={null}>
       <PricingPage />
+      </Suspense>
       </>
       )}
 
@@ -3891,6 +3905,7 @@ export default function App() {
       {/* ── Auteur, droits et licence ── */}
       <div ref={copyrightSectionRef} />
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Auteur, droits et licence")}</h2>
+      <Suspense fallback={null}>
       <RightsTool
         file={file}
         apiUrl={apiUrl}
@@ -3899,6 +3914,7 @@ export default function App() {
           recipeParts.current[url] = { output: { rights } };
         }}
       />
+      </Suspense>
       </>
       )}
         </div>
