@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react";
 // @ts-expect-error — plain JS module, no type declarations
 import { SpectraOverlayEditor } from "./spectra-overlay-editor.js";
 import "./spectra-overlay-editor.css";
+// Polices @fontsource de l'éditeur : chargées avec l'éditeur seulement (116 ko de CSS de moins au premier affichage de l'app)
+import "../../fonts";
 
 export function OverlayEditor({ file }: { file: File | null }) {
   const host = useRef<HTMLDivElement | null>(null);

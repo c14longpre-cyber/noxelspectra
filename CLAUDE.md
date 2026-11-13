@@ -33,10 +33,10 @@ NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxe
 
 ## Accueil de l'app lisible sans JavaScript (scan NOXEL SEO du 13 novembre 2026)
 
-- `frontend/index.html` porte dans `#root` un contenu statique (`main.nx-static` : un h1, environ 400 mots, liens vers les onglets, FAQ, pages learn) que React remplace au démarrage : les moteurs et robots d'IA qui ne lancent pas le JavaScript voient une vraie page au lieu de 0 mot. Tout changement d'outil, de forfait ou de promesse se reflète aussi dans ce texte et dans le JSON-LD (`@graph` : Organization, WebSite, WebApplication, BreadcrumbList, FAQPage ; mêmes questions que la FAQ visible).
+- `frontend/index.html` porte dans `#root` un contenu statique (`main.nx-static` : un h1 avec « NOXEL SPECTRA », environ 630 mots, liens vers les onglets, FAQ, pages learn) que React remplace au démarrage : les moteurs et robots d'IA qui ne lancent pas le JavaScript voient une vraie page au lieu de 0 mot. Tout changement d'outil, de forfait ou de promesse se reflète aussi dans ce texte et dans le JSON-LD (`@graph` : Organization, WebSite, WebApplication, BreadcrumbList, FAQPage ; mêmes questions que la FAQ visible).
 - Titre de 58 caractères (60 au plus) ; même texte dans `App.tsx` (titre de l'onglet Analyser) et `en.ts`.
 - Les deux scripts du kit de consentement sont en `defer` : exécutés dans l'ordre et avant le module de l'app, sans bloquer l'affichage.
-- Outils lourds chargés à l'ouverture de leur onglet (`lazy` dans App.tsx : OverlayEditor, GradientTool, RightsTool, BgRefiner, PricingPage, AiDrawTool, SocialCropper), chacun dans son `Suspense`.
+- Outils lourds chargés à l'ouverture de leur onglet (`lazy` dans App.tsx : OverlayEditor, GradientTool, RightsTool, BgRefiner, PricingPage, AiDrawTool, SocialCropper), chacun dans son `Suspense`. Les polices @fontsource de l'éditeur (`src/fonts.ts`, 116 ko de CSS) sont importées par OverlayEditor.tsx, pas par main.tsx.
 
 ## Polices de l'éditeur de calques
 
