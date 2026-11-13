@@ -1,11 +1,11 @@
 # NOXEL Spectra — notes pour les agents Claude Code
 
 NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxelspectra.com), outil vidéo `video/`, API `backend/`. Couleurs officielles NOXEL : vert #3ddc84, violet #A855F7. Boutons : kit HUD `frontend/src/components/hud/` (source du kit pour les autres sites NOXEL).
-## Look commun NOXEL Shell 1.1
+## Look commun NOXEL Shell 1.2
 
 - `landing/noxel-shell.css` et `frontend/src/noxel-shell.css` : copies identiques du fichier de noxel360 et noxelforge (modèle NOXEL SEO) ; toute modification se fait partout, version incrémentée dans l'en-tête.
 - Vitrine : en-tête `.nx-bar` et pied de page `.nx-foot` dans les 3 pages de `landing/`. App et vidéo : barre du haut `.nx-bar` pleine largeur (logo, repère `SectionBadge` Images ou Vidéo, titre de l'onglet pour l'app, Chroma, pastilles Vidéo/Images, Aide, NOXEL360, langue, compte), barre latérale dessous sans logo. La vidéo importe `../frontend/src/noxel-shell.css`.
-- Shell 1.1 (13 novembre 2026) : même barre du haut sur les 4 sites, NOXEL SEO compris ; logo dans un carré de 150 × 150 px à 100 % de zoom (`.nx-bar__logo`, mobile 46 px) ; barre non collante (166 px).
+- Shell 1.1 (13 novembre 2026) : même barre du haut sur les 4 sites, NOXEL SEO compris ; logo dans un carré de 150 × 150 px à 100 % de zoom (`.nx-bar__logo`, mobile 46 px) ; barre non collante (166 px). Shell 1.2 : classe commune `.nx-bar__mascot` pour le personnage du module (NX360, Alfred) ; SPECTRA garde `.spectra-mascot` / `.vx-mascot` pour Chroma (fond noir fondu).
 - **Chroma** (caméléon arc-en-ciel, mascotte de SPECTRA) : `chroma.webp` dans `frontend/public/` et `video/public/`, dans la barre du haut (`.spectra-mascot`, `.vx-mascot` : fond noir fondu par `mix-blend-mode: screen` et bords adoucis par un masque), caché sous 1280 px (app) ou 1100 px (vidéo).
 - Noms des modules toujours en majuscules : NOXEL360, NOXEL SEO, NOXEL FORGE, NOXEL NEXUS, NOXEL SPECTRA. Page de prix : section « Forfaits » de l'app (cartes `.nx-pcard`, chiffres lus sur GET /api/plans).
 
