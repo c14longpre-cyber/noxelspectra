@@ -41,6 +41,7 @@ import { sectionDepuisChemin, useSectionUrl } from "./useSectionUrl";
 // Adresse de chaque onglet (app.noxelspectra.com/<adresse>) ; mêmes adresses dans frontend/vercel.json
 export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
 import { LangPill } from "./components/spectra-nexus/LangPill";
+import NxSearch from "./components/NxSearch";
 // Outils lourds chargés à l'ouverture de leur onglet (moins de JavaScript au premier affichage)
 const OverlayEditor = lazy(() => import("./components/spectra-editor/OverlayEditor").then((m) => ({ default: m.OverlayEditor })));
 const GradientTool = lazy(() => import("./components/spectra-gradient/GradientTool").then((m) => ({ default: m.GradientTool })));
@@ -1949,6 +1950,19 @@ export default function App() {
     });
   }
 
+  // Recherche de la barre du haut : un onglet de l'app s'ouvre sans recharger la page
+  const ouvrirDansApp = (url: string) => {
+    let u: URL;
+    try { u = new URL(url, window.location.href); } catch { return false; }
+    if (u.hostname !== "app.noxelspectra.com" && u.host !== window.location.host) return false;
+    const slug = u.pathname.replace(/^\/+|\/+$/g, "");
+    const id = slug === "" ? "analyze" : Object.keys(SECTION_SLUGS).find((k) => SECTION_SLUGS[k] === slug);
+    if (!id || (u.host !== window.location.host && window.location.hostname !== "localhost")) return false;
+    setActiveSection(id);
+    setSidebarOpen(false);
+    return true;
+  };
+
   return (
     <>
       {/* NOXEL Shell 1.1 : barre du haut commune aux 4 sites, logo dans un carré de 150 × 150 px */}
@@ -1963,6 +1977,8 @@ export default function App() {
         </div>
         <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="spectra-mascot" width={225} height={150} />
         <div className="nx-bar__right spectra-bar__right">
+          {/* NOXEL Shell 1.3 : recherche « app ou guides », comme NOXEL SEO */}
+          <NxSearch lang={lang} navigate={ouvrirDansApp} />
           <a className="nx-pill" href="https://video.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("Vidéo")}</a>
           <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener" style={{ textDecoration: "none" }}><span className="nx-pill__code">?</span> {tr("Aide")}</a>
           <a className="nx-pill" href="https://noxel360.com/" rel="noopener" style={{ textDecoration: "none" }}>{tr("NOXEL360")}</a>
