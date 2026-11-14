@@ -480,6 +480,10 @@ export default function App() {
       email_in_use: tr("Un compte NOXEL existe déjà pour ce courriel avec une autre méthode de connexion. Utilise celle-ci."),
       missing_token: tr("Lien incomplet."),
       server_error: tr("Connexion impossible pour le moment. Réessaie."),
+      github_cancelled: tr("Connexion annulée."),
+      linkedin_cancelled: tr("Connexion annulée."),
+      microsoft_cancelled: tr("Connexion annulée."),
+      invalid_state: tr("La connexion a expiré. Recommence."),
     };
     if (auth) setAvisCompte({ texte: tr("Tu es connecté à NOXEL SPECTRA.") });
     else if (err) setAvisCompte({ texte: ERREURS[err] ?? tr("Connexion impossible."), erreur: true });
