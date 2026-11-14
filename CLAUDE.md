@@ -1,7 +1,7 @@
 # NOXEL Spectra — notes pour les agents Claude Code
 
 NOXEL Spectra : vitrine `landing/` (noxelspectra.com), app `frontend/` (app.noxelspectra.com), outil vidéo `video/`, API `backend/`. Couleurs officielles NOXEL : vert #3ddc84, violet #A855F7. Boutons : kit HUD `frontend/src/components/hud/` (source du kit pour les autres sites NOXEL).
-## Look commun NOXEL Shell 1.2
+## Look commun NOXEL Shell 1.2.1 (1.2.1 : textes discrets à 62 % de blanc, contraste 4,5:1)
 
 - `landing/noxel-shell.css` et `frontend/src/noxel-shell.css` : copies identiques du fichier de noxel360 et noxelforge (modèle NOXEL SEO) ; toute modification se fait partout, version incrémentée dans l'en-tête.
 - Vitrine : en-tête `.nx-bar` et pied de page `.nx-foot` dans les 3 pages de `landing/`. App et vidéo : barre du haut `.nx-bar` pleine largeur (logo, repère `SectionBadge` Images ou Vidéo, titre de l'onglet pour l'app, Chroma, pastilles Vidéo/Images, Aide, NOXEL360, langue, compte), barre latérale dessous sans logo. La vidéo importe `../frontend/src/noxel-shell.css`.
