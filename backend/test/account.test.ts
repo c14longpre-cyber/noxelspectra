@@ -38,3 +38,17 @@ test("crédits restants : le compteur mensuel repart à zéro au changement de m
   assert.equal(creditsRestants({ ...base, creditsPeriod: "2000-01" }).inclus, 20);
   assert.equal(creditsRestants({ ...base, tier: "bronze", creditsUsed: 0 }).total, 10);
 });
+
+test("un bouton GitHub / LinkedIn / Microsoft n'est proposé que si son identifiant et son secret existent", async () => {
+  const { fournisseursActifs } = await import("../src/account/oauth.routes");
+  assert.deepEqual(fournisseursActifs({}), []);
+  assert.deepEqual(fournisseursActifs({ GITHUB_CLIENT_ID: "a" }), []);
+  assert.deepEqual(fournisseursActifs({ GITHUB_CLIENT_ID: "a", GITHUB_CLIENT_SECRET: "b", MICROSOFT_CLIENT_ID: "c", MICROSOFT_CLIENT_SECRET: "d" }), ["github", "microsoft"]);
+});
+
+test("LinkedIn, GitHub et Microsoft suivent les règles de rattachement à un compte existant", async () => {
+  const { deciderConnexion } = await import("../src/account/userStore");
+  const existant = { id: "1", email: "a@b.c", provider: "google" } as any;
+  assert.equal(deciderConnexion({ emailVerified: true }, null, existant).action, "existant");
+  assert.equal(deciderConnexion({ emailVerified: false }, null, existant).action, "refuser");
+});

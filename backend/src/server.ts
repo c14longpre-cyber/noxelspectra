@@ -51,6 +51,7 @@ import { parseRights, hasRights, readRights, missingAfterExport, applyRights } f
 import { renderTextOverlay } from "./textOverlay";
 import cookieParser from "cookie-parser";
 import authRoutes from "./account/auth.routes";
+import oauthRoutes from "./account/oauth.routes";
 import { billingRouter, stripeWebhook } from "./account/billing.routes";
 import { aiRouter } from "./account/ai.routes";
 import { quotaOutils } from "./account/middleware";
@@ -188,6 +189,8 @@ const apercuLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: 
   message: { ok: false, code: "rate_limited", error: "Trop d'aperçus d'affilée : attends quelques secondes." } });
 
 // Comptes, forfaits et dessin IA (facultatifs : sans configuration, les routes répondent 503)
+// GitHub, LinkedIn, Microsoft et GET /api/auth/providers avant les autres routes de compte
+app.use("/api/auth", oauthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", billingRouter);
 app.use("/api", aiRouter);
