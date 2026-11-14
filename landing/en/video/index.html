@@ -100,6 +100,7 @@
 <!-- NOXEL Consent 1.6.0: no optional tools on the showcase site; preferences + choice relay between NOXEL sites -->
 <link rel="stylesheet" href="/consent/noxel-consent.css">
 <!-- NOXEL Shell 1.0: same header and footer as NOXEL360, NOXEL SEO and NOXEL FORGE -->
+<script defer src="/nx-search.js"></script>
 <link rel="stylesheet" href="/noxel-shell.css">
 <script>try{localStorage.setItem("noxel-lang","en")}catch(_){}</script>
 <script src="/consent/sites.js"></script>
@@ -117,7 +118,9 @@
     <a class="nx-nav" href="/en/#privacy">Privacy</a>
     <a class="nx-nav" href="/en/#questions">Questions</a>
   </nav>
+  <img src="/chroma.webp" alt="Chroma, the NOXEL SPECTRA chameleon" class="nx-bar__mascot" width="225" height="150" decoding="async" style="mix-blend-mode:screen;-webkit-mask-image:radial-gradient(ellipse 60% 62% at 50% 46%,#000 62%,transparent 100%);mask-image:radial-gradient(ellipse 60% 62% at 50% 46%,#000 62%,transparent 100%);filter:none">
   <div class="nx-bar__right">
+    <div class="nx-search" data-nx-search data-lang="en"></div>
     <a class="nx-pill" href="/video/" hreflang="fr" lang="fr" data-lang="fr" title="Français" style="text-decoration:none">FR</a>
     <a class="nx-pill" href="https://app.noxelspectra.com/?lang=en" rel="noopener" style="text-decoration:none"><span class="nx-pill__code">→</span> Open the app</a>
   </div>

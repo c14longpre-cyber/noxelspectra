@@ -17,6 +17,7 @@ import { sectionDepuisChemin, useSectionUrl } from "../../frontend/src/useSectio
 // Adresse de chaque outil (video.noxelspectra.com/<adresse>) ; mêmes adresses dans video/vercel.json
 const TOOL_SLUGS: Record<string, string> = {"analyze": "analyze", "under25": "under-25-mb", "web": "ready-for-my-site", "social": "social-media", "convert": "convert", "compress": "compress", "cut": "trim", "crop": "crop-resize", "rotate": "rotate-flip", "speed": "speed", "audio": "audio", "text": "text-logo", "watermark": "watermark", "rights": "copyright", "thumb": "thumbnail", "export": "export"};
 import { LangPill } from "../../frontend/src/components/spectra-nexus/LangPill";
+import NxSearch from "../../frontend/src/components/NxSearch";
 const NexusSelector = lazy(() => import("../../frontend/src/components/spectra-nexus/NexusSelector"));
 // Chaque outil (et le moteur vidéo qu'il utilise) est téléchargé quand on l'ouvre, pas au premier affichage
 const CompressPanel = lazyTool(() => import("./components/CompressPanel").then((m) => m.CompressPanel));
@@ -206,6 +207,18 @@ export default function App() {
   const waitText = !file ? tr("Choisis d'abord une vidéo.") : busy || !error ? tr("Analyse de la vidéo…") : tr("L'analyse de la vidéo n'a pas abouti.");
   const baseName = file ? file.name.replace(/\.[^.]+$/, "") : "video";
 
+  // Recherche de la barre du haut : un outil vidéo s'ouvre sans recharger la page
+  const ouvrirOutil = (url: string) => {
+    let u: URL;
+    try { u = new URL(url, window.location.href); } catch { return false; }
+    if (u.hostname !== "video.noxelspectra.com" && u.host !== window.location.host) return false;
+    const slug = u.pathname.replace(/^\/+|\/+$/g, "");
+    const id = slug === "" ? "analyze" : Object.keys(TOOL_SLUGS).find((k) => TOOL_SLUGS[k] === slug);
+    if (!id || (u.host !== window.location.host && window.location.hostname !== "localhost")) return false;
+    setTool(id);
+    return true;
+  };
+
   return (
     <>
     {/* NOXEL Shell 1.1 : barre du haut commune aux 4 sites, logo dans un carré de 150 × 150 px */}
@@ -216,6 +229,8 @@ export default function App() {
       <SectionBadge kind="video" label={tr("Vidéo")} />
       <img src="/chroma.webp" alt={tr("Chroma, le caméléon de NOXEL SPECTRA")} className="vx-mascot" width={225} height={150} />
       <div className="nx-bar__right vx-bar__right">
+        {/* NOXEL Shell 1.3 : recherche « app ou guides », comme NOXEL SEO */}
+        <NxSearch lang={lang} navigate={ouvrirOutil} />
         <a className="nx-pill" href="https://app.noxelspectra.com/" rel="noopener">{tr("Images")}</a>
         <a className="nx-pill" href="https://www.noxelspectra.com/" rel="noopener"><span className="nx-pill__code">?</span> {tr("Aide")}</a>
         <a className="nx-pill" href="https://noxel360.com/" rel="noopener">{tr("NOXEL360")}</a>
