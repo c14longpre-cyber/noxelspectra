@@ -3,6 +3,7 @@ import { trServeur } from "../../i18n/serveur";
 // Le cookie de session est posé par l'API (api.noxelspectra.com) : chaque appel doit l'envoyer
 // (credentials: "include"), sinon le quota compte l'adresse IP au lieu du compte.
 import { useCallback, useEffect, useState } from "react";
+import { accepterPassageSso } from "../../noxelSso";
 
 export const API_URL: string = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -37,6 +38,8 @@ const abonnes = new Set<() => void>();
 const notifier = () => abonnes.forEach((f) => f());
 
 export async function rafraichirCompte(): Promise<Account | null> {
+  // Arrivée depuis NOXEL SEO ou NOXEL FORGE (?nxsso=) : la session s'ouvre d'abord (une seule fois)
+  await accepterPassageSso(API_URL);
   try {
     const r = await apiFetch(`${API_URL}/api/auth/me`);
     if (r.status === 503) actif = false;
