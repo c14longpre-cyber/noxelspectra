@@ -8,6 +8,7 @@ import { API_URL, apiFetch, lireErreur, rafraichirCompte } from "./account";
 
 import { tr, shownLang } from "../../i18n";
 import { trServeur } from "../../i18n/serveur";
+import { avertissementNavigateurIntegre, navigateurIntegre } from "../../inAppBrowser";
 declare global {
   interface Window { google?: { accounts: { id: { initialize: (c: object) => void; renderButton: (el: HTMLElement, c: object) => void } } } }
 }
@@ -26,6 +27,8 @@ async function post(path: string, body: object) {
 }
 
 export function LoginModal({ onClose }: { onClose: () => void }) {
+  // Navigateur d'une appli (Facebook, LinkedIn…) : Google y refuse souvent la connexion
+  const inApp = navigateurIntegre();
   const [onglet, setOnglet] = useState<Onglet>("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,6 +140,11 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
         <h2 id="sp-login-title" className="sp-modal__title">{tr("Connexion à NOXEL SPECTRA")}</h2>
         <p className="sp-modal__sub">{tr("Un seul compte NOXEL pour NOXEL SEO, NOXEL FORGE et NOXEL SPECTRA. Les outils gratuits restent ouverts sans compte.")}</p>
 
+        {inApp && (
+          <p role="note" style={{ margin: "0 0 14px", padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(255,183,77,0.45)", background: "rgba(255,183,77,0.08)", color: "#ffd59a", fontSize: 13, lineHeight: 1.45 }}>
+            {avertissementNavigateurIntegre(inApp, shownLang() === "fr")}
+          </p>
+        )}
         {GOOGLE_CLIENT_ID && <div ref={googleRef} className="sp-google" />}
         {actifs.length > 0 && (
           <div className="sp-providers">
