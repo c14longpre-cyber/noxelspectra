@@ -1,8 +1,9 @@
 // Pastilles de compte de l'en-tête (même rendu que NOXEL SEO et NOXEL FORGE : médaille + avatar + menu)
 import { useEffect, useRef, useState } from "react";
-import { TIER_MEDAL, allerVers, deconnecter, openLogin, openPricing, useAccount } from "./account";
+import { API_URL, TIER_MEDAL, allerVers, deconnecter, openLogin, openPricing, useAccount } from "./account";
 
 import { tr, locale, pl } from "../../i18n";
+import { lienSso } from "../../noxelSso";
 function initiales(nom?: string | null) {
   const p = String(nom || "").trim().split(/\s+/).filter(Boolean);
   return ((p[0]?.[0] || "") + (p[1]?.[0] || "")).toUpperCase() || "?";
@@ -53,6 +54,9 @@ export function AccountPill() {
           {plan.tier !== "bronze" || plan.subscriptionStatus ? (
             <button role="menuitem" type="button" className="nx-menu__item" onClick={() => { setOpen(false); allerVers("/api/billing/portal").catch((e) => alert(e.message)); }}>{tr("Gérer l'abonnement")}</button>
           ) : null}
+          {/* Autres outils NOXEL, déjà connecté (NOXEL SSO) */}
+          <a role="menuitem" className="nx-menu__item" href={lienSso(API_URL, "seo", "/app")}>NOXEL SEO ↗</a>
+          <a role="menuitem" className="nx-menu__item" href={lienSso(API_URL, "forge", "/forge/dashboard")}>NOXEL FORGE ↗</a>
           <button role="menuitem" type="button" className="nx-menu__item nx-menu__item--danger" onClick={() => { setOpen(false); void deconnecter(); }}>{tr("Se déconnecter")}</button>
         </div>
       )}

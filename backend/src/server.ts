@@ -55,6 +55,7 @@ import oauthRoutes from "./account/oauth.routes";
 import { billingRouter, stripeWebhook } from "./account/billing.routes";
 import { aiRouter } from "./account/ai.routes";
 import { codesRouter } from "./account/codes.routes";
+import { ssoRouter } from "./account/sso.routes";
 import { quotaOutils } from "./account/middleware";
 import { rateLimit } from "express-rate-limit";
 import { PLANS } from "./account/plans";
@@ -191,6 +192,7 @@ const apercuLimiter = rateLimit({ windowMs: 60_000, limit: 60, standardHeaders: 
 
 // Comptes, forfaits et dessin IA (facultatifs : sans configuration, les routes répondent 503)
 // GitHub, LinkedIn, Microsoft et GET /api/auth/providers avant les autres routes de compte
+app.use("/api/auth", ssoRouter);
 app.use("/api/auth", oauthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", billingRouter);
