@@ -42,6 +42,7 @@ import { sectionDepuisChemin, useSectionUrl } from "./useSectionUrl";
 export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
 import { LangPill } from "./components/spectra-nexus/LangPill";
 import NxSearch from "./components/NxSearch";
+import NivoChat from "./components/NivoChat";
 // Outils lourds chargés à l'ouverture de leur onglet (moins de JavaScript au premier affichage)
 const OverlayEditor = lazy(() => import("./components/spectra-editor/OverlayEditor").then((m) => ({ default: m.OverlayEditor })));
 const GradientTool = lazy(() => import("./components/spectra-gradient/GradientTool").then((m) => ({ default: m.GradientTool })));
@@ -3953,6 +3954,8 @@ export default function App() {
         </div>
       </main>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
+      {/* Nivo, l'assistant de support NOXEL (faits de SPECTRA, API de NOXEL SEO) */}
+      <NivoChat locale={lang} site="spectra" />
       {exifPrompt && (
         <ExifNotice
           items={exifPrompt.files.flatMap((f, i) => {
