@@ -14,7 +14,8 @@ export type Tier = "bronze" | "silver" | "gold" | "platinum" | "diamond";
 
 export interface Account {
   user: { id: string; email: string; name: string; avatarUrl: string | null; provider: string };
-  plan: { tier: Tier; name: string; opsPerDay: number; batchFiles: number; subscriptionStatus: string | null };
+  plan: { tier: Tier; name: string; opsPerDay: number; batchFiles: number; subscriptionStatus: string | null; offerEndsAt?: string | null };
+  isAdmin?: boolean;
   credits: { inclus: number; achetes: number; total: number; parMois: number };
 }
 

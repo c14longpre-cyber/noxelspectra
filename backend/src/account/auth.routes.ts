@@ -16,6 +16,7 @@ import { sendMagicLinkEmail, sendSignupConfirmationEmail } from "./email";
 import { authLimiter, emailIpLimiter, emailRecipientLimiter } from "./limiters";
 import { getSupabase } from "./supabase";
 import { must } from "./supabaseCheck";
+import { estAdminSpectra } from "./codes.routes";
 import { requireComptes, lireDemandeur, oublierDemandeur } from "./middleware";
 import { creditsRestants } from "./members";
 import { PLANS } from "./plans";
@@ -36,7 +37,8 @@ router.get("/me", async (req, res) => {
   const plan = PLANS[d.tier];
   return res.json({
     ok: true, user: toPublicUser(d.user),
-    plan: { tier: d.tier, name: plan.name, opsPerDay: plan.opsPerDay, batchFiles: plan.batchFiles, subscriptionStatus: d.member.subscriptionStatus },
+    plan: { tier: d.tier, name: plan.name, opsPerDay: plan.opsPerDay, batchFiles: plan.batchFiles, subscriptionStatus: d.member.subscriptionStatus, offerEndsAt: d.member.offerEndsAt },
+    isAdmin: estAdminSpectra(d.user.email),
     credits: creditsRestants(d.member),
   });
 });

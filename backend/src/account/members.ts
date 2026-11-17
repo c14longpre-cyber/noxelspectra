@@ -2,6 +2,7 @@
 import { getSupabase } from "./supabase";
 import { must } from "./supabaseCheck";
 import { normalizeTier, PLANS, type Tier } from "./plans";
+import { tierEffectif } from "./codesAcces";
 
 export interface Member {
   userId: string;
@@ -12,14 +13,18 @@ export interface Member {
   creditsPeriod: string | null;
   creditsUsed: number;
   creditsExtra: number;
+  /** Fin d'un forfait offert par un code d'accès (null = aucune offre en cours) */
+  offerEndsAt: string | null;
 }
 
 function toMember(r: any): Member {
   return {
-    userId: r.user_id, tier: normalizeTier(r.tier),
+    // Forfait offert par un code : retour au forfait d'avant dès la date passée
+    userId: r.user_id, tier: normalizeTier(tierEffectif(r)),
     stripeCustomerId: r.stripe_customer_id ?? null, stripeSubscriptionId: r.stripe_subscription_id ?? null,
     subscriptionStatus: r.subscription_status ?? null, creditsPeriod: r.credits_period ?? null,
     creditsUsed: r.credits_used ?? 0, creditsExtra: r.credits_extra ?? 0,
+    offerEndsAt: r.tier_expires_at && new Date(r.tier_expires_at).getTime() > Date.now() ? r.tier_expires_at : null,
   };
 }
 
@@ -68,4 +73,12 @@ export async function ajouterCredits(userId: string, credits: number, sessionId:
   const { data, error } = await getSupabase().rpc("spectra_ajouter_credits", { p_user: userId, p_credits: credits, p_session: sessionId });
   if (error) throw new Error("spectra_ajouter_credits: " + error.message);
   return data === true;
+}
+
+/** Un abonnement payé remplace un forfait offert par un code (sans effet avant la migration) */
+export async function effacerOffre(userId: string): Promise<void> {
+  try {
+    const { error } = await getSupabase().from("spectra_members").update({ tier_expires_at: null, tier_after_expiry: null }).eq("user_id", userId);
+    if (error && !/tier_expires_at|tier_after_expiry/.test(error.message)) console.error("[spectra] effacer l'offre:", error.message);
+  } catch (e) { console.error("[spectra] effacer l'offre:", e); }
 }

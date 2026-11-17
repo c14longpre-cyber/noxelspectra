@@ -7,7 +7,7 @@ import Stripe from "stripe";
 import { FRONTEND_URL } from "./config";
 import { requireUser, oublierDemandeur, type Demandeur } from "./middleware";
 import { CREDIT_PACK, PLANS, TIERS, normalizeTier, priceIdFor, tierForPrice, type Tier } from "./plans";
-import { ajouterCredits, findMemberByCustomer, getMember, updateMember } from "./members";
+import { ajouterCredits, effacerOffre, findMemberByCustomer, getMember, updateMember } from "./members";
 import { getSupabase } from "./supabase";
 import { must } from "./supabaseCheck";
 
@@ -164,6 +164,7 @@ export async function stripeWebhook(req: Request, res: Response) {
             tier: normalizeTier(s.metadata.spectraTier), stripe_customer_id: String(s.customer),
             stripe_subscription_id: String(s.subscription), subscription_status: "active",
           });
+          await effacerOffre(userId);  // le forfait payé remplace un forfait offert par un code
         }
         oublierDemandeur(userId);
         break;
@@ -179,6 +180,7 @@ export async function stripeWebhook(req: Request, res: Response) {
           subscription_status: sub.status, stripe_customer_id: String(sub.customer),
           ...(tier === "garder" ? {} : tier === "bronze" ? { tier: "bronze", stripe_subscription_id: null } : { tier, stripe_subscription_id: sub.id }),
         });
+        if (tier !== "garder" && tier !== "bronze") await effacerOffre(userId);
         oublierDemandeur(userId);
         break;
       }
