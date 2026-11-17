@@ -54,6 +54,7 @@ import authRoutes from "./account/auth.routes";
 import oauthRoutes from "./account/oauth.routes";
 import { billingRouter, stripeWebhook } from "./account/billing.routes";
 import { aiRouter } from "./account/ai.routes";
+import { codesRouter } from "./account/codes.routes";
 import { quotaOutils } from "./account/middleware";
 import { rateLimit } from "express-rate-limit";
 import { PLANS } from "./account/plans";
@@ -194,6 +195,7 @@ app.use("/api/auth", oauthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", billingRouter);
 app.use("/api", aiRouter);
+app.use("/api", codesRouter);
 if (!comptesActifs()) console.warn("Comptes SPECTRA désactivés (SPECTRA_JWT_SECRET, SUPABASE_URL ou SUPABASE_SERVICE_KEY manquant) : outils gratuits seulement.");
 
 const upload = multer({

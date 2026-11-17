@@ -5,6 +5,7 @@ import { HudButton } from "../hud/HudButton";
 import { API_URL, TIER_COLORS, TIER_MEDAL, allerVers, apiFetch, openLogin, useAccount, type PlanInfo } from "./account";
 
 import { tr, locale, shownLang, pl } from "../../i18n";
+import { AdminCodes, RedeemCode } from "./AccessCodes";
 interface PlansReponse { plans: PlanInfo[]; creditPack: { credits: number; priceCad: number; available: boolean } }
 
 const prix = (n: number) => n.toLocaleString(locale(), { style: "currency", currency: "CAD", maximumFractionDigits: n % 1 ? 2 : 0 });
@@ -96,6 +97,9 @@ export function PricingPage() {
         <HudButton action="continue" compact busy={busy === "credits"} disabled={!data?.creditPack.available}
           label={data?.creditPack.available ? tr("Acheter {a} crédits", { a: data.creditPack.credits }) : tr("Bientôt")} onClick={acheterCredits} />
       </div>
+
+      {account && <RedeemCode offerEndsAt={account.plan.offerEndsAt} />}
+      {account?.isAdmin && <AdminCodes />}
     </div>
   );
 }
