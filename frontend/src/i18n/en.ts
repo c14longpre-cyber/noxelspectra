@@ -1605,6 +1605,26 @@ const en: Record<string, string> = {
  "Échange du code momentanément indisponible.": "Code redemption is temporarily unavailable.",
  "Réservé aux administrateurs.": "Admins only.",
  "Forfait invalide.": "Invalid plan.",
- "Durée invalide.": "Invalid duration."
+ "Durée invalide.": "Invalid duration.",
+ "Pipette de couleur": "Color picker",
+ "Survolez l'image sélectionnée ci-dessus : la loupe montre le pixel visé et sa couleur. Un clic la garde en HEX, RGB et HSL, prête à copier, avec sa lisibilité sur fond blanc et noir.": "Hover over the image selected above: the magnifier shows the pixel you aim at and its color. One click keeps it in HEX, RGB and HSL, ready to copy, with its readability on white and black.",
+ "Cette image ne peut pas être lue par le navigateur.": "Your browser can't read this image.",
+ "Copie impossible : sélectionnez le texte et copiez-le à la main.": "Can't copy: select the text and copy it by hand.",
+ "Choisir et copier {hex}": "Select and copy {hex}",
+ "Prendre une couleur n'importe où à l'écran": "Pick a color anywhere on your screen",
+ "Choisissez une image ci-dessus, puis survolez-la : la couleur sous le curseur s'affiche, un clic la garde.": "Choose an image above, then hover over it: the color under the cursor shows up, and a click keeps it.",
+ "Image : survolez ou utilisez les flèches pour viser un pixel, Entrée pour garder sa couleur": "Image: hover or use the arrow keys to aim at a pixel, Enter to keep its color",
+ "Pixel {x}, {y} sur {w} × {h}": "Pixel {x}, {y} of {w} × {h}",
+ "{w} × {h} pixels": "{w} × {h} pixels",
+ "L'image reste dans votre navigateur.": "The image stays in your browser.",
+ "Lisibilité d'un texte de cette couleur :": "Readability of text in this color:",
+ "Sur fond blanc :": "On white:",
+ "Sur fond noir :": "On black:",
+ "conforme (AA)": "passes (AA)",
+ "gros texte seulement": "large text only",
+ "trop faible": "too low",
+ "Aucune couleur gardée pour l'instant.": "No color kept yet.",
+ "Couleurs gardées (clic = copier)": "Kept colors (click = copy)",
+ "Vider la liste": "Clear list"
 };
 export default en;
