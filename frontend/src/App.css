@@ -471,6 +471,57 @@ a {
 .spectra-mascot + .nx-bar__right { margin-left: 0; }
 @media (max-width: 1279px) { .spectra-mascot { display: none; } .spectra-mascot + .nx-bar__right { margin-left: auto; } }
 @media (max-width: 900px) {
-  .spectra-bar { padding: 8px 12px 8px 64px; }
+  .spectra-bar { padding: 8px 12px; }
   .spectra-bar__title { display: none; }
+}
+
+/* ── Navigation mobile (≤ 860 px) : barre du bas + panneau « Plus », modèle NOXEL SEO ── */
+.sx-mnav { display: none; }
+@media (max-width: 860px) {
+  .sx-mnav { display: block; }
+  .sidebar, .sidebar-backdrop { display: none !important; }
+  .app-main { padding: 16px 14px calc(84px + env(safe-area-inset-bottom)) !important; }
+  .sx-mnav__bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 300; height: 60px;
+    padding-bottom: env(safe-area-inset-bottom);
+    display: flex; align-items: stretch; background: #07090f; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .sx-mnav__btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    border: none; background: none; color: rgba(255,255,255,0.62); font: 600 10px/1.2 inherit; cursor: pointer;
+    border-top: 2px solid transparent;
+  }
+  .sx-mnav__btn.active { color: #3ddc84; border-top-color: #3ddc84; }
+  .sx-mnav__icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; font-size: 18px; }
+  .sx-mnav__icon img, .sx-mnav__icon svg { width: 22px; height: 22px; }
+  .sx-mnav__backdrop { position: fixed; inset: 0; z-index: 298; background: rgba(0,0,0,0.6); }
+  .sx-mnav__sheet {
+    position: fixed; left: 0; right: 0; bottom: 60px; z-index: 299; max-height: 72vh; overflow-y: auto;
+    background: rgba(13,16,23,0.98); border-top: 1px solid rgba(61,220,132,0.2); border-radius: 20px 20px 0 0;
+    padding: 14px 12px 12px; transform: translateY(110%); visibility: hidden;
+    transition: transform .3s cubic-bezier(.32,.72,0,1), visibility 0s .3s;
+  }
+  .sx-mnav__sheet.open { transform: translateY(0); visibility: visible; transition: transform .3s cubic-bezier(.32,.72,0,1); }
+  .sx-mnav__grip { width: 36px; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.15); margin: 0 auto 10px; }
+  .sx-mnav__title { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #3ddc84; margin-bottom: 12px; }
+  .sx-mnav__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sx-mnav__tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 76px;
+    padding: 10px 6px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.78); font: 700 11px/1.25 inherit; text-align: center; cursor: pointer;
+  }
+  .sx-mnav__tile.active { color: #3ddc84; background: rgba(61,220,132,0.12); border-color: rgba(61,220,132,0.3); }
+  .sx-mnav__links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sx-mnav__links > * {
+    flex: 1 1 30%; padding: 10px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.78); font: 700 12px/1.2 inherit;
+    text-align: center; text-decoration: none; cursor: pointer;
+  }
+  /* Barre du haut : Vidéo, Aide et NOXEL360 passent dans le panneau « Plus » ; il reste la langue et le compte */
+  .spectra-bar__right > a.nx-pill { display: none !important; }
+  .spectra-bar__right { flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+  /* Nivo et le bouton du consentement passent au-dessus de la barre */
+  .nivo-launcher, .nivo-panel { bottom: 72px !important; }
+  #noxel-consent-root .nx-consent-launcher { display: none !important; }
+  #noxel-consent-root .nx-consent-banner { bottom: 72px !important; }
 }
