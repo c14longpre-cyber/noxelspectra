@@ -31,3 +31,47 @@ export function contraste(a: Rgb, b: Rgb): number {
   const la = luminance(a), lb = luminance(b);
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
+
+export function hslEnRgb(h: number, s: number, l: number): Rgb {
+  const S = s / 100, L = l / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = S * Math.min(L, 1 - L);
+  const f = (n: number) => L - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+export function hexEnRgb(hex: string): Rgb {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// « #abc », « abc », « #aabbcc » → « #aabbcc » ; null si ce n'est pas une couleur
+export function normaliserHex(v: string): string | null {
+  let s = v.trim().replace(/^#/, "").toLowerCase();
+  if (/^[0-9a-f]{3}$/.test(s)) s = s.split("").map((c) => c + c).join("");
+  return /^[0-9a-f]{6}$/.test(s) ? `#${s}` : null;
+}
+
+// Critères WCAG 2.2 : 1.4.3 (AA), 1.4.6 (AAA), 1.4.11 (composants d'interface et graphiques)
+export const CRITERES = [
+  { id: "aa", seuil: 4.5 },
+  { id: "aaLarge", seuil: 3 },
+  { id: "aaa", seuil: 7 },
+  { id: "aaaLarge", seuil: 4.5 },
+  { id: "ui", seuil: 3 },
+] as const;
+
+// Couleur de texte la plus proche (même teinte et saturation, luminosité changée le moins possible)
+// qui atteint le rapport voulu sur ce fond ; null si aucune n'y arrive.
+export function couleurProche(texte: Rgb, fond: Rgb, cible: number): string | null {
+  if (contraste(texte, fond) >= cible) return formats(texte).hex;
+  const [h, s, l] = rgbEnHsl(texte);
+  for (let d = 1; d <= 100; d++) {
+    for (const L of [l - d, l + d]) {
+      if (L < 0 || L > 100) continue;
+      const rgb = hslEnRgb(h, s, L);
+      if (contraste(rgb, fond) >= cible) return formats(rgb).hex;
+    }
+  }
+  return null;
+}

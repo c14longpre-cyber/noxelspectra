@@ -4,7 +4,8 @@
 // La pipette de l'écran (API EyeDropper) n'existe que dans Chrome et Edge sur ordinateur.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { tr } from "../../i18n";
-import { formats, contraste, type Rgb } from "./colorMath";
+import { formats, hexEnRgb, type Rgb } from "./colorMath";
+import { ContrastChecker, type Cible } from "./ContrastChecker";
 
 const HISTORY_KEY = "spectra-picker-history";
 const HISTORY_MAX = 12;
@@ -20,11 +21,6 @@ function lireHistorique(): string[] {
   } catch { return []; }
 }
 
-function hexEnRgb(hex: string): Rgb {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
 export function ColorPicker({ src }: { src: string | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loupeRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +33,10 @@ export function ColorPicker({ src }: { src: string | null }) {
   const [historique, setHistorique] = useState<string[]>(lireHistorique);
   const [copie, setCopie] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  // Vérificateur de contraste : la pipette remplit la case visée (texte, puis fond)
+  const [texte, setTexte] = useState("#1a1a1a");
+  const [fond, setFond] = useState("#ffffff");
+  const [cible, setCible] = useState<Cible | null>(null);
   const EyeDropper = (typeof window !== "undefined" ? (window as unknown as { EyeDropper?: EyeDropperCtor }).EyeDropper : undefined);
 
   // Image dessinée à sa taille réelle : la couleur lue est celle du fichier, pas d'un aperçu réduit.
@@ -110,6 +110,8 @@ export function ColorPicker({ src }: { src: string | null }) {
 
   function garder(hex: string) {
     setChoisie(hex);
+    if (cible === "texte") { setTexte(hex); setCible("fond"); }
+    else if (cible === "fond") { setFond(hex); setCible(null); }
     setHistorique((h) => [hex, ...h.filter((x) => x !== hex)].slice(0, HISTORY_MAX));
   }
 
@@ -229,22 +231,14 @@ export function ColorPicker({ src }: { src: string | null }) {
                   </button>
                 ))}
               </div>
-              <p style={{ fontSize: 13, color: "#888", marginTop: 12, marginBottom: 4 }}>{tr("Lisibilité d'un texte de cette couleur :")}</p>
-              {([["#ffffff", tr("Sur fond blanc :")], ["#000000", tr("Sur fond noir :")]] as const).map(([fond, nom]) => {
-                const r = contraste(rgbChoisie, hexEnRgb(fond));
-                return (
-                  <div key={fond} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginTop: 4 }}>
-                    <span style={{ background: fond, color: f.hex, border: "1px solid #888", borderRadius: 4, padding: "2px 8px", fontWeight: 700 }}>Aa</span>
-                    <span>{nom} {r.toFixed(2)}:1 · {r >= 4.5 ? tr("conforme (AA)") : r >= 3 ? tr("gros texte seulement") : tr("trop faible")}</span>
-                  </div>
-                );
-              })}
             </>
           ) : (
             <p style={{ color: "#888", fontSize: 14 }}>{tr("Aucune couleur gardée pour l'instant.")}</p>
           )}
         </div>
       </div>
+
+      <ContrastChecker texte={texte} fond={fond} cible={cible} setCible={setCible} setTexte={setTexte} setFond={setFond} />
 
       {historique.length > 0 && (
         <div style={{ marginTop: 24 }}>

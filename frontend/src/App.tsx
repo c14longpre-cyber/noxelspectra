@@ -554,7 +554,7 @@ export default function App() {
     { id: "adjust", label: tr("Filtres / Réglages"), icon: "☷", ref: adjustSectionRef },
     { id: "responsive", label: tr("Tailles responsives"), icon: "▣", ref: responsiveSectionRef },
     { id: "palette", label: tr("Palette de couleurs"), icon: "◉", ref: paletteSectionRef },
-    { id: "picker", label: tr("Pipette de couleur"), icon: "⌖", ref: pickerSectionRef },
+    { id: "picker", label: tr("Pipette et contraste"), icon: "⌖", ref: pickerSectionRef },
     { id: "vectorize", label: tr("Vectoriser"), icon: "◇", ref: vectorizeSectionRef },
     { id: "favicon", label: tr("Favicons"), icon: "☆", ref: faviconSectionRef },
     { id: "metaclean", label: tr("Nettoyer les métadonnées"), icon: "▤", ref: metaCleanSectionRef },
@@ -3040,9 +3040,9 @@ export default function App() {
       <div ref={pickerSectionRef} />
       <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
 
-      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Pipette de couleur")}</h2>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Pipette et contraste WCAG")}</h2>
       <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
-        {tr("Survolez l'image sélectionnée ci-dessus : la loupe montre le pixel visé et sa couleur. Un clic la garde en HEX, RGB et HSL, prête à copier, avec sa lisibilité sur fond blanc et noir.")}
+        {tr("Survolez l'image sélectionnée ci-dessus : la loupe montre le pixel visé et sa couleur. Un clic la garde en HEX, RGB et HSL, prête à copier. Plus bas, prenez la couleur d'un texte et celle de son fond pour vérifier leur contraste selon les WCAG.")}
       </p>
       <Suspense fallback={null}>
         <ColorPicker key={originalPreviewUrl ?? "aucune"} src={originalPreviewUrl} />
