@@ -3,6 +3,7 @@ import "./App.css";
 import { HudButton, HudLink } from "./components/hud/HudButton";
 import type { HudAction } from "./components/hud/hud-data";
 import { NavIcon } from "./components/hud/NavIcon";
+import { SpectraMobileNav } from "./components/SpectraMobileNav";
 import { SectionBadge } from "./components/hud/SectionBadge";
 import { NumberInput } from "./components/NumberInput";
 import { GradientStops, type Stop } from "./components/GradientStops";
@@ -1995,13 +1996,7 @@ export default function App() {
         </div>
       </header>
     <div className="app-shell">
-      <button
-        className="mobile-menu-btn"
-        aria-label={tr("Ouvrir le menu")}
-        onClick={() => setSidebarOpen((v) => !v)}
-      >
-        ☰
-      </button>
+      <SpectraMobileNav items={NAV_ITEMS} active={activeSection} onGo={goToSection} />
       <div
         className={`sidebar-backdrop${sidebarOpen ? " open" : ""}`}
         onClick={() => setSidebarOpen(false)}

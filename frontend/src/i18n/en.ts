@@ -1643,6 +1643,11 @@ const en: Record<string, string> = {
  "Gros texte : 24 px, ou 18,66 px en gras.": "Large text: 24 px, or 18.66 px bold.",
  "Couleur de texte la plus proche qui réussit AA sur ce fond :": "Closest text color that passes AA on this background:",
  "(même teinte, clic pour l'essayer)": "(same hue, click to try it)",
- "Aucune nuance de cette teinte n'atteint AA sur ce fond : changez la couleur du fond.": "No shade of this hue reaches AA on this background: change the background color."
+ "Aucune nuance de cette teinte n'atteint AA sur ce fond : changez la couleur du fond.": "No shade of this hue reaches AA on this background: change the background color.",
+ "Tous les outils": "All tools",
+ "Détourer": "Cut out",
+ "Réseaux": "Social",
+ "Plus": "More",
+ "Navigation": "Navigation"
 };
 export default en;
