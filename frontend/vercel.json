@@ -21,7 +21,7 @@
   ],
   "rewrites": [
     {
-      "source": "/:onglet(ai-drawing|analyze|author-rights|batch|clean-metadata|color-palette|convert|crop|drop-shadow|editor|favicons|filters|glow-effect|gradient|pricing|projects|remove-background|resize|responsive-images|rotate-flip|social-media|vectorize|watermark)",
+      "source": "/:onglet(ai-drawing|analyze|author-rights|batch|clean-metadata|color-palette|color-picker|convert|crop|drop-shadow|editor|favicons|filters|glow-effect|gradient|pricing|projects|remove-background|resize|responsive-images|rotate-flip|social-media|vectorize|watermark)",
       "destination": "/index.html"
     }
   ]

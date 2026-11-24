@@ -39,7 +39,7 @@ import { SOCIAL_GROUPS, SOCIAL_PRESETS, ratioLabel } from "./socialPresets";
 import { sectionDepuisChemin, useSectionUrl } from "./useSectionUrl";
 
 // Adresse de chaque onglet (app.noxelspectra.com/<adresse>) ; mêmes adresses dans frontend/vercel.json
-export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
+export const SECTION_SLUGS: Record<string, string> = {"projects": "projects", "ai": "ai-drawing", "analyze": "analyze", "convert": "convert", "batch": "batch", "resize": "resize", "crop": "crop", "removebg": "remove-background", "rotate": "rotate-flip", "adjust": "filters", "responsive": "responsive-images", "palette": "color-palette", "picker": "color-picker", "vectorize": "vectorize", "favicon": "favicons", "metaclean": "clean-metadata", "shadow": "drop-shadow", "glow": "glow-effect", "social": "social-media", "editor": "editor", "gradient": "gradient", "watermark": "watermark", "copyright": "author-rights", "pricing": "pricing"};
 import { LangPill } from "./components/spectra-nexus/LangPill";
 import NxSearch from "./components/NxSearch";
 import NivoChat from "./components/NivoChat";
@@ -50,6 +50,7 @@ const RightsTool = lazy(() => import("./components/spectra-rights/RightsTool").t
 const BgRefiner = lazy(() => import("./components/spectra-bg/BgRefiner").then((m) => ({ default: m.BgRefiner })));
 const PricingPage = lazy(() => import("./components/spectra-account/PricingPage").then((m) => ({ default: m.PricingPage })));
 const AiDrawTool = lazy(() => import("./components/spectra-account/AiDrawTool").then((m) => ({ default: m.AiDrawTool })));
+const ColorPicker = lazy(() => import("./components/spectra-color/ColorPicker").then((m) => ({ default: m.ColorPicker })));
 const SocialCropper = lazy(() => import("./components/spectra-social/SocialCropper").then((m) => ({ default: m.SocialCropper })));
 const NexusSelector = lazy(() => import("./components/spectra-nexus/NexusSelector"));
 const FORMATS = ["webp", "avif", "jpeg", "png", "gif"] as const;
@@ -438,6 +439,7 @@ export default function App() {
   const adjustSectionRef = useRef<HTMLDivElement | null>(null);
   const responsiveSectionRef = useRef<HTMLDivElement | null>(null);
   const paletteSectionRef = useRef<HTMLDivElement | null>(null);
+  const pickerSectionRef = useRef<HTMLDivElement | null>(null);
   const vectorizeSectionRef = useRef<HTMLDivElement | null>(null);
   const faviconSectionRef = useRef<HTMLDivElement | null>(null);
   const metaCleanSectionRef = useRef<HTMLDivElement | null>(null);
@@ -552,6 +554,7 @@ export default function App() {
     { id: "adjust", label: tr("Filtres / Réglages"), icon: "☷", ref: adjustSectionRef },
     { id: "responsive", label: tr("Tailles responsives"), icon: "▣", ref: responsiveSectionRef },
     { id: "palette", label: tr("Palette de couleurs"), icon: "◉", ref: paletteSectionRef },
+    { id: "picker", label: tr("Pipette et contraste"), icon: "⌖", ref: pickerSectionRef },
     { id: "vectorize", label: tr("Vectoriser"), icon: "◇", ref: vectorizeSectionRef },
     { id: "favicon", label: tr("Favicons"), icon: "☆", ref: faviconSectionRef },
     { id: "metaclean", label: tr("Nettoyer les métadonnées"), icon: "▤", ref: metaCleanSectionRef },
@@ -3029,6 +3032,21 @@ export default function App() {
         </div>
       )}
 
+      </>
+      )}
+      {activeSection === "picker" && (
+      <>
+      {/* ── Pipette de couleur ── */}
+      <div ref={pickerSectionRef} />
+      <hr style={{ margin: "40px 0 24px", border: "none", borderTop: "1px solid #ddd" }} />
+
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>{tr("Pipette et contraste WCAG")}</h2>
+      <p style={{ color: "#888", fontSize: 13, marginTop: 0 }}>
+        {tr("Survolez l'image sélectionnée ci-dessus : la loupe montre le pixel visé et sa couleur. Un clic la garde en HEX, RGB et HSL, prête à copier. Plus bas, prenez la couleur d'un texte et celle de son fond pour vérifier leur contraste selon les WCAG.")}
+      </p>
+      <Suspense fallback={null}>
+        <ColorPicker key={originalPreviewUrl ?? "aucune"} src={originalPreviewUrl} />
+      </Suspense>
       </>
       )}
       {activeSection === "vectorize" && (
